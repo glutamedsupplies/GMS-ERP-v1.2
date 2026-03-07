@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Requests</title>
+<style>
+  :root {
+    --bg: #f5f8fc;
+    --panel: #ffffff;
+    --text: #132237;
+    --muted: #5e7085;
+    --line: #d7e3ef;
+    --accent: #0f766e;
+    --accent-soft: #def7f5;
+    --danger: #b42318;
+    --shadow: 0 16px 40px rgba(15, 23, 42, 0.1);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(circle at top left, rgba(15, 118, 110, 0.13), transparent 27%),
+      linear-gradient(180deg, #fcfdff 0%, var(--bg) 100%);
+  }
+
+  .page {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 24px 16px 32px;
+  }
+
+  .hero {
+    margin-bottom: 14px;
+  }
+
+  .hero h1 {
+    margin: 0 0 6px;
+    font-size: 31px;
+  }
+
+  .hero p {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .status {
+    min-height: 24px;
+    margin-bottom: 12px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .status.error {
+    color: var(--danger);
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 14px;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    padding: 14px;
+  }
+
+  .toolbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  input,
+  textarea,
+  select {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 10px 11px;
+    font-size: 14px;
+    outline: none;
+    color: var(--text);
+    background: #fff;
+  }
+
+  textarea {
+    min-height: 94px;
+    resize: vertical;
+    line-height: 1.45;
+  }
+
+  button {
+    border: none;
+    cursor: pointer;
+    border-radius: 11px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .primary {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .secondary {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .request-list {
+    max-height: 660px;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fbfdff;
+  }
+
+  .request-item {
+    border-bottom: 1px solid #ebf0f7;
+    padding: 11px;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+  }
+
+  .request-item:last-child {
+    border-bottom: none;
+  }
+
+  .request-item:hover,
+  .request-item.active {
+    background: #edf8f7;
+  }
+
+  .request-title {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 5px;
+    font-weight: 700;
+  }
+
+  .request-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .request-preview {
+    font-size: 13px;
+    color: #24364b;
+    line-height: 1.4;
+  }
+
+  .pill {
+    display: inline-block;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 3px 8px;
+    text-transform: uppercase;
+  }
+
+  .pill.open { background: #e8f3ff; color: #0b5ad6; }
+  .pill.in_progress { background: #fff4df; color: #b54708; }
+  .pill.resolved { background: #e8f8ef; color: #027a48; }
+  .pill.closed { background: #f3f4f6; color: #374151; }
+
+  .detail-head {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .meta {
+    background: #f8fbff;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 10px;
+  }
+
+  .meta label {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 3px;
+  }
+
+  .meta strong {
+    word-break: break-word;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .chat-box {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fbfdff;
+    min-height: 220px;
+    max-height: 390px;
+    overflow: auto;
+    padding: 11px;
+    margin-bottom: 8px;
+  }
+
+  .chat-message {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+    margin-bottom: 9px;
+    padding: 8px 10px;
+  }
+
+  .chat-message.customer {
+    border-color: #bdd8fb;
+    background: #eef6ff;
+  }
+
+  .chat-message.admin {
+    border-color: #bfe9e4;
+    background: #e8f7f5;
+  }
+
+  .chat-meta {
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+
+  .chat-input-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+  }
+
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 26px 10px;
+  }
+
+  @media (max-width: 1080px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .grid,
+    .chat-input-row {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <h1>Customer Requests</h1>
+      <p>Review customer edits/requests and reply through customer chat.</p>
+    </div>
+
+    <div id="pageStatus" class="status">Loading customer requests...</div>
+
+    <div class="layout">
+      <section class="card">
+        <div class="toolbar">
+          <input id="searchInput" type="text" placeholder="Search code, customer, contact, details...">
+          <select id="statusFilter">
+            <option value="">All Status</option>
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
+          </select>
+          <button id="refreshBtn" class="secondary" type="button">Refresh List</button>
+        </div>
+
+        <div id="requestList" class="request-list">
+          <div class="empty">No requests yet.</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="detail-head">
+          <div class="meta">
+            <label>Request Code</label>
+            <strong id="detailCode">-</strong>
+          </div>
+          <div class="meta">
+            <label>Created</label>
+            <strong id="detailCreated">-</strong>
+          </div>
+          <div class="meta">
+            <label>Updated</label>
+            <strong id="detailUpdated">-</strong>
+          </div>
+          <div class="meta">
+            <label>Messages</label>
+            <strong id="detailMessages">0</strong>
+          </div>
+        </div>
+
+        <div class="grid">
+          <input id="detailName" type="text" placeholder="Customer name">
+          <input id="detailContact" type="text" inputmode="numeric" placeholder="Contact number">
+        </div>
+        <textarea id="detailRequest" placeholder="Request details"></textarea>
+        <div class="grid" style="margin-top:8px;">
+          <select id="detailStatus">
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
+          </select>
+          <button id="saveDetailBtn" class="primary" type="button">Save Request Update</button>
+        </div>
+        <label class="row">
+          <input id="allowEditCheckbox" type="checkbox">
+          Allow customer to keep editing this request
+        </label>
+
+        <h3 style="margin:14px 0 8px;">Customer Chat</h3>
+        <div id="chatBox" class="chat-box">
+          <div class="empty">Select a request to view messages.</div>
+        </div>
+        <div class="chat-input-row">
+          <textarea id="adminMessageInput" placeholder="Reply to customer..."></textarea>
+          <button id="sendMessageBtn" class="primary" type="button">Send Reply</button>
+          <button id="reloadThreadBtn" class="secondary" type="button">Reload</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="../shared/app-client.js"></script>
+  <script src="customer_requests.js"></script>
+</body>
+</html>

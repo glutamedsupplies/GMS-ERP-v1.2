@@ -1,0 +1,319 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Head Admin Settings</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-start: #0b1020;
+            --bg-end: #16263f;
+            --card-bg: rgba(10, 18, 31, 0.88);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --input-bg: rgba(255, 255, 255, 0.94);
+            --input-muted: rgba(255, 255, 255, 0.08);
+            --text: #f5f7fb;
+            --muted: #a8b2c5;
+            --accent: #53d769;
+            --accent-strong: #39c75d;
+            --danger: #ff6767;
+            --danger-bg: rgba(255, 103, 103, 0.12);
+            --success-bg: rgba(83, 215, 105, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            min-height: 100%;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(83, 215, 105, 0.12), transparent 26%),
+                radial-gradient(circle at bottom right, rgba(0, 191, 255, 0.12), transparent 24%),
+                linear-gradient(145deg, var(--bg-start), var(--bg-end));
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-card {
+            width: min(100%, 500px);
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: 0 24px 54px rgba(0, 0, 0, 0.32);
+            backdrop-filter: blur(14px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 22px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            line-height: 1.15;
+        }
+
+        .header p {
+            margin: 8px 0 0;
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .profile-pic-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 22px;
+        }
+
+        .profile-pic-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+
+        .profile-pic {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            object-position: center;
+            border: 4px solid var(--accent);
+            background: #1f2937;
+            display: block;
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32);
+        }
+
+        .upload-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: var(--accent);
+            font-size: 13px;
+            font-weight: 600;
+            transition: color 0.2s ease, transform 0.2s ease;
+        }
+
+        .upload-btn:hover {
+            color: #7df091;
+            transform: translateY(-1px);
+        }
+
+        .file-name {
+            min-height: 18px;
+            font-size: 12px;
+            color: var(--muted);
+            text-align: center;
+            word-break: break-word;
+        }
+
+        .section {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #d6dceb;
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        input {
+            width: 100%;
+            height: 46px;
+            border: none;
+            border-radius: 10px;
+            outline: none;
+            padding: 0 14px;
+            font: inherit;
+            background: var(--input-bg);
+            color: #111827;
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        input:focus {
+            box-shadow: 0 0 0 3px rgba(83, 215, 105, 0.22);
+            transform: translateY(-1px);
+        }
+
+        input[readonly] {
+            background: var(--input-muted);
+            color: #c8d0df;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            cursor: default;
+        }
+
+        .password-input {
+            padding-right: 42px;
+        }
+
+        .toggle-password {
+            position: absolute;
+            top: 50%;
+            right: 14px;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #556070;
+            font-size: 14px;
+        }
+
+        .save-btn,
+        .logout-btn {
+            width: 100%;
+            border: none;
+            border-radius: 12px;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .save-btn {
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent-strong), #70e483);
+            color: #08111d;
+            margin-top: 6px;
+            box-shadow: 0 10px 24px rgba(83, 215, 105, 0.26);
+        }
+
+        .logout-btn {
+            height: 42px;
+            margin-top: 14px;
+            background: transparent;
+            color: #ff8e8e;
+            border: 1px solid rgba(255, 103, 103, 0.42);
+        }
+
+        .save-btn:hover,
+        .logout-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .save-btn:disabled,
+        .logout-btn:disabled {
+            opacity: 0.7;
+            cursor: wait;
+            transform: none;
+        }
+
+        .status-msg {
+            min-height: 40px;
+            margin-top: 14px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            text-align: center;
+            color: var(--muted);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .status-msg.is-error {
+            color: #ffb0b0;
+            background: var(--danger-bg);
+            border-color: rgba(255, 103, 103, 0.24);
+        }
+
+        .status-msg.is-success {
+            color: #b4f6c0;
+            background: var(--success-bg);
+            border-color: rgba(83, 215, 105, 0.26);
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 14px;
+                align-items: flex-start;
+            }
+
+            .settings-card {
+                padding: 20px;
+                border-radius: 18px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="settings-card">
+        <div class="header">
+            <h1>Head Admin Settings</h1>
+            <p>Manage your active account inside the dashboard panel.</p>
+        </div>
+
+        <div class="profile-pic-container">
+            <div class="profile-pic-wrapper">
+                <img id="profilePic" class="profile-pic" src="https://ui-avatars.com/api/?name=Head+Admin&background=1f2937&color=ffffff&size=128" alt="Head admin profile">
+            </div>
+            <label class="upload-btn" for="fileInput">
+                <i class="fa-solid fa-camera"></i>
+                Change Photo
+            </label>
+            <input type="file" id="fileInput" accept="image/*" hidden>
+            <div class="file-name" id="fileName">No new photo selected</div>
+        </div>
+
+        <div class="section">
+            <label for="adminIdDisplay">Head Admin ID</label>
+            <input type="text" id="adminIdDisplay" readonly>
+        </div>
+
+        <div class="section">
+            <label for="adminName">Full Name</label>
+            <input type="text" id="adminName" placeholder="Enter full name">
+        </div>
+
+        <div class="section">
+            <label for="newPass">New Password</label>
+            <div class="input-group">
+                <input type="password" id="newPass" class="password-input" placeholder="Leave blank to keep current password or enter 8+ characters">
+                <i class="fa-solid fa-eye toggle-password" id="togglePass1"></i>
+            </div>
+        </div>
+
+        <div class="section">
+            <label for="confirmPass">Confirm Password</label>
+            <div class="input-group">
+                <input type="password" id="confirmPass" class="password-input" placeholder="Repeat new password">
+                <i class="fa-solid fa-eye toggle-password" id="togglePass2"></i>
+            </div>
+        </div>
+
+        <button class="save-btn" id="saveBtn" type="button">Save Changes</button>
+        <div class="status-msg" id="statusText">Ready for changes.</div>
+        <button class="logout-btn" id="logoutBtn" type="button">Log Out</button>
+    </div>
+
+    <script src="../shared/app-client.js"></script>
+    <script src="./settings.js"></script>
+</body>
+</html>
+
+

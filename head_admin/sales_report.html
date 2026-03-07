@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #efeee9;
+    --panel: rgba(255, 255, 255, 0.9);
+    --ink: #11271f;
+    --muted: #68766f;
+    --line: #d9dfdb;
+    --green: #2f7d5a;
+    --green-soft: #e8f5ee;
+    --amber: #d29d2e;
+    --amber-soft: #fff5da;
+    --rose: #d06b6b;
+    --rose-soft: #fdeaea;
+    --slate: #dfe8e2;
+    --shadow: 0 28px 72px rgba(18, 39, 31, 0.1);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Manrope", sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at top left, rgba(47, 125, 90, 0.12), transparent 20%),
+      radial-gradient(circle at bottom right, rgba(210, 157, 46, 0.12), transparent 24%),
+      linear-gradient(180deg, #faf9f6 0%, var(--bg) 100%);
+  }
+  .page {
+    max-width: 1580px;
+    margin: 0 auto;
+    padding: 28px 22px 40px;
+  }
+  .hero,
+  .panel,
+  .card {
+    background: var(--panel);
+    border: 1px solid rgba(255, 255, 255, 0.76);
+    border-radius: 30px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+  }
+  .hero {
+    padding: 28px;
+    margin-bottom: 18px;
+  }
+  .hero-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: start;
+    flex-wrap: wrap;
+  }
+  .eyebrow {
+    margin: 0 0 8px;
+    color: var(--green);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  h1, h2, h3 {
+    margin: 0;
+    font-family: "Fraunces", serif;
+  }
+  h1 {
+    font-size: clamp(34px, 4vw, 50px);
+  }
+  h2 {
+    font-size: clamp(26px, 3vw, 34px);
+  }
+  .hero-copy,
+  .section-copy {
+    margin: 12px 0 0;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .active-range {
+    padding: 14px 18px;
+    border-radius: 22px;
+    background: linear-gradient(180deg, #f5fbf8 0%, #edf5f0 100%);
+    border: 1px solid #d9e9e0;
+    min-width: 280px;
+  }
+  .active-range span,
+  .active-range strong {
+    display: block;
+  }
+  .active-range span {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .active-range strong {
+    margin-top: 8px;
+    font-size: 24px;
+  }
+  .filter-panel {
+    margin-top: 18px;
+    padding: 18px;
+    border-radius: 24px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.78);
+  }
+  .filter-grid {
+    display: grid;
+    grid-template-columns: 1.45fr repeat(4, minmax(0, 1fr)) 1.1fr 1.25fr;
+    gap: 12px;
+    align-items: end;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .field.span-2 {
+    grid-column: span 2;
+  }
+  .field label {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  input,
+  select,
+  button {
+    font: inherit;
+  }
+  input,
+  select {
+    width: 100%;
+    min-height: 48px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 12px 14px;
+    background: #fffdfb;
+    color: var(--ink);
+  }
+  input:focus,
+  select:focus {
+    outline: none;
+    border-color: rgba(47, 125, 90, 0.44);
+    box-shadow: 0 0 0 4px rgba(47, 125, 90, 0.1);
+  }
+  .filter-actions {
+    display: flex;
+    gap: 10px;
+  }
+  button {
+    min-height: 46px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    font-weight: 800;
+  }
+  .primary-btn {
+    background: linear-gradient(135deg, #2f7d5a 0%, #48a176 100%);
+    color: #fff;
+  }
+  .secondary-btn {
+    background: #edf5f0;
+    color: var(--green);
+  }
+  .status {
+    min-height: 22px;
+    margin-top: 14px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .status.error {
+    color: #b91c1c;
+  }
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+  }
+  .metric-card {
+    padding: 20px;
+    border-radius: 26px;
+    border: 1px solid var(--line);
+    background: linear-gradient(180deg, #fbfffc 0%, #f1f8f4 100%);
+  }
+  .metric-card.expense {
+    background: linear-gradient(180deg, #fffdf9 0%, #fff4e8 100%);
+  }
+  .metric-card.cash {
+    background: linear-gradient(180deg, #fffef7 0%, #fff9dc 100%);
+  }
+  .metric-card.net {
+    background: linear-gradient(180deg, #fcfbff 0%, #eef2f4 100%);
+  }
+  .metric-card.cash-net {
+    background: linear-gradient(180deg, #f8feff 0%, #e9f5f7 100%);
+  }
+  .metric-card span,
+  .metric-card strong,
+  .metric-card small {
+    display: block;
+  }
+  .metric-card span {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .metric-card strong {
+    margin-top: 10px;
+    font-size: clamp(26px, 3vw, 38px);
+  }
+  .metric-card small {
+    margin-top: 10px;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .mini-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+  }
+  .mini-card {
+    padding: 18px;
+    border-radius: 24px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.82);
+  }
+  .mini-card span,
+  .mini-card strong {
+    display: block;
+  }
+  .mini-card span {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .mini-card strong {
+    margin-top: 8px;
+    font-size: clamp(24px, 3vw, 32px);
+  }
+  .content-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr);
+    gap: 18px;
+    margin-top: 18px;
+  }
+  .panel {
+    padding: 22px;
+  }
+  .chart-card + .chart-card,
+  .stack-card + .stack-card {
+    margin-top: 18px;
+  }
+  .chart-card,
+  .stack-card {
+    border: 1px solid var(--line);
+    border-radius: 26px;
+    padding: 18px;
+    background: rgba(255, 255, 255, 0.78);
+  }
+  .chart-header,
+  .stack-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: start;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .legend {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .legend i {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    display: inline-block;
+  }
+  .branch-groups {
+    display: grid;
+    gap: 16px;
+  }
+  .branch-group {
+    padding: 16px;
+    border-radius: 22px;
+    background: #f8faf8;
+    border: 1px solid #e7ece8;
+  }
+  .branch-group h3 {
+    font-size: 22px;
+  }
+  .branch-total {
+    margin-top: 4px;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .bar-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .bar-row {
+    display: grid;
+    grid-template-columns: 140px minmax(0, 1fr) 120px;
+    gap: 12px;
+    align-items: center;
+  }
+  .bar-row span,
+  .bar-row strong {
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .bar-track {
+    position: relative;
+    height: 14px;
+    border-radius: 999px;
+    background: #edf1ee;
+    overflow: hidden;
+  }
+  .bar-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: inherit;
+  }
+  .stack-grid {
+    display: grid;
+    gap: 18px;
+  }
+  .simple-list {
+    display: grid;
+    gap: 12px;
+  }
+  .payment-mode-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    max-height: 270px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .payment-mode-list .simple-row {
+    padding: 8px 10px;
+    border: 1px solid #e7ece8;
+    border-radius: 12px;
+    border-bottom: 1px solid #e7ece8;
+    background: #fbfdfb;
+  }
+  .payment-mode-list .simple-row:last-child {
+    padding: 8px 10px;
+    border-bottom: 1px solid #e7ece8;
+  }
+  .payment-mode-list .simple-row span {
+    font-size: 12px;
+  }
+  .payment-mode-list .simple-row strong {
+    font-size: 13px;
+  }
+  .simple-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #edf1ee;
+  }
+  .simple-row:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+  .simple-row span {
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .simple-row strong {
+    font-size: 15px;
+  }
+  .table-panel {
+    margin-top: 18px;
+    padding: 22px;
+  }
+  .table-scroll-helper {
+    position: sticky;
+    top: 12px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 18px;
+    padding: 10px 14px;
+    border: 1px solid #dce6e0;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 16px 28px rgba(17, 39, 31, 0.08);
+    backdrop-filter: blur(10px);
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .table-scroll-helper[hidden] {
+    display: none;
+  }
+  .table-scroll-label {
+    flex: 0 0 auto;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .table-scroll-proxy {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 16px;
+    overscroll-behavior-x: contain;
+    scrollbar-gutter: stable both-edges;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-color: #8ea99a #edf5f0;
+    scrollbar-width: thin;
+  }
+  .table-scroll-proxy::-webkit-scrollbar {
+    height: 12px;
+  }
+  .table-scroll-proxy::-webkit-scrollbar-track {
+    background: #edf5f0;
+    border-radius: 999px;
+  }
+  .table-scroll-proxy::-webkit-scrollbar-thumb {
+    background: #8ea99a;
+    border-radius: 999px;
+  }
+  .table-scroll-proxy-inner {
+    height: 1px;
+  }
+  .table-scroll-helper:not([hidden]) + .table-shell {
+    margin-top: 10px;
+  }
+  .table-shell {
+    margin-top: 18px;
+    overflow: auto;
+    overscroll-behavior-x: contain;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    background: #fff;
+  }
+  table {
+    width: 100%;
+    min-width: 1320px;
+    border-collapse: collapse;
+  }
+  th,
+  td {
+    padding: 14px 12px;
+    border-bottom: 1px solid #edf1ee;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #edf5f0;
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  tbody tr:nth-child(even) td {
+    background: rgba(244, 248, 245, 0.7);
+  }
+  .note-cell {
+    white-space: normal;
+    min-width: 220px;
+  }
+  .action-cell {
+    white-space: nowrap;
+  }
+  .action-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .table-action-btn {
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 12px;
+    background: #edf5f0;
+    color: var(--green);
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .table-action-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  .table-action-btn.receipt-btn {
+    background: #fff5da;
+    color: #9a6a00;
+  }
+  .table-action-btn.delete-btn {
+    background: #fdeaea;
+    color: #b42318;
+  }
+  .receipt-modal[hidden] {
+    display: none;
+  }
+  .receipt-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(17, 24, 39, 0.46);
+    backdrop-filter: blur(8px);
+  }
+  .receipt-dialog {
+    width: min(720px, 100%);
+    max-height: calc(100vh - 40px);
+    overflow: auto;
+    padding: 24px;
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.26);
+    font-family: "Segoe UI", Aptos, Arial, sans-serif;
+  }
+  .receipt-dialog-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .receipt-modal-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 16px;
+    margin-top: 18px;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background: #f7fffc;
+  }
+  .receipt-brand-card {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .receipt-brand-logo {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    border-radius: 18px;
+    padding: 8px;
+    background: #fff;
+    border: 1px solid #d8e7e0;
+  }
+  .receipt-brand-copy strong,
+  .receipt-brand-copy small {
+    display: block;
+  }
+  .receipt-brand-copy strong {
+    font-size: 20px;
+    letter-spacing: 0.03em;
+    font-family: Georgia, "Times New Roman", serif;
+  }
+  .receipt-brand-copy small {
+    margin-top: 4px;
+    color: var(--muted);
+  }
+  .receipt-modal-meta div,
+  .receipt-modal-totals div {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .receipt-modal-items {
+    margin-top: 18px;
+    display: grid;
+    gap: 10px;
+  }
+  .receipt-item-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    border-radius: 20px;
+    background: #effaf6;
+    border: 1px solid #d4ede4;
+  }
+  .receipt-item-copy small {
+    display: block;
+    margin-top: 4px;
+    color: var(--muted);
+  }
+  .receipt-modal-totals {
+    margin-top: 18px;
+    display: grid;
+    gap: 10px;
+    padding: 18px;
+    border-radius: 22px;
+    border: 1px dashed rgba(15, 118, 110, 0.34);
+    background: #fbfffd;
+  }
+  .receipt-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+  }
+  .receipt-modal-approval {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 18px;
+    padding-top: 10px;
+  }
+  .receipt-approval-card {
+    min-width: 260px;
+    max-width: 320px;
+    text-align: center;
+  }
+  .receipt-approval-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: #1f2937;
+  }
+  .receipt-approval-signature-wrap {
+    width: 220px;
+    margin: 6px auto 8px;
+  }
+  .receipt-approval-signature {
+    display: block;
+    width: 100%;
+    height: 90px;
+    margin: 0 auto -28px;
+    object-fit: contain;
+    object-position: center bottom;
+    position: relative;
+    top: 16px;
+    z-index: 1;
+  }
+  .receipt-approval-line {
+    width: 100%;
+    margin: 0;
+    border-top: 1px solid rgba(15, 23, 42, 0.55);
+  }
+  .receipt-approval-name {
+    font-size: 14px;
+    font-weight: 700;
+    font-family: Georgia, "Times New Roman", serif;
+  }
+  .receipt-approval-role,
+  .receipt-approval-company {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .empty {
+    padding: 28px 12px;
+    text-align: center;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  @media (max-width: 1380px) {
+    .filter-grid,
+    .metric-grid,
+    .mini-grid,
+    .content-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 860px) {
+    .page {
+      padding: 18px 14px 28px;
+    }
+    .hero,
+    .panel,
+    .card {
+      padding: 18px;
+      border-radius: 24px;
+    }
+    .filter-actions,
+    .hero-head {
+      flex-direction: column;
+    }
+    .table-scroll-helper {
+      top: 8px;
+      align-items: flex-start;
+      flex-direction: column;
+    }
+    .table-scroll-proxy {
+      width: 100%;
+    }
+    .bar-row {
+      grid-template-columns: 1fr;
+    }
+    .payment-mode-list {
+      grid-template-columns: 1fr;
+      max-height: 240px;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="hero-head">
+        <div>
+          <p class="eyebrow">Reporting</p>
+          <h1 id="salesReportTitle">Sales Report</h1>
+          <p id="salesReportCopy" class="hero-copy">Full sales view with expense and cash income overlay, branch breakdown bars, and a detailed transaction table.</p>
+        </div>
+
+        <div class="active-range">
+          <span>Active Range</span>
+          <strong id="activeDateLabel">All Dates</strong>
+        </div>
+      </div>
+
+      <section class="filter-panel">
+        <div class="filter-grid">
+          <div class="field">
+            <label for="periodFilter">Report View</label>
+            <select id="periodFilter">
+              <option value="this_month">This Month</option>
+              <option value="this_week">This Week</option>
+              <option value="custom">Custom Range</option>
+              <option value="all">All Dates</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="dateFromFilter">Date From</label>
+            <input id="dateFromFilter" type="date">
+          </div>
+          <div class="field">
+            <label for="dateToFilter">Date To</label>
+            <input id="dateToFilter" type="date">
+          </div>
+          <div class="field">
+            <label for="branchFilter">Branch</label>
+            <select id="branchFilter"></select>
+          </div>
+          <div id="fieldCashBranchFilter" class="field">
+            <label for="cashBranchFilter">Cash Branch</label>
+            <select id="cashBranchFilter"></select>
+          </div>
+          <div id="fieldPaymentFilter" class="field">
+            <label for="paymentFilter">Payment</label>
+            <select id="paymentFilter"></select>
+          </div>
+          <div id="fieldAdminFilter" class="field">
+            <label for="adminFilter">Admin</label>
+            <select id="adminFilter"></select>
+          </div>
+          <div id="fieldSalesRepFilter" class="field">
+            <label for="salesRepFilter">Sales Rep</label>
+            <input id="salesRepFilter" list="salesRepFilterList" type="text" placeholder="All sales representatives">
+            <datalist id="salesRepFilterList"></datalist>
+          </div>
+          <div class="field span-2">
+            <label for="searchFilter">Search</label>
+            <input id="searchFilter" type="text" placeholder="Receipt no., order no., customer, item, or note">
+          </div>
+          <div class="filter-actions">
+            <button id="applyFiltersBtn" type="button" class="primary-btn">Search</button>
+            <button id="resetFiltersBtn" type="button" class="secondary-btn">Reset</button>
+          </div>
+        </div>
+
+        <div id="reportStatus" class="status">Loading report...</div>
+      </section>
+
+      <section class="metric-grid">
+        <article class="metric-card">
+          <span>Total Sales</span>
+          <strong id="totalSalesValue">PHP 0.00</strong>
+          <small>Gross sales from filtered sales entries.</small>
+        </article>
+        <article class="metric-card expense">
+          <span>Total Expenses</span>
+          <strong id="totalExpensesValue">PHP 0.00</strong>
+          <small>Expenses pulled from the expense manager.</small>
+        </article>
+        <article class="metric-card cash">
+          <span>Cash Income</span>
+          <strong id="totalCashIncomeValue">PHP 0.00</strong>
+          <small>Cash from linked sales orders and manual entries.</small>
+        </article>
+        <article class="metric-card cash-net">
+          <span>Cash Net</span>
+          <strong id="cashNetValue">PHP 0.00</strong>
+          <small>`Cash Income - Expenses` para sa actual branch cash.</small>
+        </article>
+        <article class="metric-card net">
+          <span>Net Balance</span>
+          <strong id="netValue">PHP 0.00</strong>
+          <small>`Sales + Cash Income - Expenses`</small>
+        </article>
+      </section>
+
+      <section class="mini-grid">
+        <article class="mini-card">
+          <span>Orders</span>
+          <strong id="totalOrdersValue">0</strong>
+        </article>
+        <article class="mini-card">
+          <span>Payments</span>
+          <strong id="totalPaymentsValue">PHP 0.00</strong>
+        </article>
+        <article class="mini-card">
+          <span>Collections</span>
+          <strong id="totalCollectionsValue">PHP 0.00</strong>
+        </article>
+      </section>
+    </section>
+
+    <section class="content-grid">
+      <section class="panel">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <p class="eyebrow">Breakdown</p>
+              <h2>By Branch</h2>
+              <p class="section-copy">Bar breakdown ng sales, expenses, cash income, cash net, at net per branch.</p>
+            </div>
+            <div class="legend">
+              <span><i style="background:#2f7d5a"></i> Sales</span>
+              <span><i style="background:#d06b6b"></i> Expenses</span>
+              <span><i style="background:#d29d2e"></i> Cash Income</span>
+              <span><i style="background:#205c68"></i> Cash Net</span>
+              <span><i style="background:#516d7a"></i> Net</span>
+            </div>
+          </div>
+
+          <div id="branchChartBody" class="branch-groups">
+            <div class="empty">Loading branch chart...</div>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <p class="eyebrow">Breakdown</p>
+              <h2>Payment Methods</h2>
+              <p class="section-copy">Top payment method amounts from the filtered sales result.</p>
+            </div>
+          </div>
+
+          <div id="paymentChartBody" class="bar-list">
+            <div class="empty">Loading payment chart...</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="stack-grid">
+          <section class="stack-card">
+            <div class="stack-header">
+              <div>
+                <p class="eyebrow">People</p>
+                <h2>Admin Breakdown</h2>
+              </div>
+            </div>
+            <div id="adminBreakdownBody" class="simple-list">
+              <div class="empty">Loading admin breakdown...</div>
+            </div>
+          </section>
+
+          <section class="stack-card">
+            <div class="stack-header">
+              <div>
+                <p class="eyebrow">People</p>
+                <h2>Sales Rep Breakdown</h2>
+              </div>
+            </div>
+            <div id="salesRepBreakdownBody" class="simple-list">
+              <div class="empty">Loading sales rep breakdown...</div>
+            </div>
+          </section>
+
+          <section class="stack-card">
+            <div class="stack-header">
+              <div>
+                <p class="eyebrow">Payments</p>
+                <h2>All Payment Modes</h2>
+                <p class="section-copy">Lahat ng mode of payment at total na na-receive sa selected filters.</p>
+              </div>
+            </div>
+            <div id="paymentModeListBody" class="simple-list payment-mode-list">
+              <div class="empty">Loading payment mode totals...</div>
+            </div>
+          </section>
+
+          <section class="stack-card">
+            <div class="stack-header">
+              <div>
+                <p class="eyebrow">Branch Totals</p>
+                <h2>Cash Net by Branch</h2>
+              </div>
+            </div>
+            <div id="branchFinanceList" class="simple-list">
+              <div class="empty">Loading branch finance list...</div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </section>
+
+    <section class="panel table-panel">
+      <div>
+        <p class="eyebrow">Sales Rows</p>
+        <h2>Detailed Transactions</h2>
+        <p class="section-copy">Filtered transaction rows with totals, payment data, courier, at notes.</p>
+      </div>
+
+      <div id="salesTableScrollHelper" class="table-scroll-helper" hidden>
+        <span class="table-scroll-label">Horizontal Scroll</span>
+        <div id="salesTableScrollProxy" class="table-scroll-proxy" aria-label="Horizontal scroll for sales transactions table">
+          <div id="salesTableScrollProxyInner" class="table-scroll-proxy-inner"></div>
+        </div>
+      </div>
+
+      <div id="salesTableShell" class="table-shell">
+        <table id="salesTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Receipt #</th>
+              <th>Order #</th>
+              <th>Customer</th>
+              <th>Invoice Branch</th>
+              <th>Cash Branch</th>
+              <th>Total</th>
+              <th>Payment</th>
+              <th>Amount</th>
+              <th>Collection</th>
+              <th>Admin</th>
+              <th>Sales Rep</th>
+              <th>Courier</th>
+              <th>Item</th>
+              <th>Qty</th>
+              <th>Note</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="salesTableBody">
+            <tr><td colspan="17" class="empty">Loading sales records...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div id="receiptModal" class="receipt-modal" hidden>
+    <div class="receipt-dialog">
+      <div class="receipt-dialog-header">
+        <div>
+          <p class="eyebrow">Receipt Ready</p>
+          <h2>Order Receipt</h2>
+        </div>
+        <button id="closeReceiptBtn" type="button" class="secondary-btn">Close</button>
+      </div>
+
+      <div id="receiptModalMeta" class="receipt-modal-meta"></div>
+      <div id="receiptModalItems" class="receipt-modal-items"></div>
+      <div id="receiptModalTotals" class="receipt-modal-totals"></div>
+      <div id="receiptModalApproval" class="receipt-modal-approval"></div>
+
+      <div class="receipt-modal-actions">
+        <button id="printReceiptBtn" type="button" class="primary-btn">Print Receipt</button>
+        <button id="dismissReceiptBtn" type="button" class="secondary-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/app-client.js"></script>
+  <script src="sales_report.js"></script>
+</body>
+</html>

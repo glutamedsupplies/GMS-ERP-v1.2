@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Chat Portal</title>
+<style>
+  :root {
+    --bg: #f4f7ff;
+    --panel: #ffffff;
+    --text: #1e293b;
+    --muted: #64748b;
+    --line: #dce5f3;
+    --accent: #0b7285;
+    --accent-soft: #e0f5f8;
+    --danger: #b42318;
+    --shadow: 0 18px 42px rgba(15, 23, 42, 0.1);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(circle at top right, rgba(11, 114, 133, 0.14), transparent 28%),
+      linear-gradient(180deg, #fcfeff 0%, var(--bg) 100%);
+  }
+
+  .page {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 30px 18px 40px;
+  }
+
+  .hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    gap: 12px;
+  }
+
+  .hero h1 {
+    margin: 0 0 6px;
+    font-size: 30px;
+  }
+
+  .hero p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .hero a {
+    text-decoration: none;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    padding: 18px;
+  }
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: 20px;
+  }
+
+  .copy {
+    margin: 0 0 14px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .field {
+    margin-bottom: 12px;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  input,
+  textarea {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 11px 12px;
+    font-size: 14px;
+    color: var(--text);
+    background: #fff;
+    outline: none;
+  }
+
+  textarea {
+    min-height: 90px;
+    resize: vertical;
+    line-height: 1.5;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  button {
+    border: none;
+    cursor: pointer;
+    border-radius: 12px;
+    padding: 11px 14px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .primary {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .secondary {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .status {
+    margin: 12px 0 0;
+    min-height: 22px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .status.error {
+    color: var(--danger);
+  }
+
+  .thread {
+    margin-top: 16px;
+    display: none;
+  }
+
+  .thread-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .meta-item {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #f8fbff;
+    padding: 10px 11px;
+  }
+
+  .meta-label {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+
+  .meta-value {
+    font-weight: 700;
+    word-break: break-word;
+  }
+
+  .pill {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 4px 9px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+
+  .pill.open { background: #e8f3ff; color: #0b5ad6; }
+  .pill.in_progress { background: #fff4df; color: #b54708; }
+  .pill.resolved { background: #e8f8ef; color: #027a48; }
+  .pill.closed { background: #f3f4f6; color: #374151; }
+
+  .chat-box {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fbfdff;
+    min-height: 220px;
+    max-height: 380px;
+    overflow: auto;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+
+  .chat-message {
+    max-width: 85%;
+    margin-bottom: 10px;
+    padding: 9px 10px;
+    border-radius: 11px;
+    border: 1px solid var(--line);
+    background: #fff;
+    word-break: break-word;
+  }
+
+  .chat-message.customer {
+    margin-left: auto;
+    background: #e6f8fb;
+    border-color: #bce9f1;
+  }
+
+  .chat-meta {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .chat-empty {
+    color: var(--muted);
+    text-align: center;
+    padding: 24px 10px;
+  }
+
+  .chat-actions {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+    align-items: start;
+  }
+  .request-edit-section {
+    display: none;
+  }
+
+  @media (max-width: 900px) {
+    .grid,
+    .row,
+    .chat-actions {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <div>
+        <h1 id="portalTitle">Customer Chat Portal</h1>
+        <p id="portalSubtitle">Send your message and chat directly with support.</p>
+      </div>
+      <a href="/index.html">Back to Login</a>
+    </div>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Start Chat</h2>
+        <p class="copy">Mag-send ng message request para diretsong pumasok sa support chat thread.</p>
+        <div class="field">
+          <label for="companyCodeInput">Company Code</label>
+          <input id="companyCodeInput" type="text" placeholder="Enter company code">
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="clientNameInput">Name</label>
+            <input id="clientNameInput" type="text" placeholder="Your name">
+          </div>
+          <div class="field">
+            <label for="contactNumberInput">Contact Number</label>
+            <input id="contactNumberInput" type="text" inputmode="numeric" placeholder="0917...">
+          </div>
+        </div>
+        <div class="field">
+          <label for="requestDetailsInput">Topic (optional)</label>
+          <textarea id="requestDetailsInput" placeholder="Short topic/title ng concern mo"></textarea>
+        </div>
+        <div class="field">
+          <label for="initialMessageInput">Initial Message (optional)</label>
+          <textarea id="initialMessageInput" placeholder="Extra context or question..."></textarea>
+        </div>
+        <button id="createRequestBtn" class="primary" type="button">Start Chat</button>
+      </section>
+
+      <section class="card">
+        <h2>Open Existing Request</h2>
+        <p class="copy">Ilagay ang request code at contact number para ma-open at ma-edit/chat mo ulit.</p>
+        <div class="field">
+          <label for="requestCodeInput">Request Code</label>
+          <input id="requestCodeInput" type="text" placeholder="REQ-....">
+        </div>
+        <div class="field">
+          <label for="lookupContactInput">Contact Number (for verification)</label>
+          <input id="lookupContactInput" type="text" inputmode="numeric" placeholder="Contact number used on request">
+        </div>
+        <button id="openRequestBtn" class="secondary" type="button">Open Request</button>
+      </section>
+    </div>
+
+    <div id="portalStatus" class="status">Fill up the form to start.</div>
+
+    <section id="requestThreadSection" class="card thread">
+      <h2>Chat Thread</h2>
+      <div class="thread-meta">
+        <div class="meta-item">
+          <span class="meta-label">Request Code</span>
+          <span id="requestCodeLabel" class="meta-value">-</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Status</span>
+          <span id="requestStatusLabel" class="meta-value">-</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Editable by Customer</span>
+          <span id="requestEditableLabel" class="meta-value">-</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Last Updated</span>
+          <span id="requestUpdatedLabel" class="meta-value">-</span>
+        </div>
+      </div>
+
+      <div class="request-edit-section">
+        <div class="row">
+          <div class="field">
+            <label for="editNameInput">Name</label>
+            <input id="editNameInput" type="text">
+          </div>
+          <div class="field">
+            <label for="editContactInput">Contact Number</label>
+            <input id="editContactInput" type="text" inputmode="numeric">
+          </div>
+        </div>
+        <div class="field">
+          <label for="editDetailsInput">Request Details</label>
+          <textarea id="editDetailsInput"></textarea>
+        </div>
+        <div class="row">
+          <button id="saveRequestBtn" class="primary" type="button">Save Request Edits</button>
+          <button id="refreshThreadBtn" class="secondary" type="button">Refresh Thread</button>
+        </div>
+      </div>
+
+      <h2 style="margin-top:18px;">Customer Chat</h2>
+      <div id="chatMessages" class="chat-box">
+        <div class="chat-empty">No messages yet.</div>
+      </div>
+      <div class="chat-actions">
+        <textarea id="chatMessageInput" placeholder="Type your message..."></textarea>
+        <button id="sendMessageBtn" class="primary" type="button">Send</button>
+        <button id="refreshChatBtn" class="secondary" type="button">Reload</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="../shared/app-client.js"></script>
+  <script src="customer_portal.js"></script>
+</body>
+</html>

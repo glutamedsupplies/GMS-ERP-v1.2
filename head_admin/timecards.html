@@ -1,0 +1,80 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Time Cards</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap');
+    body { margin: 0; font-family: 'Roboto', sans-serif; display: flex; height: 100vh; background: #f0f2f5; overflow: hidden; }
+
+    /* Side panel */
+    .side-panel { width: 250px; background: linear-gradient(180deg,#2b7e28,#830cb3); color: #fff; padding: 20px 10px; overflow-y: auto; }
+    .side-panel h3 { padding-left: 10px; margin-bottom: 20px; font-weight: 500; }
+    .employee-item { display: flex; align-items: center; padding: 10px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.3s; }
+    .employee-item:hover { background: rgba(255,255,255,0.2); }
+    .employee-item.active { background: rgba(255,255,255,0.3); border: 1px solid #fff; }
+    .employee-item img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 10px; border: 2px solid #fff; }
+
+    .main-content { flex: 1; padding: 30px; overflow-y: auto; background: #fff; position: relative; }
+    .selectors { display: flex; gap: 20px; margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 8px; align-items: center; flex-wrap: wrap; }
+    .selectors label { font-weight: 500; margin-right: 5px; color: #555; }
+    .selectors select, .selectors input { padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc; outline: none; }
+    .week-note { color: #666; font-size: 13px; }
+
+    h2 { margin-bottom: 20px; color: #333; }
+    table { width: 100%; border-collapse: collapse; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border-radius: 12px; overflow: hidden; }
+    th, td { padding: 12px; text-align: center; border-bottom: 1px solid #ddd; }
+    th { background: linear-gradient(45deg,#ff512f,#dd2476); color: #fff; font-weight: 500; font-size: 13px; text-transform: uppercase; }
+    
+    .status-present { color: #00c853; font-weight:bold; }
+    .status-late { color: #ffab00; font-weight:bold; }
+    .status-absent { color: #d50000; font-weight:bold; }
+    .status-excuse { color: #2962ff; font-weight:bold; }
+    .status-day-off { color: #6c757d; font-weight:bold; }
+    .status-dropdown { padding: 4px; border-radius:4px; border:1px solid #ddd; }
+  </style>
+</head>
+<body>
+
+<div class="side-panel" id="employeePanel">
+  <h3><i class="fa-solid fa-users"></i> Accounts</h3>
+  <div id="employeeList"></div>
+</div>
+
+<div class="main-content">
+  <h2 id="employeeNameTitle">Select an Account</h2>
+
+  <div class="selectors">
+    <div>
+      <label>Week Date:</label>
+      <input type="date" id="weekDate">
+    </div>
+    <div>
+      <span class="week-note" id="weekRangeLabel">Loading week...</span>
+    </div>
+  </div>
+
+  <table id="timecardTable">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Day</th>
+        <th>Time In</th>
+        <th>Time Out</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="timecardTableBody">
+      <tr><td colspan="5" style="padding:50px; color:#888;">Select an account to view time card</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script src="../shared/app-client.js"></script>
+<script src="timecards.js"></script>
+</body>
+</html>
+

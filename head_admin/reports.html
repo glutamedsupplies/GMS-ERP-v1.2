@@ -1,0 +1,74 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Reports</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body{
+    margin:0;
+    font-family:'Poppins',sans-serif;
+    background:linear-gradient(135deg,#1e3c72,#2a5298);
+    color:white;
+}
+.container{ padding:30px; }
+h1{ text-align:center; margin-bottom:30px; }
+.filters{ display:flex; gap:15px; flex-wrap:wrap; justify-content:center; margin-bottom:30px; }
+select,input{ padding:10px 15px; border:none; border-radius:8px; font-size:14px; }
+button{ padding:10px 20px; border:none; border-radius:8px; background:#00c853; color:white; cursor:pointer; }
+button:hover{ background:#00e676; }
+.table-container{ background:rgba(255,255,255,0.1); padding:20px; border-radius:15px; backdrop-filter:blur(10px); }
+table{ width:100%; border-collapse:collapse; color:white; }
+th,td{ padding:12px; text-align:center; }
+th{ background:rgba(0,0,0,0.3); }
+tr:nth-child(even){ background:rgba(255,255,255,0.05); }
+.summary{ margin-top:20px; display:flex; justify-content:space-around; font-weight:600; }
+.status-present{ color:#00e676; }
+.status-late{ color:#ffea00; }
+.status-absent{ color:#ff1744; }
+.status-excused{ color:#00b0ff; }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>Attendance Reports</h1>
+    <div class="filters">
+        <select id="employeeFilter">
+            <option value="all">All Accounts</option>
+        </select>
+        <select id="rangeFilter">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+        </select>
+        <input type="date" id="dateFilter">
+        <button id="filterBtn" type="button">Filter</button>
+    </div>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Account</th>
+                    <th>Time In</th>
+                    <th>Time Out</th>
+                    <th>Minutes Late</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="reportBody"></tbody>
+        </table>
+        <div class="summary">
+            <div>Total Late Minutes: <span id="totalLate">0</span></div>
+            <div>Total Absences: <span id="totalAbsent">0</span></div>
+        </div>
+    </div>
+</div>
+<script src="../shared/app-client.js"></script>
+<script src="reports.js"></script>
+</body>
+</html>
+
+

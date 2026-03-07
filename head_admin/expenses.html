@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expenses and Cash Income</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f2efe8;
+    --panel: rgba(255, 255, 255, 0.92);
+    --ink: #16261e;
+    --muted: #6f7d76;
+    --line: #d9e1dc;
+    --accent: #25674c;
+    --accent-soft: #e7f4ec;
+    --warn: #b45309;
+    --warn-soft: #fff4e8;
+    --danger: #b91c1c;
+    --danger-soft: #fee2e2;
+    --shadow: 0 28px 70px rgba(27, 42, 34, 0.12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Manrope", sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at top left, rgba(37, 103, 76, 0.14), transparent 22%),
+      radial-gradient(circle at bottom right, rgba(180, 83, 9, 0.14), transparent 24%),
+      linear-gradient(180deg, #faf8f4 0%, var(--bg) 100%);
+  }
+  .page {
+    max-width: 1540px;
+    margin: 0 auto;
+    padding: 28px 22px 40px;
+  }
+  .hero,
+  .manager {
+    background: var(--panel);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 30px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+  }
+  .hero {
+    padding: 28px;
+    margin-bottom: 18px;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+    gap: 18px;
+    align-items: end;
+  }
+  .eyebrow {
+    margin: 0 0 8px;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  h1, h2, h3 {
+    margin: 0;
+    font-family: "Fraunces", serif;
+  }
+  h1 {
+    font-size: clamp(32px, 4vw, 46px);
+  }
+  h2 {
+    font-size: clamp(26px, 3vw, 34px);
+  }
+  .hero-copy,
+  .panel-copy {
+    margin: 12px 0 0;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .hero-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .hero-metric {
+    padding: 18px;
+    border-radius: 24px;
+    background: linear-gradient(180deg, #f7fbf8 0%, #edf5f0 100%);
+    border: 1px solid #dbe8e0;
+  }
+  .hero-metric.warn {
+    background: linear-gradient(180deg, #fff9f0 0%, #fff1df 100%);
+    border-color: #f3ddbe;
+  }
+  .hero-metric span,
+  .hero-metric strong,
+  .hero-metric small {
+    display: block;
+  }
+  .hero-metric span {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .hero-metric strong {
+    margin-top: 8px;
+    font-size: clamp(22px, 3vw, 30px);
+  }
+  .hero-metric small {
+    margin-top: 6px;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .manager-list {
+    display: grid;
+    gap: 18px;
+  }
+  .manager {
+    padding: 22px;
+  }
+  .manager-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: start;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .mode-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .mode-badge.warn {
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+  .manager-grid {
+    display: grid;
+    grid-template-columns: minmax(320px, 0.9fr) minmax(520px, 1.2fr);
+    gap: 18px;
+  }
+  .subpanel {
+    border: 1px solid var(--line);
+    border-radius: 26px;
+    padding: 18px;
+    background: rgba(255, 255, 255, 0.75);
+  }
+  .subpanel.warning {
+    background: linear-gradient(180deg, #fffefb 0%, #fff7ec 100%);
+  }
+  .subpanel-title {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .subpanel-title p {
+    margin: 6px 0 0;
+    color: var(--muted);
+  }
+  .form-grid,
+  .filter-grid,
+  .summary-grid {
+    display: grid;
+    gap: 14px;
+  }
+  .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 18px;
+  }
+  .filter-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 18px;
+  }
+  .summary-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    margin-top: 18px;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .field.span-2,
+  .field.span-3 {
+    grid-column: 1 / -1;
+  }
+  .field label {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  input,
+  select,
+  button {
+    font: inherit;
+  }
+  input,
+  select {
+    width: 100%;
+    min-height: 48px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 12px 14px;
+    background: #fffdfb;
+    color: var(--ink);
+  }
+  input:focus,
+  select:focus {
+    outline: none;
+    border-color: rgba(37, 103, 76, 0.44);
+    box-shadow: 0 0 0 4px rgba(37, 103, 76, 0.1);
+  }
+  .actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  button {
+    min-height: 44px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    font-weight: 800;
+  }
+  .primary-btn {
+    background: linear-gradient(135deg, #25674c 0%, #2e8b66 100%);
+    color: #fff;
+  }
+  .secondary-btn {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .warning-btn {
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+  .danger-btn {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+  .tiny-btn {
+    min-height: 36px;
+    padding: 0 12px;
+    border-radius: 12px;
+    font-size: 13px;
+  }
+  .status {
+    min-height: 22px;
+    margin-top: 14px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .status.error {
+    color: var(--danger);
+  }
+  .summary-card {
+    padding: 16px;
+    border-radius: 22px;
+    border: 1px solid var(--line);
+    background: linear-gradient(180deg, #fbfffc 0%, #f1f7f3 100%);
+  }
+  .summary-card.warn {
+    background: linear-gradient(180deg, #fffdf8 0%, #fff4e9 100%);
+  }
+  .summary-card span,
+  .summary-card strong {
+    display: block;
+  }
+  .summary-card span {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .summary-card strong {
+    margin-top: 8px;
+    font-size: clamp(22px, 3vw, 30px);
+  }
+  .table-shell {
+    margin-top: 18px;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    background: #fff;
+  }
+  table {
+    width: 100%;
+    min-width: 980px;
+    border-collapse: collapse;
+  }
+  th,
+  td {
+    padding: 14px 12px;
+    border-bottom: 1px solid #edf1ee;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #eef6f1;
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .warning .table-shell th,
+  .warning .table-shell th {
+    background: #fff3e4;
+    color: var(--warn);
+  }
+  tbody tr:nth-child(even) td {
+    background: rgba(244, 248, 245, 0.72);
+  }
+  .table-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .cell-copy strong,
+  .cell-copy small {
+    display: block;
+  }
+  .cell-copy small {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .status-pill.pending {
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+  .status-pill.confirmed {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .status-pill.cancelled {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+  .empty {
+    padding: 28px 12px;
+    text-align: center;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .note-cell {
+    white-space: normal;
+    min-width: 180px;
+  }
+  @media (max-width: 1240px) {
+    .hero-grid,
+    .manager-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 860px) {
+    .page {
+      padding: 18px 14px 28px;
+    }
+    .hero,
+    .manager {
+      padding: 18px;
+      border-radius: 24px;
+    }
+    .hero-metrics,
+    .form-grid,
+    .filter-grid,
+    .summary-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="hero-grid">
+        <div>
+          <p class="eyebrow">Finance Monitor</p>
+          <h1 id="expensesPageTitle">Expenses and Cash Income</h1>
+          <p id="expensesPageCopy" class="hero-copy">Dito mo na puwedeng i-manage ang branch expenses at cash income records per branch, kasama ang sales-linked at manual entries. Puwede nang mag-add, edit, delete, at reset-all ng entries per module.</p>
+        </div>
+
+        <div class="hero-metrics">
+          <article class="hero-metric">
+            <span>Expense Control</span>
+            <strong>Edit / Delete</strong>
+            <small>Update or remove old expense entries anytime.</small>
+          </article>
+          <article class="hero-metric warn">
+            <span>Cash Income</span>
+            <strong>Per Branch</strong>
+            <small>Separate tracker for sales-linked and manual cash income records by branch.</small>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <div class="manager-list">
+      <section class="manager" id="expenseManager">
+        <div class="manager-head">
+          <div>
+            <p class="eyebrow">Module One</p>
+            <h2>Expenses</h2>
+            <p class="panel-copy">I-log, i-edit, i-delete, o i-reset lahat ng expense entries per branch.</p>
+          </div>
+          <div id="expenseModeBadge" class="mode-badge">Add Mode</div>
+        </div>
+
+        <div class="manager-grid">
+          <section class="subpanel">
+            <div class="subpanel-title">
+              <div>
+                <h3 id="expenseEditorTitle">Add Expense</h3>
+                <p>Date, branch, about, amount, at optional note.</p>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div class="field">
+                <label for="expenseDateInput">Date</label>
+                <input id="expenseDateInput" type="date">
+              </div>
+              <div class="field">
+                <label for="expenseBranchInput">Branch</label>
+                <select id="expenseBranchInput"></select>
+              </div>
+              <div class="field span-2">
+                <label for="expenseAboutInput">About</label>
+                <input id="expenseAboutInput" type="text" placeholder="Ano ang pinag-gastusan">
+              </div>
+              <div class="field">
+                <label for="expenseAmountInput">Amount</label>
+                <input id="expenseAmountInput" type="number" min="0" step="0.01" placeholder="0.00">
+              </div>
+              <div class="field">
+                <label for="expenseNoteInput">Note</label>
+                <input id="expenseNoteInput" type="text" placeholder="Optional note">
+              </div>
+            </div>
+
+            <div class="actions">
+              <button id="saveExpenseBtn" type="button" class="primary-btn">Save Expense</button>
+              <button id="resetExpenseBtn" type="button" class="secondary-btn">Clear</button>
+              <button id="clearExpensesBtn" type="button" class="danger-btn">Delete All Expenses</button>
+            </div>
+
+            <div id="expenseFormStatus" class="status">Loading expense manager...</div>
+          </section>
+
+          <section class="subpanel">
+            <div class="subpanel-title">
+              <div>
+                <h3>Expense Records</h3>
+                <p>Weekly, monthly, custom, o all-date filtering with branch totals.</p>
+              </div>
+            </div>
+
+            <div class="filter-grid">
+              <div class="field">
+                <label for="expensePeriodFilter">View</label>
+                <select id="expensePeriodFilter">
+                  <option value="this_month">This Month</option>
+                  <option value="this_week">This Week</option>
+                  <option value="custom">Custom Range</option>
+                  <option value="all">All Dates</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="expenseDateFromFilter">Date From</label>
+                <input id="expenseDateFromFilter" type="date">
+              </div>
+              <div class="field">
+                <label for="expenseDateToFilter">Date To</label>
+                <input id="expenseDateToFilter" type="date">
+              </div>
+              <div class="field">
+                <label for="expenseBranchFilter">Branch</label>
+                <select id="expenseBranchFilter"></select>
+              </div>
+              <div class="field span-2">
+                <label for="expenseSearchInput">Search</label>
+                <input id="expenseSearchInput" type="text" placeholder="Search about or note">
+              </div>
+              <div class="actions">
+                <button id="applyExpenseFiltersBtn" type="button" class="primary-btn">Search</button>
+                <button id="resetExpenseFiltersBtn" type="button" class="secondary-btn">Reset</button>
+              </div>
+            </div>
+
+            <div class="summary-grid" id="expenseSummaryGrid">
+              <article class="summary-card" data-static-card="total">
+                <span>Total Expenses</span>
+                <strong id="expenseTotalValue">PHP 0.00</strong>
+              </article>
+            </div>
+
+            <div id="expenseReportStatus" class="status">Loading expense records...</div>
+
+            <div class="table-shell">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Branch</th>
+                    <th>About</th>
+                    <th>Amount</th>
+                    <th>Note</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="expenseTableBody">
+                  <tr><td colspan="6" class="empty">Loading expense records...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="manager" id="cashIncomeManager">
+        <div class="manager-head">
+          <div>
+            <p class="eyebrow">Module Two</p>
+            <h2>Cash Income</h2>
+            <p class="panel-copy">Automatic cash tracker from sales orders plus manual cash income records per branch.</p>
+          </div>
+          <div id="cashIncomeModeBadge" class="mode-badge warn">Add Mode</div>
+        </div>
+
+        <div class="manager-grid">
+          <section class="subpanel warning">
+            <div class="subpanel-title">
+              <div>
+                <h3 id="cashIncomeEditorTitle">Add Cash Income</h3>
+                <p>Date, branch, amount, description, at confirmation status for manual or sales-linked cash entries.</p>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div class="field">
+                <label for="cashIncomeDateInput">Date</label>
+                <input id="cashIncomeDateInput" type="date">
+              </div>
+              <div class="field">
+                <label for="cashIncomeBranchInput">Branch</label>
+                <select id="cashIncomeBranchInput"></select>
+              </div>
+              <div class="field span-2">
+                <label for="cashIncomeAboutInput">About</label>
+                <input id="cashIncomeAboutInput" type="text" placeholder="Saan nanggaling ang cash income">
+              </div>
+              <div class="field">
+                <label for="cashIncomeAmountInput">Amount</label>
+                <input id="cashIncomeAmountInput" type="number" min="0" step="0.01" placeholder="0.00">
+              </div>
+              <div class="field">
+                <label for="cashIncomeNoteInput">Note</label>
+                <input id="cashIncomeNoteInput" type="text" placeholder="Optional note">
+              </div>
+              <div class="field span-2">
+                <label for="cashIncomeStatusInput">Confirmation Status</label>
+                <select id="cashIncomeStatusInput">
+                  <option value="Confirmed">Confirmed</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button id="saveCashIncomeBtn" type="button" class="primary-btn">Save Cash Income</button>
+              <button id="resetCashIncomeBtn" type="button" class="secondary-btn">Clear</button>
+              <button id="clearCashIncomeBtn" type="button" class="danger-btn">Delete Manual Cash Income</button>
+            </div>
+
+            <div id="cashIncomeFormStatus" class="status">Loading cash income manager...</div>
+          </section>
+
+          <section class="subpanel warning">
+            <div class="subpanel-title">
+              <div>
+                <h3>Cash Income Records</h3>
+                <p>Filterable list with branch totals and editable history.</p>
+              </div>
+            </div>
+
+            <div class="filter-grid">
+              <div class="field">
+                <label for="cashIncomePeriodFilter">View</label>
+                <select id="cashIncomePeriodFilter">
+                  <option value="this_month">This Month</option>
+                  <option value="this_week">This Week</option>
+                  <option value="custom">Custom Range</option>
+                  <option value="all">All Dates</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="cashIncomeDateFromFilter">Date From</label>
+                <input id="cashIncomeDateFromFilter" type="date">
+              </div>
+              <div class="field">
+                <label for="cashIncomeDateToFilter">Date To</label>
+                <input id="cashIncomeDateToFilter" type="date">
+              </div>
+              <div class="field">
+                <label for="cashIncomeBranchFilter">Branch</label>
+                <select id="cashIncomeBranchFilter"></select>
+              </div>
+              <div class="field span-2">
+                <label for="cashIncomeSearchInput">Search</label>
+                <input id="cashIncomeSearchInput" type="text" placeholder="Search about or note">
+              </div>
+              <div class="actions">
+                <button id="applyCashIncomeFiltersBtn" type="button" class="primary-btn">Search</button>
+                <button id="resetCashIncomeFiltersBtn" type="button" class="secondary-btn">Reset</button>
+              </div>
+            </div>
+
+            <div class="summary-grid" id="cashIncomeSummaryGrid">
+              <article class="summary-card warn" data-static-card="total">
+                <span>Confirmed Cash</span>
+                <strong id="cashIncomeTotalValue">PHP 0.00</strong>
+              </article>
+              <article class="summary-card warn" data-static-card="pending">
+                <span>Pending Cash</span>
+                <strong id="cashIncomePendingValue">PHP 0.00</strong>
+              </article>
+            </div>
+
+            <div id="cashIncomeReportStatus" class="status">Loading cash income records...</div>
+
+            <div class="table-shell">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Branch</th>
+                    <th>About</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Note</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="cashIncomeTableBody">
+                  <tr><td colspan="7" class="empty">Loading cash income records...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="../shared/app-client.js"></script>
+  <script src="expenses.js"></script>
+</body>
+</html>

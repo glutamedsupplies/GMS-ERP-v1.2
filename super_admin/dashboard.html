@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Admin Console</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap">
+  <style>
+    :root {
+      --bg-a: #f5f8fd;
+      --bg-b: #e8effa;
+      --panel: rgba(255, 255, 255, 0.88);
+      --line: #d1deef;
+      --text: #12233e;
+      --muted: #576982;
+      --accent: #0b6eb7;
+      --accent-strong: #085a96;
+      --success: #0f926e;
+      --warn: #cf8124;
+      --danger: #cb4342;
+      --shadow: 0 12px 30px rgba(11, 30, 62, 0.12);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: "Source Sans 3", "Trebuchet MS", sans-serif;
+      background:
+        radial-gradient(820px 500px at -8% -10%, #d8edff 0%, transparent 60%),
+        radial-gradient(760px 420px at 110% 8%, #ffe7cf 0%, transparent 58%),
+        linear-gradient(160deg, var(--bg-a), var(--bg-b));
+    }
+
+    h1, h2, strong, button {
+      font-family: "Sora", "Segoe UI", sans-serif;
+    }
+
+    .wrap {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 22px 16px 30px;
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+      padding: 20px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: linear-gradient(140deg, rgba(255, 255, 255, 0.94), rgba(247, 251, 255, 0.86));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(3px);
+    }
+
+    .eyebrow {
+      margin: 0;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #3c618a;
+    }
+
+    .top h1 {
+      margin: 6px 0 6px;
+      font-size: clamp(25px, 3vw, 34px);
+      line-height: 1.1;
+    }
+
+    .top-note {
+      margin: 0;
+      max-width: 700px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid--compose {
+      grid-template-columns: 1.2fr 1fr;
+    }
+
+    .grid--lists {
+      margin-top: 14px;
+      grid-template-columns: 1.4fr 1fr;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: 0 8px 22px rgba(12, 30, 60, 0.08);
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-end;
+      margin-bottom: 10px;
+    }
+
+    .card h2 {
+      margin: 0;
+      font-size: 19px;
+      color: #13345c;
+    }
+
+    .section-hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+    }
+
+    .form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .form .full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #385a80;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid #c7d6ec;
+      background: #f7fbff;
+      color: #10233f;
+      padding: 10px 11px;
+      font-size: 14px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(11, 110, 183, 0.16);
+    }
+
+    textarea {
+      min-height: 84px;
+      resize: vertical;
+      line-height: 1.4;
+    }
+
+    .color-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .color-control input[type="color"] {
+      width: 46px;
+      min-width: 46px;
+      height: 42px;
+      border-radius: 12px;
+      border: 1px solid #c7d6ec;
+      padding: 3px;
+      cursor: pointer;
+      background: #ffffff;
+    }
+
+    .color-control input[type="text"] {
+      flex: 1;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid #c7d6ec;
+      background: #f7fbff;
+      color: #10233f;
+      padding: 6px;
+      font-size: 13px;
+    }
+
+    input[type="file"]::file-selector-button {
+      margin-right: 10px;
+      border: 1px solid #c7d6ec;
+      border-radius: 9px;
+      background: #ffffff;
+      color: #203b60;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .mini-logo-preview {
+      margin-top: 8px;
+      width: 76px;
+      height: 76px;
+      border-radius: 12px;
+      border: 1px solid #c9d8ec;
+      background: #f3f7fc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .mini-logo-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #ffffff;
+    }
+
+    .upload-meta {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    button {
+      border: 1px solid transparent;
+      border-radius: 11px;
+      padding: 9px 13px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button[disabled] {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-soft {
+      background: #eff4fd;
+      border-color: #cad8ec;
+      color: #203b60;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #10a277, var(--success));
+    }
+
+    .btn-warn {
+      background: linear-gradient(135deg, #efa33e, var(--warn));
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #e0554c, var(--danger));
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .toolbar input {
+      flex: 1;
+    }
+
+    .list {
+      max-height: 560px;
+      overflow: auto;
+      border: 1px solid #d3e0f2;
+      border-radius: 14px;
+      padding: 10px;
+      background: rgba(247, 251, 255, 0.8);
+    }
+
+    .row {
+      margin-bottom: 10px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #d5e1f2;
+      background: #ffffff;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .row:last-child {
+      margin-bottom: 0;
+    }
+
+    .company-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .company-meta {
+      display: grid;
+      gap: 4px;
+    }
+
+    .company-preview {
+      width: 58px;
+      height: 58px;
+      border-radius: 14px;
+      border: 1px solid #c9d8ec;
+      background: #f3f7fc;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .company-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #ffffff;
+    }
+
+    .company-edit-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .company-edit-grid .span-2 {
+      grid-column: span 2;
+    }
+
+    .company-actions,
+    .plan-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    #status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 6px 10px;
+      border-radius: 10px;
+      border: 1px solid #c9d7eb;
+      background: #f3f8ff;
+      color: #1d4f87;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(11, 23, 39, 0.45);
+      z-index: 30;
+    }
+
+    .modal.is-open {
+      display: flex;
+    }
+
+    .modal-card {
+      width: min(860px, 100%);
+      max-height: calc(100vh - 30px);
+      overflow: auto;
+      border-radius: var(--radius);
+      border: 1px solid #c8d8ec;
+      background: linear-gradient(180deg, #ffffff, #f6faff);
+      padding: 16px;
+      box-shadow: 0 20px 44px rgba(10, 24, 44, 0.22);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 21px;
+    }
+
+    .modal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .modal-grid .full {
+      grid-column: 1 / -1;
+    }
+
+    .modal-actions {
+      margin-top: 14px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    ::-webkit-scrollbar {
+      width: 11px;
+      height: 11px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #edf4fd;
+      border-radius: 8px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #b8cae2;
+      border-radius: 8px;
+      border: 2px solid #edf4fd;
+    }
+
+    @media (max-width: 1160px) {
+      .grid--compose,
+      .grid--lists {
+        grid-template-columns: 1fr;
+      }
+
+      .company-edit-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 900px) {
+      .wrap {
+        padding: 14px 12px 22px;
+      }
+
+      .top {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 16px;
+      }
+
+      .top-actions {
+        justify-content: flex-start;
+      }
+
+      .form,
+      .modal-grid,
+      .company-edit-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .company-edit-grid .span-2 {
+        grid-column: span 1;
+      }
+
+      .company-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .card-head {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .section-hint {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <p class="eyebrow">Control Center</p>
+        <h1>Super Admin Console</h1>
+        <p class="top-note">Manage companies, subscription plans, and audit activity from one focused workspace.</p>
+      </div>
+      <div class="top-actions">
+        <button id="customerChatBtn" type="button" class="btn-soft">Customer Chat</button>
+        <button id="refreshBtn" type="button" class="btn-soft">Refresh Data</button>
+        <button id="logoutBtn" type="button" class="btn-danger">Log Out</button>
+        <span id="status">Loading...</span>
+      </div>
+    </div>
+
+    <div class="grid grid--compose">
+      <section class="card">
+        <div class="card-head">
+          <h2>Create Company</h2>
+          <p class="section-hint">Provision a tenant with its own admin account</p>
+        </div>
+        <div class="form">
+          <div><label>Name</label><input id="companyName" type="text"></div>
+          <div><label>Company Code</label><input id="companyCode" type="text"></div>
+          <div><label>Subdomain</label><input id="companySubdomain" type="text"></div>
+          <div><label>Custom Domain (optional)</label><input id="companyCustomDomain" type="text" placeholder="company.example.com"></div>
+          <div><label>Plan</label><select id="companyPlan"></select></div>
+          <div><label>App Name (optional)</label><input id="companyAppName" type="text" placeholder="GMS ERP"></div>
+          <div>
+            <label>Primary Color (optional)</label>
+            <div class="color-control">
+              <input id="companyPrimaryColorPicker" type="color" value="#2575fc" aria-label="Company primary color picker">
+              <input id="companyPrimaryColor" type="text" placeholder="#2575fc" autocomplete="off" spellcheck="false">
+            </div>
+          </div>
+          <div>
+            <label for="companyLogoFile">Upload Logo (optional)</label>
+            <input id="companyLogoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+            <div class="mini-logo-preview">
+              <img id="companyLogoPreview" src="/logo.png" alt="Company logo preview">
+            </div>
+            <div id="companyLogoMeta" class="upload-meta">No logo uploaded yet. Default logo will be used.</div>
+          </div>
+          <div><label>Admin Username</label><input id="adminUsername" type="text"></div>
+          <div><label>Admin Password</label><input id="adminPassword" type="password"></div>
+          <div><label>Enable White Label</label><select id="companyWhiteLabel"><option value="false" selected>false</option><option value="true">true</option></select></div>
+          <div class="full"><label>Add-ons JSON (optional)</label><textarea id="companyAddons" placeholder='[{"addon_key":"ai_reader","is_active":true,"quota":{"monthlyQuota":100}}]'></textarea></div>
+          <div class="full"><button id="createCompanyBtn" type="button">Create Company</button></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Create Plan</h2>
+          <p class="section-hint">Define feature access and usage limits</p>
+        </div>
+        <div class="form">
+          <div><label>Plan ID</label><input id="planId" type="text"></div>
+          <div><label>Name</label><input id="planName" type="text"></div>
+          <div><label>Price Monthly</label><input id="planPrice" type="number" step="0.01"></div>
+          <div><label>Max Branches</label><input id="planBranches" type="number"></div>
+          <div><label>Max Users</label><input id="planUsers" type="number"></div>
+          <div><label>Max Invoices / Month</label><input id="planInvoices" type="number"></div>
+          <div><label>AI Monthly Quota</label><input id="planAiQuota" type="number"></div>
+          <div><label>Attendance</label><select id="mAttendance"><option value="true">true</option><option value="false">false</option></select></div>
+          <div><label>Sales</label><select id="mSales"><option value="true">true</option><option value="false">false</option></select></div>
+          <div><label>Inventory</label><select id="mInventory"><option value="true">true</option><option value="false">false</option></select></div>
+          <div><label>Invoicing</label><select id="mInvoicing"><option value="true">true</option><option value="false">false</option></select></div>
+          <div><label>Reports</label><select id="mReports"><option value="true">true</option><option value="false">false</option></select></div>
+          <div><label>AI Reader</label><select id="mAi"><option value="true">true</option><option value="false">false</option></select></div>
+          <div class="full"><button id="createPlanBtn" type="button">Create Plan</button></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="grid grid--lists">
+      <section class="card">
+        <div class="card-head">
+          <h2>Companies</h2>
+          <p class="section-hint">Search and manage tenant configuration</p>
+        </div>
+        <div class="toolbar">
+          <input id="companyFilter" type="search" placeholder="Search by company, code, subdomain, domain, app name">
+          <span id="companySummary" class="muted"></span>
+        </div>
+        <div id="companiesList" class="list"></div>
+      </section>
+      <section class="card">
+        <div class="card-head">
+          <h2>Plans</h2>
+          <p class="section-hint">Edit or remove active subscription tiers</p>
+        </div>
+        <div id="plansList" class="list"></div>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:14px;">
+      <div class="card-head">
+        <h2>Audit Logs</h2>
+        <p class="section-hint">Latest super admin actions and trail events</p>
+      </div>
+      <div id="auditList" class="list"></div>
+    </section>
+  </div>
+
+  <div id="planEditModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="planEditTitle">
+      <div class="modal-header">
+        <h2 id="planEditTitle">Edit Plan</h2>
+        <button id="planEditCloseBtn" type="button" class="btn-soft">Close</button>
+      </div>
+      <div class="modal-grid">
+        <div><label>Plan ID</label><input id="editPlanId" type="text"></div>
+        <div><label>Name</label><input id="editPlanName" type="text"></div>
+        <div><label>Price Monthly</label><input id="editPlanPrice" type="number" step="0.01"></div>
+        <div><label>Max Branches</label><input id="editPlanBranches" type="number"></div>
+        <div><label>Max Users</label><input id="editPlanUsers" type="number"></div>
+        <div><label>Max Invoices / Month</label><input id="editPlanInvoices" type="number"></div>
+        <div><label>AI Monthly Quota</label><input id="editPlanAiQuota" type="number"></div>
+        <div><label>Attendance</label><select id="editMAttendance"><option value="true">true</option><option value="false">false</option></select></div>
+        <div><label>Sales</label><select id="editMSales"><option value="true">true</option><option value="false">false</option></select></div>
+        <div><label>Inventory</label><select id="editMInventory"><option value="true">true</option><option value="false">false</option></select></div>
+        <div><label>Invoicing</label><select id="editMInvoicing"><option value="true">true</option><option value="false">false</option></select></div>
+        <div><label>Reports</label><select id="editMReports"><option value="true">true</option><option value="false">false</option></select></div>
+        <div><label>AI Reader</label><select id="editMAi"><option value="true">true</option><option value="false">false</option></select></div>
+      </div>
+      <div class="modal-actions">
+        <button id="planEditCancelBtn" type="button" class="btn-soft">Cancel</button>
+        <button id="planEditSaveBtn" type="button" class="btn-success">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/app-client.js"></script>
+  <script src="./dashboard.js"></script>
+</body>
+</html>

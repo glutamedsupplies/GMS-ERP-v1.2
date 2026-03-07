@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Composite Items</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #f6f8fc;
+    --panel: #fff;
+    --ink: #17324d;
+    --muted: #5f7285;
+    --accent: #7c3aed;
+    --line: #dce5ee;
+    --shadow: 0 18px 48px rgba(23, 50, 77, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; color: var(--ink); background: linear-gradient(180deg, #fbfdff 0%, var(--bg) 100%); }
+  .page { max-width: 1300px; margin: 0 auto; padding: 28px 24px 40px; }
+  h1 { margin: 0 0 8px; font-size: 30px; }
+  p { margin: 0 0 18px; color: var(--muted); line-height: 1.6; }
+  .toolbar { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; margin-bottom: 16px; }
+  input { width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; font-size: 14px; }
+  button { border: none; border-radius: 14px; background: var(--accent); color: #fff; font-weight: 700; cursor: pointer; }
+  .panel, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); }
+  .panel { padding: 20px; }
+  .card { padding: 18px; margin-bottom: 16px; }
+  .label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .value { font-size: 28px; font-weight: 700; }
+  .status { min-height: 24px; margin-bottom: 14px; color: var(--muted); font-size: 14px; }
+  .status.error { color: #b91c1c; }
+  .table-shell { overflow: auto; border: 1px solid var(--line); border-radius: 18px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; }
+  th, td { padding: 13px 14px; border-bottom: 1px solid #edf2f7; text-align: left; font-size: 13px; vertical-align: top; }
+  th { background: #f8fbff; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; }
+  .empty { text-align: center; color: var(--muted); padding: 24px 12px; }
+  .action-btn { padding: 8px 10px; border-radius: 10px; font-size: 12px; }
+  .delete-btn { background: #b91c1c; color: #fff; }
+  .secondary-btn { background: #ede9fe; color: #6d28d9; }
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.48);
+    backdrop-filter: blur(3px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    z-index: 1100;
+  }
+  .modal.is-open { display: flex; }
+  .modal-card {
+    width: 100%;
+    max-width: 740px;
+    max-height: 90vh;
+    overflow: auto;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    padding: 18px;
+  }
+  .modal-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .field label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .component-list {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .component-row {
+    display: grid;
+    grid-template-columns: 1.6fr 0.6fr 0.8fr auto;
+    gap: 8px;
+    padding: 10px;
+    border-bottom: 1px solid #edf2f7;
+    background: #fff;
+  }
+  .component-row:last-child { border-bottom: none; }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+  @media (max-width: 860px) {
+    .toolbar,
+    .modal-grid,
+    .component-row {
+      grid-template-columns: 1fr;
+    }
+    .modal-actions {
+      flex-direction: column;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <h1 id="pageTitle">Composite Items</h1>
+    <p id="pageCopy">Reference list ito ng composite item configurations galing sa composite CSV. Ipinapakita nito ang product, code, set, at raw component details para may mabilis kang lookup sa dashboard.</p>
+
+    <div class="card">
+      <span class="label">Visible Composite Rows</span>
+      <div id="rowCount" class="value">0</div>
+    </div>
+
+    <div class="toolbar">
+      <input id="searchInput" type="text" placeholder="Search product, code, set, or detail text">
+      <button id="refreshBtn" type="button" class="secondary-btn">Refresh</button>
+      <button id="openModalBtn" type="button"><i class="fa-solid fa-plus"></i> Add Composite</button>
+    </div>
+
+    <div class="panel">
+      <div id="statusText" class="status">Loading composite items...</div>
+
+      <div class="table-shell">
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Code</th>
+              <th>Set</th>
+              <th>Details</th>
+              <th>Source</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="compositeTableBody">
+            <tr><td colspan="6" class="empty">Loading composite items...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="compositeModal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+      <h2 style="margin:0 0 6px;">Add Composite Setup</h2>
+      <p style="margin:0 0 12px; color:var(--muted);">Ilagay ang product variant at mga component na ibabawas kapag na-order ang composite item.</p>
+
+      <div class="modal-grid">
+        <div class="field">
+          <label for="productNameInput">Product Name</label>
+          <input id="productNameInput" type="text" placeholder="Example: Gluta Set">
+        </div>
+        <div class="field">
+          <label for="itemCodeInput">Item Code</label>
+          <input id="itemCodeInput" type="text" placeholder="Example: GS-001">
+        </div>
+        <div class="field">
+          <label for="itemSetInput">Set</label>
+          <input id="itemSetInput" type="text" placeholder="Example: P">
+        </div>
+      </div>
+
+      <div id="componentList" class="component-list"></div>
+      <button id="addComponentBtn" type="button" class="secondary-btn" style="margin-bottom:12px;">
+        <i class="fa-solid fa-plus"></i> Add Component
+      </button>
+
+      <div class="modal-actions">
+        <button id="closeModalBtn" type="button" class="secondary-btn">Cancel</button>
+        <button id="saveCompositeBtn" type="button">Save Composite</button>
+      </div>
+    </div>
+  </div>
+
+  <datalist id="compositeComponentList"></datalist>
+
+  <script src="../shared/app-client.js"></script>
+  <script src="composite_items.js"></script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time In / Time Out Station</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+<style>
+body{
+    margin:0;
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+    font-family:'Segoe UI',sans-serif;
+    color:white;
+}
+.container{
+    text-align:center;
+    background:rgba(255,255,255,0.08);
+    padding:40px;
+    border-radius:20px;
+    backdrop-filter:blur(15px);
+    box-shadow:0 10px 40px rgba(0,0,0,0.5);
+    width:420px;
+}
+.clock{ font-family:'Orbitron',sans-serif; font-size:40px; margin-bottom:10px; letter-spacing:2px; }
+.date{ margin-bottom:20px; opacity:0.8; }
+input{
+    width:100%;
+    padding:14px 16px;
+    border:none;
+    border-radius:14px;
+    margin-bottom:18px;
+    font-size:16px;
+    box-sizing:border-box;
+}
+button{
+    width:100%;
+    padding:15px;
+    margin:10px 0;
+    border:none;
+    border-radius:50px;
+    font-size:18px;
+    cursor:pointer;
+    transition:0.3s ease;
+}
+#timeInBtn{ background:#00c853; color:white; }
+#timeInBtn:hover{ background:#00e676; }
+#timeOutBtn{ background:#d50000; color:white; }
+#timeOutBtn:hover{ background:#ff1744; }
+.status{ margin-top:20px; font-size:14px; min-height:20px; }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="clock" id="clock">00:00:00</div>
+    <div class="date" id="date"></div>
+    <input type="text" id="empIdInput" placeholder="Enter employee ID">
+    <button id="timeInBtn" type="button">TIME IN</button>
+    <button id="timeOutBtn" type="button">TIME OUT</button>
+    <div class="status" id="msgBox"></div>
+</div>
+<script src="../shared/app-client.js"></script>
+<script src="time_station.js"></script>
+</body>
+</html>
+
+

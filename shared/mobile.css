@@ -1,0 +1,533 @@
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  max-width: 100%;
+}
+
+img,
+svg,
+canvas,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+input,
+select,
+textarea,
+button {
+  max-width: 100%;
+}
+
+textarea {
+  resize: vertical;
+}
+
+html[data-app-mobile="true"],
+html[data-app-mobile="true"] body {
+  overflow-x: hidden;
+}
+
+@media (max-width: 900px) {
+  html[data-app-mobile="true"] body {
+    min-height: 100vh;
+    height: auto !important;
+  }
+
+  html[data-app-mobile="true"] input,
+  html[data-app-mobile="true"] select,
+  html[data-app-mobile="true"] textarea,
+  html[data-app-mobile="true"] button {
+    font-size: 16px !important;
+  }
+
+  html[data-app-page="index"] body,
+  html[data-app-page="settings"] body,
+  html[data-app-page="time_in_time_out"] body {
+    padding: 16px;
+    overflow-y: auto;
+  }
+
+  html[data-app-page="index"] .login-card,
+  html[data-app-page="settings"] .settings-card,
+  html[data-app-page="time_in_time_out"] .container {
+    width: min(100%, 460px) !important;
+    max-width: 100%;
+  }
+
+  html[data-app-page="index"] .login-card {
+    padding: 56px 20px 24px !important;
+  }
+
+  html[data-app-page="index"] .logo-container {
+    width: 96px !important;
+    height: 96px !important;
+    margin: -38px auto 16px !important;
+  }
+
+  html[data-app-page="index"] h2 {
+    margin-bottom: 24px !important;
+    font-size: 28px;
+  }
+
+  html[data-app-page="employee"] .container,
+  html[data-app-page="time_card"] .container,
+  html[data-app-page="reports"] .container {
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 16px !important;
+  }
+
+  html[data-app-page="employee"] h2,
+  html[data-app-page="time_card"] h2,
+  html[data-app-page="reports"] h1 {
+    margin-bottom: 24px !important;
+  }
+
+  html[data-app-page="employee"] .dashboard {
+    flex-direction: column !important;
+    gap: 14px !important;
+  }
+
+  html[data-app-page="employee"] .card {
+    min-width: 0 !important;
+    width: 100%;
+    padding: 24px 18px !important;
+  }
+
+  html[data-app-page="employee"] .card i {
+    font-size: 42px !important;
+  }
+
+  html[data-app-page="employee"] .card h3 {
+    font-size: 19px !important;
+  }
+
+  html[data-app-page="time_card"] #weekRange {
+    margin-bottom: 20px !important;
+    font-size: 15px;
+  }
+
+  html[data-app-page="time_card"] tbody td {
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  html[data-app-page="time_card"] tbody td::before {
+    padding-right: 12px;
+  }
+
+  html[data-app-page="settings"] .settings-card {
+    padding: 22px !important;
+    border-radius: 18px !important;
+  }
+
+  html[data-app-page="settings"] h2,
+  html[data-app-section="head_admin"][data-app-page="settings"] .header h1 {
+    font-size: 26px !important;
+  }
+
+  html[data-app-page="settings"] label {
+    font-size: 12px !important;
+  }
+
+  html[data-app-page="settings"] .backBtn {
+    padding: 10px 14px !important;
+    font-size: 14px !important;
+  }
+
+  html[data-app-page="time_in_time_out"] body {
+    align-items: flex-start !important;
+  }
+
+  html[data-app-page="time_in_time_out"] .container {
+    padding: 24px 18px !important;
+  }
+
+  html[data-app-page="time_in_time_out"] .backBtn {
+    width: 100%;
+    margin-bottom: 16px !important;
+  }
+
+  html[data-app-page="time_in_time_out"] button {
+    width: 100% !important;
+  }
+
+  html[data-app-page="time_in_time_out"] .clock {
+    font-size: clamp(30px, 10vw, 38px) !important;
+    letter-spacing: 1px !important;
+  }
+
+  html[data-app-section="head_admin"][data-app-page="dashboard"] body {
+    overflow: auto !important;
+  }
+
+  html[data-app-section="head_admin"][data-app-page="dashboard"] .dashboard-wrapper {
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  html[data-app-section="head_admin"][data-app-page="dashboard"] .sidebar {
+    width: 100% !important;
+    padding: 14px 12px 12px !important;
+  }
+
+  html[data-app-section="head_admin"][data-app-page="dashboard"] .sidebar .logo {
+    margin: 0 0 10px !important;
+    text-align: left !important;
+  }
+
+  html[data-app-section="head_admin"][data-app-page="dashboard"] .sidebar ul {
+    display: block;
+    max-height: 48vh;
+    width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0;
+    scrollbar-width: thin;
+  }
+
+  html[data-app-section="head_admin"][data-app-page="dashboard"] .sidebar ul li {
+    width: 100%;
+    white-space: normal;
+    border-left: none !important;
+    border-radius: 12px;
+    padding: 11px 12px !important;
+    margin-bottom: 6px;
+  }
+
+  html[data-app-section="head_admin"][data-app-page="dashboard"] .sidebar ul li.nav-section-label {
+    cursor: default;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.9;
+    margin-top: 8px;
+    margin-bottom: 4px;
+  }
+
+  html[data-app-section="head_admin"][data-app-page="dashboard"] .sidebar ul li.nav-subitem {
+    padding-left: 14px !important;
+  }
+
+  html[data-app-section="head_admin"][data-app-page="dashboard"] .sidebar ul li.nav-subitem::before,
+  html[data-app-section="head_admin"][data-app-page="dashboard"] .sidebar ul li.nav-subitem::after {
+    display: none !important;
+  }
+
+  html[data-app-section="head_admin"][data-app-page="dashboard"] .sidebar ul li.active,
+  html[data-app-section="head_admin"][data-app-page="dashboard"] .sidebar ul li:hover {
+    border-left: none !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  }
+
+  html[data-app-section="head_admin"][data-app-page="dashboard"] .main-panel {
+    min-height: 72vh;
+    overflow: visible !important;
+  }
+
+  html[data-app-section="head_admin"][data-app-page="dashboard"] .top-panel-nav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  html[data-app-section="head_admin"][data-app-page="dashboard"] .top-panel-title {
+    font-size: 11px;
+  }
+
+  html[data-app-section="head_admin"][data-app-page="dashboard"] .top-panel-items {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    overflow: visible !important;
+    padding-bottom: 0;
+  }
+
+  html[data-app-section="head_admin"][data-app-page="dashboard"] .top-panel-button {
+    width: 100%;
+    justify-content: center;
+    white-space: normal;
+    padding: 9px 12px;
+  }
+
+  html[data-app-section="head_admin"][data-app-page="dashboard"] .main-panel iframe {
+    min-height: 72vh;
+  }
+
+  html[data-app-page="employees"] .admin-header {
+    padding: 14px 16px !important;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  html[data-app-page="employees"] .container {
+    padding: 16px !important;
+    overflow-x: visible;
+  }
+
+  html[data-app-page="employees"] .top-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  html[data-app-page="employees"] .add-btn {
+    justify-content: center;
+    min-height: 48px;
+    padding: 12px 18px !important;
+  }
+
+  html[data-app-page="employees"] table {
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  html[data-app-page="employees"] .modal {
+    padding: 16px;
+  }
+
+  html[data-app-page="employees"] .modal-content {
+    width: min(100%, 460px) !important;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    padding: 22px !important;
+  }
+
+  html[data-app-page="timecards"] body {
+    flex-direction: column;
+    overflow: auto !important;
+  }
+
+  html[data-app-page="timecards"] .side-panel {
+    width: 100% !important;
+    padding: 14px 12px !important;
+  }
+
+  html[data-app-page="timecards"] #employeeList {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  html[data-app-page="timecards"] .employee-item {
+    margin-bottom: 0 !important;
+    width: 100%;
+  }
+
+  html[data-app-page="timecards"] .main-content {
+    padding: 16px !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+  }
+
+  html[data-app-page="timecards"] .selectors {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  html[data-app-page="timecards"] table {
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  html[data-app-page="reports"] .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  html[data-app-page="reports"] .table-container {
+    overflow-x: visible;
+    padding: 16px !important;
+  }
+
+  html[data-app-page="reports"] table {
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  html[data-app-page="reports"] .summary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 860px) {
+  html[data-app-mobile="true"] table[data-mobile-card-ready="true"] {
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  html[data-app-mobile="true"] table[data-mobile-card-ready="true"] thead {
+    display: none !important;
+  }
+
+  html[data-app-mobile="true"] table[data-mobile-card-ready="true"] tbody {
+    display: block;
+    width: 100%;
+  }
+
+  html[data-app-mobile="true"] table[data-mobile-card-ready="true"] tr {
+    display: block;
+    margin: 0 0 12px !important;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  html[data-app-mobile="true"] table[data-mobile-card-ready="true"] tr:last-child {
+    margin-bottom: 0 !important;
+  }
+
+  html[data-app-mobile="true"] table[data-mobile-card-ready="true"] td {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 11px 14px !important;
+    border: 0 !important;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.9) !important;
+    text-align: left !important;
+    white-space: normal !important;
+  }
+
+  html[data-app-mobile="true"] table[data-mobile-card-ready="true"] td:last-child {
+    border-bottom: none !important;
+  }
+
+  html[data-app-mobile="true"] table[data-mobile-card-ready="true"] td::before {
+    content: attr(data-label);
+    flex: 0 0 42%;
+    max-width: 42%;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: currentColor;
+    opacity: 0.72;
+  }
+
+  html[data-app-mobile="true"] table[data-mobile-card-ready="true"] td > * {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  html[data-app-mobile="true"] table[data-mobile-card-ready="true"] td input,
+  html[data-app-mobile="true"] table[data-mobile-card-ready="true"] td select,
+  html[data-app-mobile="true"] table[data-mobile-card-ready="true"] td textarea,
+  html[data-app-mobile="true"] table[data-mobile-card-ready="true"] td button {
+    width: 100%;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  html[data-app-mobile="true"] table[data-mobile-card-ready="true"] td[colspan]:not([colspan="1"]),
+  html[data-app-mobile="true"] table[data-mobile-card-ready="true"] td.empty-row {
+    display: block !important;
+    text-align: left !important;
+  }
+
+  html[data-app-mobile="true"] table[data-mobile-card-ready="true"] td[colspan]:not([colspan="1"])::before,
+  html[data-app-mobile="true"] table[data-mobile-card-ready="true"] td.empty-row::before {
+    content: none !important;
+  }
+}
+
+@media (max-width: 700px) {
+  html[data-app-section="head_admin"] .page,
+  html[data-app-section="head_admin"] .page-shell {
+    padding: 14px 12px 24px !important;
+  }
+
+  html[data-app-section="head_admin"] .hero,
+  html[data-app-section="head_admin"] .hero-card,
+  html[data-app-section="head_admin"] .panel,
+  html[data-app-section="head_admin"] .manager,
+  html[data-app-section="head_admin"] .subpanel,
+  html[data-app-section="head_admin"] .card,
+  html[data-app-section="head_admin"] .summary-card,
+  html[data-app-section="head_admin"] .modal-card,
+  html[data-app-section="head_admin"] .modal-content,
+  html[data-app-section="head_admin"] .table-card {
+    border-radius: 20px !important;
+    padding: 18px !important;
+  }
+
+  html[data-app-section="head_admin"] .hero,
+  html[data-app-section="head_admin"] .hero-card,
+  html[data-app-section="head_admin"] .hero-head,
+  html[data-app-section="head_admin"] .manager-head,
+  html[data-app-section="head_admin"] .hero-actions,
+  html[data-app-section="head_admin"] .actions,
+  html[data-app-section="head_admin"] .toolbar-buttons {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  html[data-app-section="head_admin"] .page [class*="grid"],
+  html[data-app-section="head_admin"] .page-shell [class*="grid"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  html[data-app-section="head_admin"] h1 {
+    font-size: clamp(28px, 8vw, 34px) !important;
+    line-height: 1.08 !important;
+  }
+
+  html[data-app-section="head_admin"] h2 {
+    font-size: clamp(22px, 6vw, 28px) !important;
+  }
+
+  html[data-app-section="head_admin"] .hero-copy,
+  html[data-app-section="head_admin"] .section-copy,
+  html[data-app-section="head_admin"] .panel-copy,
+  html[data-app-section="head_admin"] p {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  html[data-app-section="head_admin"] .eyebrow,
+  html[data-app-section="head_admin"] .label {
+    font-size: 12px !important;
+  }
+
+  html[data-app-section="head_admin"] .active-range,
+  html[data-app-section="head_admin"] .hero-total,
+  html[data-app-section="head_admin"] .hero-side-card {
+    min-width: 0 !important;
+    text-align: left !important;
+  }
+
+  html[data-app-section="head_admin"] .table-shell,
+  html[data-app-section="head_admin"] .table-wrap,
+  html[data-app-section="head_admin"] .table-container,
+  html[data-app-section="head_admin"] .table-scroll-proxy {
+    overflow-x: visible !important;
+    -webkit-overflow-scrolling: auto;
+  }
+
+  html[data-app-section="head_admin"] .table-shell table,
+  html[data-app-section="head_admin"] .table-wrap table,
+  html[data-app-section="head_admin"] .table-container table {
+    width: 100%;
+    min-width: 0 !important;
+  }
+
+  html[data-app-section="head_admin"] .table-scroll-helper,
+  html[data-app-section="head_admin"] .table-scroll-proxy {
+    display: none !important;
+  }
+}

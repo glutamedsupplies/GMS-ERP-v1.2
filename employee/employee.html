@@ -1,0 +1,113 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Employee Dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; font-family: 'Roboto', sans-serif; }
+
+  body { background-color:#f4f7fa; color:#333; }
+
+  .container { max-width: 1040px; margin: 50px auto; padding: 20px; }
+
+  h2 { text-align:center; margin-bottom:40px; color:#2c3e50; }
+  .section-title {
+    margin: 34px 0 6px;
+    color: #2c3e50;
+    font-size: 24px;
+    text-align: left;
+  }
+  .section-copy {
+    margin-bottom: 16px;
+    color: #6b7280;
+    line-height: 1.5;
+  }
+
+  .dashboard {
+    display:flex;
+    justify-content:space-between;
+    gap:20px;
+    flex-wrap:wrap;
+  }
+
+  .card {
+    flex:1;
+    min-width:220px;
+    background-color:#fff;
+    padding:30px;
+    border-radius:12px;
+    box-shadow:0 5px 20px rgba(0,0,0,0.05);
+    text-align:center;
+    cursor:pointer;
+    transition:0.3s;
+  }
+  .card:hover { transform:translateY(-5px); box-shadow:0 10px 25px rgba(0,0,0,0.1); }
+
+  .card i {
+    font-size:50px;
+    color:#27ae60;
+    margin-bottom:15px;
+  }
+  .card h3 { font-size:20px; color:#2c3e50; }
+  .card p {
+    margin-top: 10px;
+    color: #6b7280;
+    line-height: 1.5;
+    font-size: 14px;
+  }
+  .feature-card {
+    border: none;
+    display: block;
+    width: 100%;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+  }
+  .feature-card i {
+    font-size: 34px;
+  }
+  #featureAccessSection[hidden] {
+    display: none;
+  }
+
+  @media (max-width:768px){
+    .dashboard { flex-direction:column; gap:20px; }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h2>Employee Dashboard</h2>
+
+    <div class="dashboard">
+      <div class="card" id="timeCardBtn">
+        <i class="fa-solid fa-clock"></i>
+        <h3>Time Card</h3>
+      </div>
+
+      <div class="card" id="timeInOutBtn">
+        <i class="fa-solid fa-right-to-bracket"></i>
+        <h3>Time In / Time Out</h3>
+      </div>
+
+      <div class="card" id="settingsBtn">
+        <i class="fa-solid fa-gear"></i>
+        <h3>Settings</h3>
+      </div>
+    </div>
+
+    <section id="featureAccessSection" hidden>
+      <h3 class="section-title">Granted Module Access</h3>
+      <p class="section-copy">Ito ang additional tools na in-enable sa account mo mula User Management.</p>
+      <div id="featureCards" class="dashboard"></div>
+    </section>
+  </div>
+
+  <script src="../shared/app-client.js"></script>
+  <script src="employee_dashboard.js"></script>
+</body>
+</html>

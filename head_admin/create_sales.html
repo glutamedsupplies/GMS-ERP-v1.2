@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Sales</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #f6f8fc;
+    --panel: #fff;
+    --ink: #17324d;
+    --muted: #5f7285;
+    --accent: #9f1239;
+    --accent-soft: #fde7ef;
+    --line: #dce5ee;
+    --shadow: 0 18px 48px rgba(23, 50, 77, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at top right, rgba(159, 18, 57, 0.1), transparent 25%),
+      linear-gradient(180deg, #fbfdff 0%, var(--bg) 100%);
+  }
+  .page { max-width: 1450px; margin: 0 auto; padding: 28px 24px 40px; }
+  .hero h1 { margin: 0 0 8px; font-size: 32px; }
+  .hero p { margin: 0 0 18px; color: var(--muted); line-height: 1.6; max-width: 980px; }
+  .builder-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 20px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    padding: 22px;
+  }
+  .panel h2 { margin: 0 0 8px; font-size: 21px; }
+  .panel p { margin: 0 0 16px; color: var(--muted); line-height: 1.6; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field.span-2 { grid-column: 1 / -1; }
+  .field label { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .field input, .field select, .field textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 14px;
+    outline: none;
+  }
+  .field textarea { min-height: 72px; resize: vertical; }
+  .line-builder {
+    margin-top: 18px;
+    padding: 16px;
+    border-radius: 18px;
+    background: #f8fbff;
+    border: 1px solid var(--line);
+  }
+  .line-builder h3 { margin: 0 0 12px; font-size: 16px; }
+  .inline-grid { display: grid; grid-template-columns: 1.3fr .7fr .55fr .55fr .7fr .85fr; gap: 10px; align-items: end; }
+  .actions { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+  button {
+    border: none;
+    cursor: pointer;
+    border-radius: 14px;
+    padding: 12px 18px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .primary-btn { background: var(--accent); color: #fff; }
+  .secondary-btn { background: #eef5fb; color: var(--ink); }
+  .status { min-height: 24px; margin-top: 14px; color: var(--muted); font-size: 14px; }
+  .status.error { color: #b91c1c; }
+  .table-shell { overflow: auto; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 13px 14px; border-bottom: 1px solid #edf2f7; text-align: left; font-size: 13px; vertical-align: top; }
+  th { background: #f8fbff; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; }
+  .empty { text-align: center; color: var(--muted); padding: 22px 12px; }
+  .receipt-card {
+    border-radius: 22px;
+    background: linear-gradient(180deg, #fffdfd 0%, #fff 100%);
+    border: 1px solid #f1d7e0;
+    padding: 22px;
+  }
+  .receipt-card h3 { margin: 0 0 10px; font-size: 18px; }
+  .receipt-meta { display: grid; gap: 8px; margin-bottom: 18px; color: var(--ink); font-size: 14px; }
+  .receipt-list { display: grid; gap: 10px; margin-bottom: 16px; }
+  .receipt-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: var(--accent-soft);
+    font-size: 14px;
+  }
+  .receipt-totals {
+    display: grid;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px dashed #d8a5b7;
+    font-size: 15px;
+  }
+  .small-btn { padding: 9px 12px; border-radius: 10px; font-size: 12px; }
+  @media (max-width: 1220px) {
+    .builder-grid { grid-template-columns: 1fr; }
+    .inline-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 900px) {
+    .grid, .inline-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <h1>Create Sales</h1>
+      <p>Hiwalay na ang receipt builder para focused ang paggawa ng bagong sales entry. Ang inventory deduction ay naka-base pa rin sa composite components, hindi sa set rows.</p>
+    </div>
+
+    <div class="builder-grid">
+      <section class="panel">
+        <h2>Create Receipt</h2>
+        <p>Mag-encode ng client details at mag-add ng maraming items sa iisang receipt bago i-save. Ang set options ay naka-lock sa actual options mo.</p>
+
+        <div class="grid">
+          <div class="field">
+            <label for="saleDateInput">Date</label>
+            <input id="saleDateInput" type="date">
+          </div>
+          <div class="field">
+            <label for="branchInput">Branch</label>
+            <select id="branchInput"></select>
+          </div>
+          <div class="field">
+            <label for="courierInput">Courier</label>
+            <select id="courierInput"></select>
+          </div>
+          <div class="field">
+            <label for="paymentOptionInput">Mode of Payment</label>
+            <select id="paymentOptionInput"></select>
+          </div>
+          <div class="field">
+            <label for="adminInput">Admin</label>
+            <select id="adminInput"></select>
+          </div>
+          <div class="field">
+            <label for="salesRepInput">Sales Representative</label>
+            <input id="salesRepInput" list="salesRepList" type="text" placeholder="Enter sales representative">
+            <datalist id="salesRepList"></datalist>
+          </div>
+          <div class="field span-2">
+            <label for="clientNameInput">Client Name</label>
+            <input id="clientNameInput" type="text" placeholder="Enter client name">
+          </div>
+          <div class="field">
+            <label for="clientContactInput">Contact</label>
+            <input id="clientContactInput" type="text" placeholder="Contact number">
+          </div>
+          <div class="field">
+            <label for="amountPaidInput">Amount Paid</label>
+            <input id="amountPaidInput" type="number" min="0" step="0.01" placeholder="0.00">
+          </div>
+          <div class="field span-2">
+            <label for="clientAddressInput">Address</label>
+            <textarea id="clientAddressInput" placeholder="Delivery address"></textarea>
+          </div>
+          <div class="field">
+            <label for="collectionInput">Collection / Balance</label>
+            <input id="collectionInput" type="number" min="0" step="0.01" placeholder="Optional">
+          </div>
+          <div class="field">
+            <label for="noteInput">Note</label>
+            <input id="noteInput" type="text" placeholder="Optional note">
+          </div>
+        </div>
+
+        <div class="line-builder">
+          <h3>Add Receipt Item</h3>
+          <div class="inline-grid">
+            <div class="field">
+              <label for="productInput">Product Name</label>
+              <select id="productInput"><option value="">Select product</option></select>
+            </div>
+            <div class="field">
+              <label for="setInput">Set</label>
+              <select id="setInput"><option value="">Select set</option></select>
+            </div>
+            <div class="field">
+              <label for="qtyInput">Qty</label>
+              <input id="qtyInput" type="number" min="1" step="1" value="1">
+            </div>
+            <div class="field">
+              <label for="unitInput">Units</label>
+              <input id="unitInput" type="text" readonly>
+            </div>
+            <div class="field">
+              <label for="unitPriceInput">Price Each</label>
+              <input id="unitPriceInput" type="number" readonly>
+            </div>
+            <div class="field">
+              <label for="lineTotalInput">Total Price</label>
+              <input id="lineTotalInput" type="number" readonly>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="addItemBtn" type="button" class="primary-btn"><i class="fa-solid fa-plus"></i> Add Item</button>
+            <button id="clearLineBtn" type="button" class="secondary-btn"><i class="fa-solid fa-eraser"></i> Clear Line</button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="createReceiptBtn" type="button" class="primary-btn"><i class="fa-solid fa-receipt"></i> Create Receipt</button>
+          <button id="clearReceiptBtn" type="button" class="secondary-btn"><i class="fa-solid fa-trash"></i> Clear Receipt</button>
+        </div>
+
+        <div id="formStatus" class="status">Loading receipt references...</div>
+      </section>
+
+      <section class="panel">
+        <h2>Receipt Preview</h2>
+        <p>Receipt-style summary ito ng current draft mo bago i-save. Hiwalay na ito sa reporting panel para mas malinis ang workflow.</p>
+
+        <div class="table-shell" style="margin-bottom:16px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Qty</th>
+                <th>Units</th>
+                <th>Product</th>
+                <th>Set</th>
+                <th>Price</th>
+                <th>Total</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="draftItemsBody">
+              <tr><td colspan="8" class="empty">No receipt items yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="receipt-card">
+          <h3 id="receiptTitle">Receipt Draft</h3>
+          <div id="receiptMeta" class="receipt-meta"></div>
+          <div id="receiptItems" class="receipt-list"></div>
+          <div id="receiptTotals" class="receipt-totals"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="../shared/app-client.js"></script>
+  <script src="sales_report.js"></script>
+</body>
+</html>

@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Client Data Base</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #f4f7fb;
+    --panel: #ffffff;
+    --text: #17324d;
+    --muted: #5f7387;
+    --accent: #14532d;
+    --accent-soft: #e7f7ed;
+    --line: #d6e1ea;
+    --danger: #b91c1c;
+    --shadow: 0 20px 50px rgba(23, 50, 77, 0.08);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(circle at top left, rgba(20, 83, 45, 0.12), transparent 26%),
+      linear-gradient(180deg, #fbfdff 0%, var(--bg) 100%);
+  }
+
+  .page {
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 32px 26px 40px;
+  }
+
+  .hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .hero h1 {
+    margin: 0 0 10px;
+    font-size: 32px;
+  }
+
+  .hero p {
+    margin: 0;
+    color: var(--muted);
+    max-width: 760px;
+    line-height: 1.6;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .card,
+  .panel,
+  .modal-content {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+  }
+
+  .card {
+    padding: 20px 22px;
+  }
+
+  .label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 12px;
+  }
+
+  .value {
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .search-box {
+    flex: 1;
+    position: relative;
+  }
+
+  .search-box input {
+    width: 100%;
+    padding: 14px 18px 14px 44px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    font-size: 15px;
+    background: #fff;
+    color: var(--text);
+    outline: none;
+  }
+
+  .search-box i {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+  }
+
+  .actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  button {
+    border: none;
+    cursor: pointer;
+    border-radius: 14px;
+    padding: 13px 18px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .primary-btn {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .secondary-btn {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .panel {
+    padding: 22px;
+  }
+
+  .rules {
+    margin-bottom: 16px;
+    padding: 16px 18px;
+    border-radius: 16px;
+    background: #f8fbff;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    line-height: 1.6;
+    font-size: 14px;
+  }
+
+  .status {
+    min-height: 24px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .status.error {
+    color: var(--danger);
+  }
+
+  .table-shell {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+  }
+
+  th, td {
+    padding: 15px 16px;
+    text-align: left;
+    border-bottom: 1px solid #edf2f7;
+    font-size: 14px;
+  }
+
+  th {
+    background: #f8fbff;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 12px;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  tbody tr[data-client-id] {
+    cursor: pointer;
+    transition: background-color 140ms ease;
+  }
+
+  tbody tr[data-client-id]:hover {
+    background: #f8fbff;
+  }
+
+  .source-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .actions-cell {
+    width: 120px;
+  }
+
+  .row-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .danger-btn {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .danger-btn:hover {
+    background: #fecaca;
+  }
+
+  .modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(4px);
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+
+  .modal-content {
+    width: 100%;
+    max-width: 460px;
+    padding: 26px;
+  }
+
+  .modal-content h2 {
+    margin: 0 0 8px;
+  }
+
+  .modal-content p {
+    margin: 0 0 18px;
+    color: var(--muted);
+    line-height: 1.5;
+    font-size: 14px;
+  }
+
+  .field {
+    margin-bottom: 14px;
+  }
+
+  .field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .field input {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    font-size: 14px;
+    outline: none;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .modal-actions button {
+    flex: 1;
+  }
+
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 28px 16px;
+  }
+
+  @media (max-width: 860px) {
+    .hero,
+    .toolbar,
+    .actions,
+    .modal-actions {
+      flex-direction: column;
+    }
+
+    .actions,
+    .actions button,
+    .modal-actions button {
+      width: 100%;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <div>
+        <h1>Client Data Base</h1>
+        <p id="pageSubtitle">All client data for your company.</p>
+      </div>
+    </div>
+
+    <div class="summary-grid">
+      <div class="card">
+        <span class="label">Visible Records</span>
+        <div id="visibleCount" class="value">0</div>
+      </div>
+      <div class="card">
+        <span class="label">Unique Numbers</span>
+        <div id="uniqueCount" class="value">0</div>
+      </div>
+      <div class="card">
+        <span class="label">Search Filter</span>
+        <div id="filterLabel" class="value" style="font-size: 18px; line-height: 1.4;">All Records</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="searchInput" type="text" placeholder="Search by client name or contact number">
+      </div>
+      <div class="actions">
+        <button id="refreshBtn" type="button" class="secondary-btn"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+        <button id="openModalBtn" type="button" class="primary-btn"><i class="fa-solid fa-plus"></i> Add Client</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="rules">
+        Rule: same client name is allowed multiple times if the contact number is different. Philippine mobile variants like <strong>+63</strong>, <strong>09</strong>, and <strong>9</strong> are treated as the same number. Click an existing row to edit and update it.
+      </div>
+
+      <div id="statusText" class="status">Loading client records...</div>
+
+      <div class="table-shell">
+        <table>
+          <thead>
+            <tr>
+              <th>Client Name</th>
+              <th>Contact Number</th>
+              <th>Source</th>
+              <th>Created</th>
+              <th class="actions-cell">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="clientTableBody">
+            <tr><td colspan="5" class="empty">Loading records...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="clientModal" class="modal">
+    <div class="modal-content">
+      <h2 id="clientModalTitle">Add Client</h2>
+      <p id="clientModalDescription">Mag-add ng bagong client record. Ang parehong name ay puwedeng ulitin basta bagong number. Kapag existing na ang number, io-update ang existing record sa halip na mag-error.</p>
+
+      <div class="field">
+        <label for="clientNameInput">Client Name</label>
+        <input id="clientNameInput" type="text" placeholder="Enter client name">
+      </div>
+
+      <div class="field">
+        <label for="contactNumberInput">Contact Number</label>
+        <input id="contactNumberInput" type="text" inputmode="numeric" placeholder="e.g. +639171234567, 09171234567, or 9171234567">
+      </div>
+
+      <div class="modal-actions">
+        <button id="saveClientBtn" type="button" class="primary-btn">Save Client</button>
+        <button id="closeModalBtn" type="button" class="secondary-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/app-client.js"></script>
+  <script src="client_database.js"></script>
+</body>
+</html>

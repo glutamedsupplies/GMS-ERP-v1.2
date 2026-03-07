@@ -1,0 +1,44 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time In / Time Out</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+body{ margin:0; height:100vh; display:flex; justify-content:center; align-items:center; background-color:#f4f7fa; font-family:'Roboto',sans-serif; color:#333; }
+.container{ text-align:center; background:#fff; padding:40px; border-radius:20px; box-shadow:0 10px 25px rgba(0,0,0,0.1); width:400px; }
+h2{ margin-bottom:10px; color:#2c3e50; }
+.welcome{ margin-bottom:20px; font-size:16px; color:#27ae60; font-weight:500; }
+.backBtn{ display:inline-block; margin-bottom:25px; padding:10px 20px; background:#2980b9; color:white; border:none; border-radius:10px; cursor:pointer; transition:0.3s; }
+.backBtn:hover{ background:#3498db; }
+.clock{ font-size:36px; margin-bottom:10px; letter-spacing:2px; color:#27ae60; font-weight:500; }
+.date{ margin-bottom:25px; opacity:0.7; color:#34495e; }
+button{ width:200px; padding:15px; margin:10px 0; border:none; border-radius:50px; font-size:18px; cursor:pointer; transition:0.3s ease; }
+#timeInBtn{ background:#00c853; color:white; }
+#timeInBtn:hover{ background:#00e676; }
+#timeOutBtn{ background:#d50000; color:white; }
+#timeOutBtn:hover{ background:#ff1744; }
+button:disabled{ background:gray !important; cursor:not-allowed; opacity:0.6; }
+.status{ margin-top:20px; font-size:14px; opacity:0.9; color:#34495e; min-height:18px; }
+</style>
+</head>
+<body>
+<div class="container">
+    <button class="backBtn" id="backBtn"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</button>
+    <h2>Time In / Time Out</h2>
+    <div class="welcome" id="welcomeUser">Welcome</div>
+    <div class="clock" id="clock">00:00:00</div>
+    <div class="date" id="date"></div>
+    <button id="timeInBtn" type="button">TIME IN</button>
+    <button id="timeOutBtn" type="button" disabled>TIME OUT</button>
+    <div class="status" id="statusText"></div>
+</div>
+<script src="../shared/app-client.js"></script>
+<script src="time_in_time_out.js"></script>
+</body>
+</html>
+
+

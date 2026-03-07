@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product Pricing</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="inventory.css">
+</head>
+<body>
+  <div class="page-shell">
+    <section class="hero-card">
+      <div>
+        <p class="eyebrow">Head Admin</p>
+        <h1 id="pageTitle">Product Pricing</h1>
+        <p id="pageCopy" class="hero-copy">Manage product variants used by the order form. Search by product or set, import the latest CSV, and maintain item code and price in one place.</p>
+      </div>
+      <div class="hero-actions">
+        <button id="importCsvBtn" type="button" class="secondary-btn"><i class="fa-solid fa-file-import"></i> Import CSV</button>
+        <button id="openModalBtn" type="button" class="primary-btn"><i class="fa-solid fa-plus"></i> Add Variant</button>
+      </div>
+    </section>
+
+    <section class="summary-grid">
+      <article class="summary-card">
+        <span class="summary-label">Visible Variants</span>
+        <strong id="variantCount" class="summary-value">0</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Unique Products</span>
+        <strong id="productCount" class="summary-value">0</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Average Price</span>
+        <strong id="averagePrice" class="summary-value">PHP 0.00</strong>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="toolbar">
+        <div class="field">
+          <label for="productFilterInput">Search</label>
+          <input id="productFilterInput" type="text" placeholder="Search product name, item code, or set">
+        </div>
+        <div class="field">
+          <label for="setFilterInput">Set</label>
+          <input id="setFilterInput" type="text" placeholder="Filter by set">
+        </div>
+        <div class="toolbar-buttons">
+          <button id="refreshBtn" type="button" class="secondary-btn"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+        </div>
+      </div>
+
+      <div id="statusText" class="status">Loading inventory variants...</div>
+
+      <div class="table-shell">
+        <table>
+          <thead>
+            <tr>
+              <th>Product Name</th>
+              <th>Item Code</th>
+              <th>Set</th>
+              <th>Price</th>
+              <th>Updated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryTableBody">
+            <tr><td colspan="6" class="empty">Loading inventory variants...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div id="variantModal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Inventory Variant</p>
+          <h2 id="modalTitle">Add Variant</h2>
+        </div>
+        <button id="closeModalBtn" type="button" class="icon-btn" aria-label="Close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="modal-grid">
+        <div class="field field-span-2">
+          <label for="productNameInput">Product Name</label>
+          <input id="productNameInput" type="text" placeholder="Enter product name">
+        </div>
+        <div class="field">
+          <label for="itemCodeInput">Item Code</label>
+          <input id="itemCodeInput" type="text" placeholder="Enter item code">
+        </div>
+        <div class="field">
+          <label for="setNameInput">Set</label>
+          <input id="setNameInput" type="text" placeholder="Enter set name">
+        </div>
+        <div class="field">
+          <label for="priceInput">Price</label>
+          <input id="priceInput" type="number" min="0" step="0.01" placeholder="0.00">
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="saveVariantBtn" type="button" class="primary-btn">Save Variant</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/app-client.js"></script>
+  <script src="inventory.js"></script>
+</body>
+</html>

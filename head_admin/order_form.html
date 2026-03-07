@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Form</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="order_form.css">
+</head>
+<body>
+  <div class="page-shell">
+    <section class="hero-card">
+      <div>
+        <p class="eyebrow">Sales Module</p>
+        <h1 id="orderHeroTitle">High-Speed Order Encoding</h1>
+        <p id="orderHeroCopy" class="hero-copy">Encode like a sheet: type, use arrow keys, press enter or tab, and keep moving. Inventory variants stay cached and totals update live while you work.</p>
+        <p id="aiUsageTopIndicator" class="ai-usage-indicator">AI reads this month: -- / --</p>
+      </div>
+
+      <div class="hero-metrics">
+        <div class="hero-total" id="heroTotalCard">
+          <span>Total Amount</span>
+          <strong id="orderTotalValue">PHP 0.00</strong>
+          <small id="heroTotalMeta">Ready for encoding</small>
+        </div>
+        <div class="hero-side-card" id="heroCollectionCard">
+          <span>Collection</span>
+          <strong id="heroCollectionValue">PHP 0.00</strong>
+          <small id="heroPaymentMeta">No balance</small>
+        </div>
+      </div>
+    </section>
+
+    <div class="layout-grid">
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Header</p>
+            <h2 id="orderDetailsTitle">Order Details</h2>
+          </div>
+          <button id="openOrderFormSetupBtn" type="button" class="secondary-btn secondary-btn-compact">
+            <i class="fa-solid fa-sliders"></i> Customize Form
+          </button>
+        </div>
+
+        <div id="editModeBanner" class="edit-mode-banner" hidden></div>
+
+        <div class="form-grid">
+          <div id="fieldQuickPaste" class="field field-span-2">
+            <div class="field-inline-heading">
+              <label for="pastedOrderInput">Quick Paste</label>
+              <button id="applyPastedOrderBtn" type="button" class="secondary-btn secondary-btn-compact">Parse Text</button>
+            </div>
+            <textarea id="pastedOrderInput" rows="6" placeholder="Paste the full chat order here. The form will auto-fill after paste."></textarea>
+            <small class="field-help">Supports tagged blocks like DATE, BRANCH, COURIER, Name, Contact, Address, Mode of Payment, FINAL ORDER LIST, TOTAL, and ADMIN.</small>
+            <small id="aiUsageHint" class="field-help">AI reads this month: -- / --</small>
+          </div>
+          <div class="field">
+            <label for="orderNumberInput">Order No.</label>
+            <input id="orderNumberInput" type="text" readonly>
+          </div>
+          <div class="field">
+            <label for="saleDateInput">Date</label>
+            <input id="saleDateInput" type="date">
+          </div>
+          <div class="field">
+            <label for="branchCombobox">Invoice Branch</label>
+            <div id="branchCombobox" class="combo-host"></div>
+          </div>
+          <div id="fieldCashBranch" class="field">
+            <label for="cashBranchCombobox">Cash Branch</label>
+            <div id="cashBranchCombobox" class="combo-host"></div>
+          </div>
+          <div class="field">
+            <label for="courierCombobox">Courier</label>
+            <div id="courierCombobox" class="combo-host"></div>
+          </div>
+          <div class="field">
+            <label for="paymentTypeInput">Payment Type</label>
+            <input id="paymentTypeInput" type="text" placeholder="Auto from amount paid" readonly>
+          </div>
+          <div class="field">
+            <label for="adminCombobox">Admin</label>
+            <div id="adminCombobox" class="combo-host"></div>
+          </div>
+          <div id="fieldSalesRep" class="field">
+            <label for="salesRepCombobox">Sales Representative</label>
+            <div id="salesRepCombobox" class="combo-host"></div>
+          </div>
+          <div class="field field-span-2">
+            <label for="paymentMethodCombobox">Payment Method</label>
+            <div id="paymentMethodCombobox" class="combo-host combo-host-tags"></div>
+          </div>
+
+          <div class="field field-span-2">
+            <label for="clientNameCombobox">Client Name</label>
+            <div id="clientNameCombobox" class="combo-host"></div>
+          </div>
+          <div id="fieldClientContact" class="field">
+            <label for="clientContactInput">Contact Number</label>
+            <input id="clientContactInput" type="text" placeholder="09XXXXXXXXX">
+          </div>
+          <div id="fieldDeliveryFee" class="field">
+            <label for="deliveryFeeInput">Delivery Fee</label>
+            <input id="deliveryFeeInput" type="number" min="0" step="0.01" placeholder="0.00">
+          </div>
+          <div id="fieldClientAddress" class="field field-span-2">
+            <label for="clientAddressInput">Address</label>
+            <textarea id="clientAddressInput" rows="3" placeholder="Delivery address"></textarea>
+          </div>
+          <div id="fieldDeliveryFeeRule" class="field field-span-2">
+            <label>Delivery Fee Rule</label>
+            <label class="toggle-card" for="deliveryFeeToggle">
+              <input id="deliveryFeeToggle" type="checkbox" checked>
+              <span class="toggle-text">
+                <strong>DF included in total due</strong>
+                <small>Kapag naka-on, kasama ang delivery fee sa total na babayaran at doon ibabase ang collection, overpayment, at balance.</small>
+              </span>
+            </label>
+          </div>
+          <div class="field">
+            <label for="amountPaidInput">Amount Paid</label>
+            <input id="amountPaidInput" type="number" min="0" step="0.01" placeholder="Auto total from payment methods" readonly>
+          </div>
+          <div class="field">
+            <label for="collectionInput">Collection / Balance</label>
+            <input id="collectionInput" type="text" readonly>
+          </div>
+          <div class="field">
+            <label for="underpaymentInput">Underpayment</label>
+            <input id="underpaymentInput" type="text" readonly>
+          </div>
+          <div class="field">
+            <label for="overpaymentInput">Overpayment</label>
+            <input id="overpaymentInput" type="text" readonly>
+          </div>
+          <div id="fieldNote" class="field field-span-2">
+            <label for="noteInput">Note</label>
+            <input id="noteInput" type="text" placeholder="Optional note">
+          </div>
+        </div>
+      </section>
+
+      <section class="panel panel-stretch">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Items</p>
+            <h2 id="variantBuilderTitle">Variant Builder</h2>
+          </div>
+          <button id="addItemRowBtn" type="button" class="secondary-btn"><i class="fa-solid fa-plus"></i> Add Item</button>
+        </div>
+
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>Product Name</th>
+                <th>Set</th>
+                <th>Stock</th>
+                <th>Item Code</th>
+                <th>Price</th>
+                <th>Qty</th>
+                <th>Subtotal</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="itemsTableBody">
+              <tr><td colspan="8" class="empty">Loading inventory cache...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel-footer">
+          <div class="footer-summary">
+            <div>
+              <span class="footer-label">Grand Total</span>
+              <strong id="footerTotalValue">PHP 0.00</strong>
+            </div>
+            <div>
+              <span class="footer-label">Ready To Collect</span>
+              <strong id="footerCollectionValue">PHP 0.00</strong>
+            </div>
+          </div>
+          <div class="footer-actions">
+            <label class="footer-toggle" for="inventoryDeductToggle" title="Kapag naka-on, ibabawas ang quantity ng order sa inventory.">
+              <input id="inventoryDeductToggle" type="checkbox" checked>
+              <span>Ibawas sa inventory</span>
+            </label>
+            <button id="viewReceiptBtn" type="button" class="secondary-btn" hidden>View Receipt</button>
+            <button id="deleteOrderBtn" type="button" class="danger-btn" hidden>Delete Order</button>
+            <button id="newOrderBtn" type="button" class="secondary-btn" hidden>New Order</button>
+            <button id="resetOrderBtn" type="button" class="icon-danger-btn" title="Reset order">
+              <i class="fa-solid fa-rotate-left"></i>
+            </button>
+            <button id="submitOrderBtn" type="button" class="primary-btn">Create Order</button>
+          </div>
+        </div>
+
+        <div id="aiUsageBottomIndicator" class="ai-usage-indicator ai-usage-indicator-bottom">AI reads this month: -- / --</div>
+        <div id="statusText" class="status">Loading order form references...</div>
+      </section>
+    </div>
+  </div>
+
+  <div id="orderFormSetupModal" class="receipt-modal" hidden>
+    <div class="receipt-dialog order-setup-dialog">
+      <div class="receipt-dialog-header">
+        <div>
+          <p class="eyebrow">Workspace Setup</p>
+          <h2>Customize Order Form</h2>
+        </div>
+        <button id="closeOrderFormSetupBtn" type="button" class="icon-danger-btn" title="Close setup">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="order-setup-grid">
+        <div class="field field-span-2">
+          <label for="ofsOrderFormTitle">Order Form Title</label>
+          <input id="ofsOrderFormTitle" type="text" placeholder="Order form title">
+        </div>
+        <div class="field field-span-2">
+          <label for="ofsOrderFormCopy">Order Form Subtitle</label>
+          <textarea id="ofsOrderFormCopy" rows="3" placeholder="Description shown below the title"></textarea>
+        </div>
+        <div class="field">
+          <label for="ofsOrderDetailsTitle">Order Details Section Title</label>
+          <input id="ofsOrderDetailsTitle" type="text" placeholder="Order Details">
+        </div>
+        <div class="field">
+          <label for="ofsOrderItemsTitle">Items Section Title</label>
+          <input id="ofsOrderItemsTitle" type="text" placeholder="Variant Builder">
+        </div>
+        <div class="field">
+          <label for="ofsParseButton">Parse Button Label</label>
+          <input id="ofsParseButton" type="text" placeholder="Parse Text">
+        </div>
+        <div class="field">
+          <label for="ofsAddItemButton">Add Item Button Label</label>
+          <input id="ofsAddItemButton" type="text" placeholder="Add Item">
+        </div>
+        <div class="field field-span-2">
+          <label for="ofsSubmitButton">Create Button Label</label>
+          <input id="ofsSubmitButton" type="text" placeholder="Create Order">
+        </div>
+
+        <div class="field">
+          <label for="ofsBranches">Invoice Branch Options</label>
+          <textarea id="ofsBranches" rows="5" placeholder="One branch per line"></textarea>
+        </div>
+        <div class="field">
+          <label for="ofsCashBranches">Cash Branch Options</label>
+          <textarea id="ofsCashBranches" rows="5" placeholder="Optional. Leave blank to use invoice branches"></textarea>
+        </div>
+        <div class="field">
+          <label for="ofsCouriers">Courier Options</label>
+          <textarea id="ofsCouriers" rows="5" placeholder="One courier per line"></textarea>
+        </div>
+        <div class="field">
+          <label for="ofsAdmins">Admin Options</label>
+          <textarea id="ofsAdmins" rows="5" placeholder="One admin per line"></textarea>
+        </div>
+        <div class="field">
+          <label for="ofsSalesReps">Sales Rep Options</label>
+          <textarea id="ofsSalesReps" rows="5" placeholder="One sales representative per line"></textarea>
+        </div>
+        <div class="field">
+          <label for="ofsPaymentMethods">Payment Method Options</label>
+          <textarea id="ofsPaymentMethods" rows="5" placeholder="One payment method per line"></textarea>
+        </div>
+
+        <div class="field field-span-2">
+          <label>Visible Fields</label>
+          <div class="order-setup-toggle-grid">
+            <label class="order-setup-toggle"><input id="ofsShowQuickPaste" type="checkbox"> Quick Paste</label>
+            <label class="order-setup-toggle"><input id="ofsShowCashBranch" type="checkbox"> Cash Branch</label>
+            <label class="order-setup-toggle"><input id="ofsShowSalesRep" type="checkbox"> Sales Representative</label>
+            <label class="order-setup-toggle"><input id="ofsShowDeliveryFee" type="checkbox"> Delivery Fee</label>
+            <label class="order-setup-toggle"><input id="ofsShowNote" type="checkbox"> Note</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="receipt-modal-actions">
+        <button id="saveOrderFormSetupBtn" type="button" class="primary-btn">Save Setup</button>
+        <button id="dismissOrderFormSetupBtn" type="button" class="secondary-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="receiptModal" class="receipt-modal" hidden>
+    <div class="receipt-dialog">
+      <div class="receipt-dialog-header">
+        <div>
+          <p class="eyebrow">Receipt Ready</p>
+          <h2>Order Receipt</h2>
+        </div>
+        <button id="closeReceiptBtn" type="button" class="icon-danger-btn" title="Close receipt">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div id="receiptModalMeta" class="receipt-modal-meta"></div>
+      <div id="receiptModalItems" class="receipt-modal-items"></div>
+      <div id="receiptModalTotals" class="receipt-modal-totals"></div>
+      <div id="receiptModalApproval" class="receipt-modal-approval"></div>
+
+      <div class="receipt-modal-actions">
+        <button id="printReceiptBtn" type="button" class="primary-btn">Print Receipt</button>
+        <button id="dismissReceiptBtn" type="button" class="secondary-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/app-client.js"></script>
+  <script src="order_form.js"></script>
+</body>
+</html>

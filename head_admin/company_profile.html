@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Company Profile</title>
+  <style>
+    :root {
+      --bg: #edf2f8;
+      --bg-shade: #dbe7f7;
+      --card: rgba(255, 255, 255, 0.94);
+      --line: #dbe5f1;
+      --text: #102341;
+      --muted: #5a6f8f;
+      --primary: #2b64e3;
+      --primary-dark: #1849b9;
+      --shadow: 0 18px 40px rgba(18, 40, 78, 0.14);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI Variable", "Segoe UI", Tahoma, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, #d5e4ff 0%, transparent 42%),
+        radial-gradient(circle at bottom left, #d7ecff 0%, transparent 38%),
+        linear-gradient(160deg, var(--bg), var(--bg-shade));
+      min-height: 100vh;
+    }
+
+    .wrap { max-width: 860px; margin: 0 auto; padding: 30px 16px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    h1 { margin: 0 0 16px; font-size: clamp(24px, 3vw, 32px); letter-spacing: .2px; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .full { grid-column: 1 / -1; }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: #3e5579;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: .35px;
+      font-weight: 700;
+    }
+    input {
+      width: 100%;
+      height: 42px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #c6d3e4;
+      background: #fff;
+      color: #0f172a;
+      font: inherit;
+      transition: border-color .18s ease, box-shadow .18s ease;
+    }
+    input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+    }
+    .color-control {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    #primaryColor {
+      width: 56px;
+      min-width: 56px;
+      padding: 4px;
+      cursor: pointer;
+    }
+    #primaryColor::-webkit-color-swatch-wrapper { padding: 0; border-radius: 8px; }
+    #primaryColor::-webkit-color-swatch { border: none; border-radius: 8px; }
+    #primaryColor::-moz-color-swatch { border: none; border-radius: 8px; }
+    #primaryColorHex {
+      flex: 1;
+      font-family: "Consolas", "Courier New", monospace;
+      text-transform: lowercase;
+    }
+    input[type="file"] {
+      height: auto;
+      min-height: 42px;
+      padding: 6px 10px;
+    }
+
+    .logo-preview {
+      margin-top: 10px;
+      width: 156px;
+      height: 156px;
+      border-radius: 14px;
+      border: 1px solid #c9d6e8;
+      background: linear-gradient(160deg, #f9fbff, #eef4fd);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6);
+    }
+    .logo-preview img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+    .logo-meta { margin-top: 8px; font-size: 12px; color: var(--muted); font-weight: 600; }
+
+    .actions {
+      margin-top: 16px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    button {
+      border: none;
+      border-radius: 12px;
+      height: 42px;
+      padding: 0 16px;
+      background: linear-gradient(140deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 16px rgba(30, 85, 197, 0.35);
+      transition: transform .14s ease, filter .14s ease, box-shadow .14s ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    button:disabled { opacity: .65; cursor: not-allowed; transform: none; }
+    #status { font-size: 13px; color: #1f3a68; font-weight: 600; }
+    .workspace-box {
+      margin-top: 18px;
+      border: 1px solid #cfdbeb;
+      border-radius: 14px;
+      padding: 14px;
+      background: rgba(245, 250, 255, 0.9);
+    }
+    .workspace-box h2 {
+      margin: 0 0 6px;
+      font-size: 19px;
+    }
+    .workspace-box p {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .toggle-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .toggle-grid label {
+      margin: 0;
+      font-size: 12px;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 600;
+      color: #243955;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid #cfdbeb;
+      background: #fff;
+    }
+    .toggle-grid input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      border-radius: 4px;
+      min-height: auto;
+      padding: 0;
+    }
+    textarea {
+      width: 100%;
+      min-height: 96px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #c6d3e4;
+      background: #fff;
+      color: #0f172a;
+      font: inherit;
+      resize: vertical;
+    }
+    .view-only-note {
+      grid-column: 1 / -1;
+      margin-top: 4px;
+      margin-bottom: 4px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #cfd9e8;
+      background: #f2f7ff;
+      color: #2f4a73;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.45;
+    }
+    .readonly-field {
+      background: #f5f8fd !important;
+      color: #4f607a !important;
+      border-color: #d2dceb !important;
+      cursor: not-allowed;
+    }
+    .readonly-toggle-grid label {
+      opacity: 0.72;
+      background: #f5f8fd;
+    }
+
+    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+    @media (max-width: 760px) {
+      .wrap { padding: 20px 12px 26px; }
+      .card { padding: 16px; border-radius: 18px; }
+      .logo-preview { width: 130px; height: 130px; }
+      button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Company Profile</h1>
+      <div class="grid">
+        <div>
+          <label for="name">Company Name</label>
+          <input id="name" type="text">
+        </div>
+        <div>
+          <label for="companyCode">Company Code</label>
+          <input id="companyCode" type="text">
+        </div>
+        <div>
+          <label for="subdomain">Subdomain</label>
+          <input id="subdomain" type="text">
+        </div>
+        <div>
+          <label for="customDomain">Custom Domain</label>
+          <input id="customDomain" type="text">
+        </div>
+        <div>
+          <label for="primaryColor">Primary Color</label>
+          <div class="color-control">
+            <input id="primaryColor" type="color" value="#2575fc" aria-label="Primary color picker">
+            <input id="primaryColorHex" type="text" placeholder="#2575fc" autocomplete="off" spellcheck="false">
+          </div>
+        </div>
+        <div>
+          <label for="appName">App Name (white-label)</label>
+          <input id="appName" type="text">
+        </div>
+        <div class="full">
+          <label for="logoFile">Upload Logo (PNG, JPG, WebP, SVG)</label>
+          <input id="logoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+          <div class="logo-preview">
+            <img id="logoPreview" src="/logo.png" alt="Company logo preview">
+          </div>
+          <div id="logoMeta" class="logo-meta">Current company logo preview.</div>
+        </div>
+        <div class="full">
+          <label for="address">Business Address</label>
+          <input id="address" type="text">
+        </div>
+        <div class="full">
+          <label for="contact">Business Contact</label>
+          <input id="contact" type="text">
+        </div>
+      </div>
+
+      <section class="workspace-box">
+        <h2>Workspace Setup</h2>
+        <p>Per-company setup para sa menu labels, visibility, payment modes, at basic screen preferences.</p>
+
+        <div class="grid">
+          <div>
+            <label for="inventoryMenuLabel">Pricing Menu Label</label>
+            <input id="inventoryMenuLabel" type="text" placeholder="Product Pricing">
+          </div>
+          <div>
+            <label for="inventoryLevelsMenuLabel">Inventory Menu Label</label>
+            <input id="inventoryLevelsMenuLabel" type="text" placeholder="Inventory">
+          </div>
+          <div>
+            <label for="expensesTitle">Expenses Page Title</label>
+            <input id="expensesTitle" type="text" placeholder="Expenses and Cash Income">
+          </div>
+          <div>
+            <label for="expensesCopy">Expenses Page Subtitle</label>
+            <input id="expensesCopy" type="text" placeholder="Optional subtitle">
+          </div>
+          <div>
+            <label for="orderFormTitle">Order Form Title</label>
+            <input id="orderFormTitle" type="text" placeholder="Order Form title">
+          </div>
+          <div>
+            <label for="salesReportTitle">Sales Report Title</label>
+            <input id="salesReportTitle" type="text" placeholder="Sales Report title">
+          </div>
+          <div class="full">
+            <label for="orderFormCopy">Order Form Subtitle / Description</label>
+            <textarea id="orderFormCopy" placeholder="Order form description shown below the title"></textarea>
+          </div>
+          <div class="full">
+            <label for="salesReportCopy">Sales Report Subtitle / Description</label>
+            <textarea id="salesReportCopy" placeholder="Sales report description shown below the title"></textarea>
+          </div>
+          <div class="view-only-note">
+            Order Form setup is now edited in <strong>Order Form panel -> Customize Form</strong>.
+            The fields below are view-only in Company Profile.
+          </div>
+          <div class="full">
+            <label for="orderPaymentMethods">Order Form Payment Modes</label>
+            <textarea id="orderPaymentMethods" placeholder="One payment mode per line. Example:&#10;GCash&#10;Maya&#10;Bank Transfer&#10;Cash"></textarea>
+          </div>
+          <div>
+            <label for="orderBranches">Order Form Invoice Branch Options</label>
+            <textarea id="orderBranches" placeholder="One branch per line"></textarea>
+          </div>
+          <div>
+            <label for="orderCashBranches">Order Form Cash Branch Options</label>
+            <textarea id="orderCashBranches" placeholder="Optional. Leave blank to use invoice branches"></textarea>
+          </div>
+          <div>
+            <label for="orderCouriers">Order Form Courier Options</label>
+            <textarea id="orderCouriers" placeholder="One courier per line"></textarea>
+          </div>
+          <div>
+            <label for="orderAdmins">Order Form Admin Options</label>
+            <textarea id="orderAdmins" placeholder="One admin per line"></textarea>
+          </div>
+          <div class="full">
+            <label for="orderSalesReps">Order Form Sales Rep Options</label>
+            <textarea id="orderSalesReps" placeholder="One sales representative per line"></textarea>
+          </div>
+        </div>
+
+        <label style="margin-bottom:6px;">Menu Visibility</label>
+        <div class="toggle-grid">
+          <label><input id="showInvoiceSummary" type="checkbox"> Show Invoice Summary menu</label>
+          <label><input id="showInventoryLevels" type="checkbox"> Show Inventory menu</label>
+        </div>
+
+        <label style="margin-bottom:6px;">Order Form Fields</label>
+        <div class="toggle-grid readonly-toggle-grid">
+          <label><input id="ofQuickPaste" type="checkbox"> Quick Paste</label>
+          <label><input id="ofCashBranch" type="checkbox"> Cash Branch</label>
+          <label><input id="ofSalesRep" type="checkbox"> Sales Representative</label>
+          <label><input id="ofDeliveryFee" type="checkbox"> Delivery Fee</label>
+          <label><input id="ofNote" type="checkbox"> Note</label>
+        </div>
+
+        <label style="margin-bottom:6px;">Sales Report Filters</label>
+        <div class="toggle-grid">
+          <label><input id="srCashBranch" type="checkbox"> Cash Branch filter</label>
+          <label><input id="srPayment" type="checkbox"> Payment filter</label>
+          <label><input id="srAdmin" type="checkbox"> Admin filter</label>
+          <label><input id="srSalesRep" type="checkbox"> Sales Rep filter</label>
+        </div>
+      </section>
+
+      <div class="actions">
+        <button id="saveBtn" type="button">Save Profile</button>
+        <span id="status">Ready.</span>
+      </div>
+    </div>
+  </div>
+  <script src="../shared/app-client.js"></script>
+  <script src="./company_profile.js"></script>
+</body>
+</html>

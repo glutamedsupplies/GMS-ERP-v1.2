@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LBC Tracking Panel</title>
+  <style>
+    :root {
+      --bg: #edf3fa;
+      --panel: #ffffff;
+      --ink: #1f2937;
+      --muted: #5f6b7c;
+      --line: #dbe6f2;
+      --teal-700: #0f766e;
+      --teal-500: #14b8a6;
+      --teal-100: #ccfbf1;
+      --blue-100: #dbeafe;
+      --blue-700: #1d4ed8;
+      --amber-100: #fef3c7;
+      --amber-700: #b45309;
+      --orange-100: #ffedd5;
+      --orange-700: #c2410c;
+      --green-100: #dcfce7;
+      --green-700: #166534;
+      --red-100: #fee2e2;
+      --red-200: #fecaca;
+      --red-700: #b91c1c;
+      --shadow: 0 20px 44px rgba(15, 23, 42, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Manrope", "Plus Jakarta Sans", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(1200px 600px at 0% -15%, #d8f3ff 0%, transparent 58%),
+        radial-gradient(1050px 560px at 100% 0%, #dcfce7 0%, transparent 55%),
+        var(--bg);
+      padding: 18px;
+    }
+
+    .panel {
+      max-width: 1600px;
+      margin: 0 auto;
+      background: var(--panel);
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hero {
+      padding: 18px 22px 16px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(130deg, #ecfeff 0%, #f8fafc 54%, #ecfccb 100%);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: 0.2px;
+    }
+
+    .hero p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .panel-body {
+      padding: 12px;
+      background: #f3f8fd;
+      display: grid;
+      gap: 14px;
+    }
+
+    .tracking-main-panel {
+      border: 1px solid #d7e5f3;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+    }
+
+    .tracking-intake {
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--line);
+      background: #f8fbff;
+      display: grid;
+      gap: 12px;
+    }
+
+    .input-card {
+      border: 1px solid #d9e7f5;
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .input-title {
+      margin: 0;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: #334155;
+      font-weight: 800;
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: minmax(220px, 1.7fr) minmax(160px, 1fr) auto auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .bulk-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .field {
+      width: 100%;
+      border: 1px solid #c8d7e8;
+      border-radius: 10px;
+      background: #fff;
+      color: #0f172a;
+      font-size: 13px;
+      padding: 0 12px;
+      height: 40px;
+    }
+
+    .field.field-inline {
+      height: 32px;
+      padding: 0 10px;
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
+    .field-inline.field-tracking-number {
+      min-width: 132px;
+    }
+
+    .field-inline.field-amount {
+      min-width: 120px;
+    }
+
+    .field-inline.field-status {
+      min-width: 130px;
+      padding-right: 28px;
+    }
+
+    .field-inline.field-date-monitored {
+      min-width: 168px;
+    }
+
+    textarea.field {
+      min-height: 84px;
+      padding: 10px 12px;
+      resize: vertical;
+      line-height: 1.4;
+      height: auto;
+    }
+
+    .field:focus {
+      outline: none;
+      border-color: #2dd4bf;
+      box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.2);
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 0 14px;
+      height: 40px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn.btn-inline {
+      height: 32px;
+      border-radius: 8px;
+      font-size: 11px;
+      padding: 0 12px;
+    }
+
+    .btn.primary {
+      background: linear-gradient(135deg, var(--teal-700), var(--teal-500));
+      color: #fff;
+    }
+
+    .btn.secondary {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    .btn.warning {
+      background: linear-gradient(135deg, #b45309, #d97706);
+      color: #fff;
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .scanner-hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .auto-detect-result {
+      min-height: 16px;
+      font-size: 12px;
+      color: #0f766e;
+    }
+
+    .toolbar {
+      padding: 14px 22px;
+      display: grid;
+      gap: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .chip-row,
+    .quick-row,
+    .search-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .chip {
+      border: 1px solid #c8d7e8;
+      background: #f8fafc;
+      color: #0f172a;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    .chip.active {
+      background: var(--teal-700);
+      color: #fff;
+      border-color: var(--teal-700);
+    }
+
+    .chip.quick {
+      background: #f8fafc;
+      border-color: #d2dbe8;
+    }
+
+    .chip.quick.active {
+      background: #1d4ed8;
+      border-color: #1d4ed8;
+      color: #fff;
+    }
+
+    #searchInput {
+      flex: 1 1 300px;
+      min-width: 220px;
+    }
+
+    .summary-grid {
+      padding: 12px 22px 16px;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfdff;
+    }
+
+    .summary-card {
+      border: 1px solid #d8e4f2;
+      border-radius: 14px;
+      background: #fff;
+      padding: 10px 12px;
+      display: grid;
+      gap: 2px;
+    }
+
+    .summary-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #516172;
+      font-weight: 800;
+    }
+
+    .summary-value {
+      font-size: 24px;
+      font-weight: 900;
+      line-height: 1.1;
+      color: #0f172a;
+    }
+
+    .summary-note {
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    .summary-card.concern {
+      border-color: #fecaca;
+      background: #fff7f7;
+    }
+
+    .summary-card.concern .summary-label,
+    .summary-card.concern .summary-value {
+      color: #b91c1c;
+    }
+
+    .status-line {
+      min-height: 18px;
+      font-size: 12px;
+      color: #4b5563;
+      padding: 0 22px 14px;
+    }
+
+    .status-line.error {
+      color: var(--red-700);
+    }
+
+    .table-wrap {
+      border-top: 1px solid var(--line);
+      overflow: auto;
+      max-height: calc(100vh - 440px);
+    }
+
+    table {
+      width: 100%;
+      min-width: 1260px;
+      border-collapse: collapse;
+      font-size: 12px;
+      table-layout: fixed;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #f8fbff;
+      border-bottom: 1px solid #d5e3f3;
+      text-transform: uppercase;
+      letter-spacing: 0.35px;
+      font-size: 11px;
+      color: #334155;
+      padding: 10px 8px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    tbody td {
+      border-bottom: 1px solid #edf2f7;
+      padding: 8px;
+      color: #0f172a;
+      vertical-align: middle;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fbfdff;
+    }
+
+    tbody tr.row-missing-tracking {
+      background: #fff1f2;
+    }
+
+    .tracking-text {
+      display: inline-flex;
+      min-height: 24px;
+      align-items: center;
+      font-family: "JetBrains Mono", "Cascadia Code", monospace;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.15px;
+      color: #0f172a;
+    }
+
+    .tracking-text.empty {
+      color: #b91c1c;
+    }
+
+    tbody tr[data-editing="true"] {
+      background: #ecfeff;
+    }
+
+    .row-action-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      padding: 4px 9px;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+    }
+
+    .pill.branch-pampanga {
+      background: var(--orange-100);
+      color: var(--orange-700);
+      border-color: #fdba74;
+    }
+
+    .pill.branch-cubao {
+      background: var(--green-100);
+      color: var(--green-700);
+      border-color: #86efac;
+    }
+
+    .pill.branch-default {
+      background: #e2e8f0;
+      color: #334155;
+      border-color: #cbd5e1;
+    }
+
+    .pill.delivery-in-transit,
+    .field-inline.field-status.status-delivery-in-transit {
+      background: var(--blue-100);
+      color: var(--blue-700);
+      border-color: #93c5fd;
+    }
+
+    .pill.delivery-delivered,
+    .field-inline.field-status.status-delivery-delivered {
+      background: var(--green-100);
+      color: var(--green-700);
+      border-color: #86efac;
+    }
+
+    .pill.delivery-rts,
+    .field-inline.field-status.status-delivery-rts {
+      background: var(--amber-100);
+      color: var(--amber-700);
+      border-color: #fcd34d;
+    }
+
+    .pill.delivery-rto,
+    .field-inline.field-status.status-delivery-rto {
+      background: var(--red-100);
+      color: var(--red-700);
+      border-color: var(--red-200);
+    }
+
+    .pill.delivery-concern,
+    .field-inline.field-status.status-delivery-concern {
+      background: #fff1f2;
+      color: #be123c;
+      border-color: #fecdd3;
+    }
+
+    .pill.delivery-out-for-delivery,
+    .field-inline.field-status.status-delivery-out-for-delivery {
+      background: #e0f2fe;
+      color: #0369a1;
+      border-color: #7dd3fc;
+    }
+
+    .pill.delivery-pending,
+    .field-inline.field-status.status-delivery-pending {
+      background: #f1f5f9;
+      color: #475569;
+      border-color: #cbd5e1;
+    }
+
+    .pill.delivery-ready-pickup,
+    .field-inline.field-status.status-delivery-ready-pickup {
+      background: #ccfbf1;
+      color: #0f766e;
+      border-color: #5eead4;
+    }
+
+    .pill.delivery-in-transfer,
+    .field-inline.field-status.status-delivery-in-transfer {
+      background: #ecfeff;
+      color: #0e7490;
+      border-color: #67e8f9;
+    }
+
+    .pill.delivery-re-deliver,
+    .field-inline.field-status.status-delivery-re-deliver {
+      background: #ffedd5;
+      color: #c2410c;
+      border-color: #fdba74;
+    }
+
+    .pill.delivery-pending-pickup,
+    .field-inline.field-status.status-delivery-pending-pickup {
+      background: #fef9c3;
+      color: #854d0e;
+      border-color: #fde047;
+    }
+
+    .pill.ship-pending-packing {
+      background: #f1f5f9;
+      color: #475569;
+      border-color: #cbd5e1;
+    }
+
+    .pill.ship-packed {
+      background: #e0f2fe;
+      color: #0369a1;
+      border-color: #7dd3fc;
+    }
+
+    .pill.ship-handed {
+      background: #ffedd5;
+      color: #c2410c;
+      border-color: #fdba74;
+    }
+
+    .pill.ship-in-transit {
+      background: #dbeafe;
+      color: #1d4ed8;
+      border-color: #93c5fd;
+    }
+
+    .pill.ship-delivered {
+      background: #dcfce7;
+      color: #166534;
+      border-color: #86efac;
+    }
+
+    .pill.ship-rts {
+      background: #fef3c7;
+      color: #b45309;
+      border-color: #fcd34d;
+    }
+
+    .pill.ship-rto {
+      background: #fee2e2;
+      color: #b91c1c;
+      border-color: #fecaca;
+    }
+
+    .empty-row {
+      padding: 22px 10px;
+      text-align: center;
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .collection-panel {
+      margin: 0;
+      border: 1px solid #d8e6f4;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #f8fcff 0%, #f3f8ff 100%);
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+      display: grid;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    .collection-header {
+      padding: 14px 16px 12px;
+      display: grid;
+      gap: 4px;
+      border-bottom: 1px solid #d6e4f3;
+      background: linear-gradient(130deg, #ecfeff 0%, #f5f9ff 48%, #eefbf3 100%);
+    }
+
+    .collection-header h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0.15px;
+      color: #0f172a;
+    }
+
+    .collection-header p {
+      margin: 0;
+      color: #526174;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .collection-toolbar {
+      padding: 12px 16px 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .collection-filter-row .chip.quick.active {
+      background: #0f766e;
+      border-color: #0f766e;
+      color: #fff;
+    }
+
+    .collection-summary-cards {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .collection-stat {
+      border: 1px solid #d8e6f4;
+      background: #fff;
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: grid;
+      gap: 2px;
+    }
+
+    .collection-stat-label {
+      font-size: 11px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: #5d6d80;
+      font-weight: 800;
+    }
+
+    .collection-stat strong {
+      font-size: 21px;
+      line-height: 1.05;
+      color: #0f172a;
+    }
+
+    .collection-stat-note {
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    .collection-stat.pending strong {
+      color: #b45309;
+    }
+
+    .collection-stat.confirmed strong {
+      color: #166534;
+    }
+
+    .collection-stat.amount-pending strong {
+      color: #1d4ed8;
+      font-size: 18px;
+    }
+
+    .collection-stat.amount-confirmed strong {
+      color: #0f766e;
+      font-size: 18px;
+    }
+
+    .collection-table-wrap {
+      margin: 0 12px 12px;
+      border: 1px solid #d8e6f4;
+      border-radius: 12px;
+      background: #fff;
+      max-height: 360px;
+    }
+
+    .collection-table {
+      min-width: 1020px;
+    }
+
+    .collection-table thead th {
+      background: #eef6ff;
+    }
+
+    .collection-table tbody tr:nth-child(even) {
+      background: #fbfdff;
+    }
+
+    .collection-table tbody tr:hover {
+      background: #eff9ff;
+    }
+
+    .collection-action {
+      display: flex;
+      align-items: center;
+    }
+
+    .collection-action-stack {
+      display: grid;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .collection-action-buttons {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .collection-note {
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    .pill.collection-pending {
+      background: #fef3c7;
+      color: #b45309;
+      border-color: #fcd34d;
+    }
+
+    .pill.collection-confirmed {
+      background: #dcfce7;
+      color: #166534;
+      border-color: #86efac;
+    }
+
+    @media (max-width: 1040px) {
+      body {
+        padding: 10px;
+      }
+
+      .hero,
+      .tracking-intake,
+      .toolbar,
+      .summary-grid,
+      .status-line,
+      .collection-header,
+      .collection-toolbar {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .panel-body {
+        padding: 8px;
+        gap: 10px;
+      }
+
+      .input-row {
+        grid-template-columns: 1fr;
+      }
+
+      .bulk-row {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .collection-summary-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .collection-table-wrap {
+        margin: 0 8px 8px;
+      }
+
+      .table-wrap {
+        max-height: calc(100vh - 390px);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .collection-summary-cards {
+        grid-template-columns: 1fr;
+      }
+
+      .collection-action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="panel">
+    <header class="hero">
+      <h1>LBC Tracking Panel</h1>
+      <p>Fast intake workflow for scan/paste tracking, automatic assignment, live shipment monitoring, and exception detection.</p>
+    </header>
+
+    <div class="panel-body">
+      <section class="tracking-main-panel">
+        <section class="tracking-intake">
+      <article class="input-card">
+        <h2 class="input-title">Tracking Number Input</h2>
+        <div class="input-row">
+          <input id="trackingScanInput" class="field" type="text" inputmode="text" autocomplete="off" placeholder="Paste or Scan Tracking Number">
+          <input id="orderLookupInput" class="field" type="text" autocomplete="off" placeholder="Order # (optional)">
+          <button id="autoDetectBtn" class="btn secondary" type="button">Auto Detect Order</button>
+          <button id="saveTrackingBtn" class="btn primary" type="button">Save</button>
+        </div>
+        <p id="autoDetectResult" class="auto-detect-result"></p>
+        <p class="scanner-hint">Scanner-ready: this field auto-focuses and pressing Enter saves immediately.</p>
+      </article>
+
+      <article class="input-card">
+        <h2 class="input-title">Bulk Tracking Input</h2>
+        <div class="bulk-row">
+          <textarea id="bulkTrackingInput" class="field" placeholder="Paste one tracking number per line or pair with order reference (example: ORD-240031 313949567146)"></textarea>
+          <button id="saveBulkBtn" class="btn primary" type="button">Process Bulk Input</button>
+        </div>
+      </article>
+        </section>
+
+        <section class="toolbar">
+      <div id="branchButtons" class="chip-row">
+        <button class="chip active" data-branch="">All Branches</button>
+        <button class="chip" data-branch="Pampanga">Pampanga</button>
+        <button class="chip" data-branch="Cubao">Cubao</button>
+      </div>
+
+      <div class="search-row">
+        <input id="searchInput" class="field" type="text" placeholder="Search order, client, tracking, assignee, branch">
+        <button id="searchBtn" class="btn secondary" type="button">Apply</button>
+        <button id="reloadBtn" class="btn secondary" type="button">Reload Table</button>
+        <button id="refreshTrackingBtn" class="btn warning" type="button">Reload Tracking</button>
+      </div>
+
+      <div id="quickFilterButtons" class="quick-row">
+        <button class="chip quick active" data-quick-filter="all">All Orders</button>
+        <button class="chip quick" data-quick-filter="in_transit">In Transit</button>
+        <button class="chip quick" data-quick-filter="delivered">Delivered</button>
+        <button class="chip quick" data-quick-filter="rts">RTS</button>
+        <button class="chip quick" data-quick-filter="rto">RTO</button>
+        <button class="chip quick" data-quick-filter="no_tracking">No Tracking Number</button>
+        <button class="chip quick" data-quick-filter="pending_shipment">Pending Shipment</button>
+      </div>
+        </section>
+
+        <section class="summary-grid">
+      <article class="summary-card">
+        <span class="summary-label">No Tracking Number</span>
+        <span id="summaryNoTracking" class="summary-value">0</span>
+        <span class="summary-note">Needs assignment</span>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">RTS</span>
+        <span id="summaryRts" class="summary-value">0</span>
+        <span class="summary-note">Returned to sender</span>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">RTO</span>
+        <span id="summaryRto" class="summary-value">0</span>
+        <span class="summary-note">Return to origin</span>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">In Transit</span>
+        <span id="summaryInTransit" class="summary-value">0</span>
+        <span class="summary-note">Active shipments</span>
+      </article>
+      <article class="summary-card concern">
+        <span class="summary-label">Concern</span>
+        <span id="summaryConcern" class="summary-value">0</span>
+        <span class="summary-note">Need immediate action</span>
+      </article>
+        </section>
+
+        <div id="panelStatus" class="status-line"></div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:112px;">Date</th>
+                <th style="width:168px;">Tracking Number</th>
+                <th style="width:128px;">Order Number</th>
+                <th style="width:190px;">Client</th>
+                <th style="width:150px;">Amount to Collect</th>
+                <th style="width:165px;">Delivery Status</th>
+                <th style="width:120px;">Branch</th>
+                <th style="width:188px;">Assigned To</th>
+                <th style="width:250px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="trackingTableBody">
+              <tr><td class="empty-row" colspan="9">Loading LBC tracking rows...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="collection-panel">
+      <header class="collection-header">
+        <h2>LBC Collection Confirmation</h2>
+        <p>Delivered orders go here for owner confirmation. Confirm once payment is collected.</p>
+      </header>
+      <div class="collection-toolbar">
+        <div id="collectionFilterButtons" class="quick-row collection-filter-row">
+          <button class="chip quick active" data-collection-filter="all">All Delivered</button>
+          <button class="chip quick" data-collection-filter="pending">Pending Confirmation</button>
+          <button class="chip quick" data-collection-filter="confirmed">Confirmed</button>
+        </div>
+        <div class="collection-summary-cards">
+          <article class="collection-stat pending">
+            <span class="collection-stat-label">Pending</span>
+            <strong id="collectionPendingCount">0</strong>
+            <span class="collection-stat-note">Needs owner confirmation</span>
+          </article>
+          <article class="collection-stat confirmed">
+            <span class="collection-stat-label">Confirmed</span>
+            <strong id="collectionConfirmedCount">0</strong>
+            <span class="collection-stat-note">Already reconciled</span>
+          </article>
+          <article class="collection-stat amount-pending">
+            <span class="collection-stat-label">Pending Amount</span>
+            <strong id="collectionPendingAmount">PHP 0.00</strong>
+            <span class="collection-stat-note">To be collected</span>
+          </article>
+          <article class="collection-stat amount-confirmed">
+            <span class="collection-stat-label">Confirmed Amount</span>
+            <strong id="collectionConfirmedAmount">PHP 0.00</strong>
+            <span class="collection-stat-note">Collected cash</span>
+          </article>
+        </div>
+      </div>
+      <div class="table-wrap collection-table-wrap">
+        <table class="collection-table">
+          <thead>
+            <tr>
+              <th style="width:112px;">Date</th>
+              <th style="width:150px;">Order Number</th>
+              <th style="width:180px;">Client</th>
+              <th style="width:165px;">Tracking Number</th>
+              <th style="width:110px;">Branch</th>
+              <th style="width:150px;">Amount to Collect</th>
+              <th style="width:150px;">Collection Status</th>
+              <th style="width:230px;">Owner Confirmation</th>
+            </tr>
+          </thead>
+          <tbody id="collectionTableBody">
+            <tr><td class="empty-row" colspan="8">Loading delivered collection rows...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      </section>
+    </div>
+  </section>
+
+  <script src="../shared/app-client.js"></script>
+  <script src="./lbc_tracking.js"></script>
+</body>
+</html>

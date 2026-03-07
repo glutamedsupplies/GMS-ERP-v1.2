@@ -1,0 +1,351 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Today Attendance</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #eef3f8;
+    --card: #ffffff;
+    --text: #1c2430;
+    --muted: #6f7c8d;
+    --border: #dce5f0;
+    --accent: #2c7be5;
+    --on-time: #1f9d55;
+    --late: #f59f00;
+    --absent: #d64545;
+    --excuse: #2962ff;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: 'Roboto', sans-serif;
+    background: linear-gradient(180deg, #f7f9fc 0%, var(--bg) 100%);
+    color: var(--text);
+  }
+
+  .page {
+    padding: 24px;
+    display: grid;
+    gap: 18px;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 22px 24px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #213b72, #2b6cb0);
+    color: #fff;
+    box-shadow: 0 16px 32px rgba(33, 59, 114, 0.18);
+  }
+
+  .header h2 {
+    margin: 0;
+    font-size: 26px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .header p {
+    margin: 8px 0 0;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 14px;
+  }
+
+  .header-meta {
+    text-align: right;
+  }
+
+  .date-label {
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0.9;
+  }
+
+  .clock {
+    margin-top: 8px;
+    font-size: 28px;
+    font-weight: 700;
+    font-family: monospace;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .summary-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 10px 24px rgba(25, 35, 52, 0.06);
+  }
+
+  .summary-card span {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+
+  .summary-card strong {
+    font-size: 28px;
+    line-height: 1;
+  }
+
+  .summary-card.total strong { color: var(--accent); }
+  .summary-card.on-time strong { color: var(--on-time); }
+  .summary-card.late strong { color: var(--late); }
+  .summary-card.absent strong { color: var(--absent); }
+  .summary-card.excuse strong { color: var(--excuse); }
+
+  .table-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 10px 24px rgba(25, 35, 52, 0.06);
+  }
+
+  .table-header {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    background: #f9fbfe;
+  }
+
+  .table-header h3 {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  .table-header p {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .table-header .status-note {
+    margin-top: 10px;
+    min-height: 18px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 980px;
+  }
+
+  th,
+  td {
+    padding: 13px 14px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+
+  th {
+    background: #f2f6fb;
+    color: #314156;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  tr:hover {
+    background: rgba(44, 123, 229, 0.04);
+  }
+
+  .employee-img {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center;
+    border: 2px solid #dbe7f5;
+    background: #dde6f1;
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 88px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+
+  .status-on-time {
+    color: var(--on-time);
+    background: rgba(31, 157, 85, 0.12);
+  }
+
+  .status-late {
+    color: #9a6700;
+    background: rgba(245, 159, 0, 0.18);
+  }
+
+  .status-absent {
+    color: var(--absent);
+    background: rgba(214, 69, 69, 0.12);
+  }
+
+  .status-excuse {
+    color: var(--excuse);
+    background: rgba(41, 98, 255, 0.12);
+  }
+
+  .no-data {
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .status-editor {
+    width: 100%;
+    min-width: 112px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  .status-editor:disabled {
+    opacity: 0.65;
+    cursor: wait;
+  }
+
+  .note-success {
+    color: var(--on-time);
+  }
+
+  .note-error {
+    color: var(--absent);
+  }
+
+  @media (max-width: 1100px) {
+    .summary-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 700px) {
+    .page {
+      padding: 16px;
+    }
+
+    .header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .header-meta {
+      text-align: left;
+    }
+
+    .summary-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div>
+      <h2><i class="fa-regular fa-calendar-check"></i> Today Attendance Snapshot</h2>
+      <p>Current-date view of all employees with On Time, Late, Absent, and Excuse status.</p>
+    </div>
+    <div class="header-meta">
+      <div class="date-label" id="dateLabel">Loading date...</div>
+      <div class="clock" id="clock">00:00:00</div>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card total">
+      <span>Total Employees</span>
+      <strong id="totalCount">0</strong>
+    </div>
+    <div class="summary-card on-time">
+      <span>On Time</span>
+      <strong id="onTimeCount">0</strong>
+    </div>
+    <div class="summary-card late">
+      <span>Late</span>
+      <strong id="lateCount">0</strong>
+    </div>
+    <div class="summary-card absent">
+      <span>Absent</span>
+      <strong id="absentCount">0</strong>
+    </div>
+    <div class="summary-card excuse">
+      <span>Excuse</span>
+      <strong id="excuseCount">0</strong>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h3>Employee Attendance For Today</h3>
+      <p>Absent employees are inferred from the employee list when no current-date record exists in the attendance log.</p>
+      <div class="status-note" id="statusNote"></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Employee ID</th>
+            <th>Name</th>
+            <th>Photo</th>
+            <th>Scheduled In</th>
+            <th>Time In</th>
+            <th>Time Out</th>
+            <th>Late Minutes</th>
+            <th>Status</th>
+            <th>Remarks</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="todayTableBody">
+          <tr>
+            <td colspan="10" class="no-data">Loading attendance records...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="../shared/app-client.js"></script>
+<script src="today_present.js"></script>
+</body>
+</html>
+
+

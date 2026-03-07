@@ -1,0 +1,103 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2575fc">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+<title id="pageTitle">GMS ERP Login</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap');
+  body{
+    font-family:'Roboto',sans-serif;
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background: linear-gradient(135deg,#6a11cb,#2575fc);
+    padding: 20px;
+  }
+  .login-card{
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(10px);
+    padding: 60px 40px 30px 40px;
+    border-radius:20px;
+    width:360px;
+    text-align:center;
+    box-shadow:0 10px 30px rgba(0,0,0,0.25);
+  }
+  .logo-container{
+    margin:-50px auto 20px auto;
+    width:120px;
+    height:120px;
+    border-radius:50%;
+    background: rgba(255,255,255,0.1);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    box-shadow:0 5px 15px rgba(0,0,0,0.3);
+    overflow:hidden;
+  }
+  .logo-container img{width:100%; height:100%; object-fit:contain; background:#fff;}
+  h2{color:#fff; margin-bottom:10px; text-shadow:1px 1px 6px rgba(0,0,0,0.4);}
+  .subtitle { color:#e5e7eb; font-size:13px; margin-bottom:18px; }
+  .input-group{display:flex; align-items:center; margin:15px 0; background: rgba(255,255,255,0.2); border-radius:12px; overflow:hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);}
+  .input-group input{flex:1; padding:12px; border:none; font-size:16px; background:transparent; color:#fff;}
+  .toggle-pass{padding:0 12px; cursor:pointer; color:#fff; display:flex; align-items:center; font-size:18px;}
+  .login-btn{width:100%; padding:14px; margin-top:25px; border:none; border-radius:12px; font-size:18px; font-weight:500; color:white; background:linear-gradient(45deg,#ff512f,#dd2476); cursor:pointer;}
+  .customer-btn{width:100%; padding:12px; margin-top:10px; border:1px solid rgba(255,255,255,0.55); border-radius:12px; font-size:15px; font-weight:600; color:#fff; background:rgba(255,255,255,0.13); cursor:pointer;}
+  .install-btn{width:100%; padding:12px; margin-top:12px; border:none; border-radius:12px; font-size:15px; font-weight:500; color:#0b1d4d; background:#ffffff; cursor:pointer;}
+  .forgot-link{
+    display:block;
+    width:100%;
+    margin-top:12px;
+    padding:4px 0;
+    color:#eaf1ff;
+    font-size:13px;
+    text-decoration:underline;
+    text-align:center;
+    cursor:pointer;
+    position:relative;
+    z-index:2;
+  }
+  #message{margin-top:20px; font-weight:bold; min-height:24px; text-align:center;}
+</style>
+</head>
+<body>
+
+<div class="login-card">
+  <div class="logo-container"><img id="brandLogo" src="logo.png" alt="Company Logo"></div>
+  <h2 id="loginTitle">GMS ERP Login</h2>
+  <div class="subtitle" id="loginSubtitle">Sign in to continue</div>
+
+  <div class="input-group">
+    <input type="text" id="companyCode" placeholder="Company Code (required for tenant users)">
+  </div>
+
+  <div class="input-group">
+    <input type="text" id="idNumber" placeholder="ID Number">
+  </div>
+
+  <div class="input-group">
+    <input type="password" id="password" placeholder="Password">
+    <div class="toggle-pass" id="togglePass"><i class="fa-regular fa-eye"></i></div>
+  </div>
+
+  <button id="loginBtn" class="login-btn">Log In</button>
+  <a id="forgotPasswordBtn" class="forgot-link" href="/renderer/forgot_password.html">Forgot Password?</a>
+  <button id="customerPortalBtn" class="customer-btn" type="button">Customer Request & Chat</button>
+  <button id="installAppBtn" class="install-btn" type="button">Install</button>
+  <div id="message"></div>
+</div>
+
+<script src="shared/app-client.js"></script>
+<script src="shared/pwa.js"></script>
+<script src="renderer/login.js"></script>
+</body>
+</html>

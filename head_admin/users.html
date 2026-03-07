@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Management</title>
+  <style>
+    :root {
+      --bg: #edf2f8;
+      --bg-shade: #dbe7f7;
+      --card: rgba(255, 255, 255, 0.94);
+      --line: #dbe5f1;
+      --text: #102341;
+      --muted: #5a6f8f;
+      --primary: #2b64e3;
+      --primary-dark: #1849b9;
+      --shadow: 0 18px 40px rgba(18, 40, 78, 0.14);
+      --success-bg: #dcfce7;
+      --success-text: #166534;
+      --danger-bg: #fee2e2;
+      --danger-text: #991b1b;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI Variable", "Segoe UI", Tahoma, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, #d5e4ff 0%, transparent 42%),
+        radial-gradient(circle at bottom left, #d7ecff 0%, transparent 38%),
+        linear-gradient(160deg, var(--bg), var(--bg-shade));
+      min-height: 100vh;
+    }
+
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 30px 16px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+
+    h1 { margin: 0; font-size: clamp(24px, 3vw, 32px); letter-spacing: .2px; }
+    h2 { margin: 0; font-size: 20px; }
+    .muted { color: var(--muted); font-size: 13px; }
+    #limitText {
+      margin-top: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 11px;
+      border-radius: 999px;
+      background: #eef4ff;
+      border: 1px solid #d8e5ff;
+      color: #27457a;
+      font-weight: 600;
+    }
+
+    .status {
+      margin: 0 0 12px;
+      min-height: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1f3a68;
+    }
+
+    input, select {
+      width: 100%;
+      height: 42px;
+      padding: 10px 12px;
+      border: 1px solid #c6d3e4;
+      border-radius: 12px;
+      background: #fff;
+      font: inherit;
+      color: #0f172a;
+      transition: border-color .18s ease, box-shadow .18s ease;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      height: 42px;
+      padding: 0 16px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .14s ease, box-shadow .14s ease, filter .14s ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    button:disabled { opacity: .65; cursor: not-allowed; transform: none; }
+
+    .toolbar { margin: 16px 0 10px; }
+    .toolbar-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .toolbar-controls select { max-width: 180px; }
+    .toolbar-controls input { max-width: 260px; }
+
+    .form {
+      display: grid;
+      grid-template-columns: minmax(170px, 1.25fr) minmax(180px, 1.4fr) minmax(140px, 1fr) minmax(140px, 1fr) minmax(180px, 1.25fr);
+      gap: 10px;
+      margin: 12px 0;
+      align-items: center;
+    }
+
+    .feature-box {
+      border: 1px solid #d8e4f3;
+      border-radius: 14px;
+      padding: 12px;
+      background: linear-gradient(180deg, #f8fbff, #f2f7ff);
+    }
+    .feature-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .55px;
+      color: #3d5480;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .feature-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .feature-list label {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      height: 32px;
+      padding: 0 10px;
+      border: 1px solid #cfdbeb;
+      border-radius: 999px;
+      background: #fff;
+      color: #1f3556;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .feature-list input { margin: 0; width: auto; height: auto; }
+    .feature-empty-note {
+      width: 100%;
+      padding: 8px 0 2px;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .form-actions { margin: 12px 0 6px; }
+    .primary-btn {
+      background: linear-gradient(140deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      box-shadow: 0 8px 16px rgba(30, 85, 197, 0.35);
+      min-width: 180px;
+    }
+    .secondary-btn {
+      border: 1px solid #cdd8e7;
+      background: #fff;
+      color: #1c2e49;
+      box-shadow: none;
+      font-weight: 600;
+    }
+    .secondary-btn:hover { background: #f5f8fd; }
+
+    .table-shell {
+      margin-top: 8px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: auto;
+      background: #fff;
+    }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1040px; }
+    th, td {
+      border-bottom: 1px solid #e8eef6;
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 14px;
+      vertical-align: middle;
+    }
+    th {
+      background: linear-gradient(180deg, #f8fbff, #f1f6fe);
+      color: #2b3f62;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      font-weight: 700;
+    }
+    tbody tr:hover { background: #f8fbff; }
+    tbody tr:last-child td { border-bottom: none; }
+    .empty-row { text-align: center; color: var(--muted); padding: 22px 14px; }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .pill.active { background: var(--success-bg); color: var(--success-text); }
+    .pill.inactive { background: var(--danger-bg); color: var(--danger-text); }
+
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .actions button {
+      height: 30px;
+      border-radius: 9px;
+      font-size: 12px;
+      padding: 0 10px;
+      font-weight: 700;
+      box-shadow: none;
+    }
+    .actions .edit { background: #e4edff; color: #214ea9; }
+    .actions .toggle { background: #eef2f7; color: #1f2f46; }
+    .actions .delete { background: #fee2e2; color: #991b1b; }
+    .actions .edit:hover { background: #d6e5ff; }
+    .actions .toggle:hover { background: #dfe7f1; }
+    .actions .delete:hover { background: #fccccc; }
+
+    .feature-pill {
+      display: inline-block;
+      margin: 2px 5px 2px 0;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #e9f0ff;
+      color: #284d97;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .feature-pill.off { background: #f1f5f9; color: #64748b; }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.46);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 20;
+      backdrop-filter: blur(2px);
+    }
+    .modal.open { display: flex; }
+    .modal-card {
+      width: min(820px, 100%);
+      background: #fff;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      padding: 16px;
+      box-shadow: 0 24px 44px rgba(8, 24, 52, 0.3);
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #e6edf8;
+      padding-bottom: 10px;
+    }
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: none;
+      background: #eef2f7;
+      color: #334155;
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: none;
+    }
+    .icon-btn:hover { background: #dfe7f1; }
+    .edit-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .edit-grid label {
+      display: grid;
+      gap: 6px;
+      font-size: 11px;
+      color: #3e5579;
+      text-transform: uppercase;
+      letter-spacing: .45px;
+      font-weight: 700;
+    }
+    .edit-grid input, .edit-grid select {
+      height: 42px;
+      text-transform: none;
+      letter-spacing: normal;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .modal-actions {
+      margin-top: 12px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    #editStatus { margin-top: 10px; min-height: 18px; }
+
+    @media (max-width: 980px) {
+      .wrap { padding: 20px 12px 26px; }
+      .card { padding: 16px; border-radius: 18px; }
+      .form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .toolbar-controls select, .toolbar-controls input { max-width: none; }
+      .edit-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 620px) {
+      .form { grid-template-columns: 1fr; }
+      .primary-btn { width: 100%; }
+      .modal-actions .primary-btn, .modal-actions .secondary-btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>User Management</h1>
+      <div id="limitText" class="muted">Loading limits...</div>
+
+      <div class="toolbar">
+        <div class="toolbar-controls">
+          <select id="roleFilter">
+            <option value="">All roles</option>
+            <option value="employee">Employees</option>
+            <option value="staff">Staff</option>
+            <option value="company_admin">Company Admins</option>
+          </select>
+          <input id="searchInput" type="text" placeholder="Search username/name">
+        </div>
+      </div>
+
+      <div class="form">
+        <input id="userId" type="text" placeholder="Username / ID">
+        <input id="userName" type="text" placeholder="Display name">
+        <select id="userRole">
+          <option value="employee">Employee</option>
+          <option value="staff">Staff</option>
+          <option value="company_admin">Company Admin</option>
+        </select>
+        <select id="userBranch"></select>
+        <input id="userPassword" type="password" placeholder="Password (min 8 chars)">
+      </div>
+
+      <div class="feature-box">
+        <div class="feature-title">Feature Access For New User</div>
+        <div id="createFeatureAccess" class="feature-list">
+          <label><input type="checkbox" data-feature-scope="create" data-feature-key="expenses" checked> Expenses</label>
+          <label><input type="checkbox" data-feature-scope="create" data-feature-key="order_form" checked> Order Form</label>
+          <label><input type="checkbox" data-feature-scope="create" data-feature-key="inventory" checked> Inventory</label>
+          <label><input type="checkbox" data-feature-scope="create" data-feature-key="composite" checked> Composite</label>
+          <label><input type="checkbox" data-feature-scope="create" data-feature-key="lbc_tracking"> LBC Tracking</label>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button id="createUserBtn" type="button" class="primary-btn">Create User</button>
+      </div>
+
+      <div id="status" class="status"></div>
+      <div class="table-shell">
+        <table>
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Branch</th>
+              <th>Features</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="editUserModal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Edit User</h2>
+        <button id="closeEditUserModalBtn" type="button" class="icon-btn" aria-label="Close edit user dialog">&times;</button>
+      </div>
+
+      <div class="edit-grid">
+        <label>
+          Username / ID
+          <input id="editUserId" type="text" disabled>
+        </label>
+        <label>
+          Display Name
+          <input id="editUserName" type="text">
+        </label>
+        <label>
+          Role
+          <select id="editUserRole">
+            <option value="employee">Employee</option>
+            <option value="staff">Staff</option>
+            <option value="company_admin">Company Admin</option>
+          </select>
+        </label>
+        <label>
+          Branch
+          <select id="editUserBranch"></select>
+        </label>
+        <label>
+          Status
+          <select id="editUserStatus">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </label>
+        <label>
+          New Password (Optional)
+          <input id="editUserPassword" type="password" placeholder="Leave blank to keep current password">
+        </label>
+      </div>
+
+      <div class="feature-box">
+        <div class="feature-title">Feature Access</div>
+        <div id="editFeatureAccess" class="feature-list">
+          <label><input type="checkbox" data-feature-scope="edit" data-feature-key="expenses"> Expenses</label>
+          <label><input type="checkbox" data-feature-scope="edit" data-feature-key="order_form"> Order Form</label>
+          <label><input type="checkbox" data-feature-scope="edit" data-feature-key="inventory"> Inventory</label>
+          <label><input type="checkbox" data-feature-scope="edit" data-feature-key="composite"> Composite</label>
+          <label><input type="checkbox" data-feature-scope="edit" data-feature-key="lbc_tracking"> LBC Tracking</label>
+        </div>
+      </div>
+
+      <div id="editStatus" class="status"></div>
+      <div class="modal-actions">
+        <button id="cancelEditUserBtn" type="button" class="secondary-btn">Cancel</button>
+        <button id="saveEditUserBtn" type="button" class="primary-btn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/app-client.js"></script>
+  <script src="./users.js"></script>
+</body>
+</html>

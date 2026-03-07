@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventory Stock</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #f5f8fc;
+    --panel: #ffffff;
+    --text: #17324d;
+    --muted: #5f7387;
+    --line: #d6e1ea;
+    --accent: #175f3d;
+    --accent-soft: #e5f5ea;
+    --danger: #b91c1c;
+    --shadow: 0 20px 50px rgba(23, 50, 77, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(circle at top left, rgba(23, 95, 61, 0.1), transparent 28%),
+      linear-gradient(180deg, #fbfdff 0%, var(--bg) 100%);
+  }
+  .page {
+    max-width: 1260px;
+    margin: 0 auto;
+    padding: 30px 22px 38px;
+  }
+  .hero {
+    margin-bottom: 16px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    padding: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .hero h1 {
+    margin: 0 0 8px;
+    font-size: 32px;
+  }
+  .hero p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.5;
+    max-width: 760px;
+  }
+  .hero .readonly-note {
+    margin-top: 9px;
+    font-size: 13px;
+    color: #14532d;
+    font-weight: 600;
+  }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .summary-card {
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    padding: 16px 18px;
+  }
+  .summary-card span {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .summary-card strong {
+    font-size: 28px;
+  }
+  .panel {
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    padding: 18px;
+  }
+  .toolbar {
+    display: grid;
+    grid-template-columns: 240px 1fr auto;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 12px;
+  }
+  .field label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .field input,
+  .field select {
+    width: 100%;
+    padding: 12px 13px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    font-size: 14px;
+    color: var(--text);
+    background: #fff;
+    outline: none;
+  }
+  button {
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 12px 14px;
+  }
+  .primary-btn {
+    background: var(--accent);
+    color: #fff;
+  }
+  .secondary-btn {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .status {
+    min-height: 22px;
+    margin-bottom: 10px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .status.error {
+    color: var(--danger);
+  }
+  .table-shell {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+  }
+  th,
+  td {
+    padding: 12px 13px;
+    text-align: left;
+    border-bottom: 1px solid #edf2f7;
+    font-size: 13px;
+    vertical-align: middle;
+  }
+  th {
+    background: #f8fbff;
+    color: var(--accent);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  tr:last-child td {
+    border-bottom: none;
+  }
+  .low-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    background: #fff5f5;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+  }
+  .ok-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    background: #e9f7ee;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 24px 12px;
+  }
+  @media (max-width: 940px) {
+    .toolbar {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div>
+        <h1 id="pageTitle">Inventory Stock</h1>
+        <p>Tingnan ang current stock per branch. Read-only ang page na ito para sa employee access.</p>
+        <div class="readonly-note">View only: walang edit, minus, damage, o set quantity dito.</div>
+      </div>
+      <button id="backBtn" type="button" class="secondary-btn"><i class="fa-solid fa-arrow-left"></i> Dashboard</button>
+    </section>
+
+    <section class="summary-grid">
+      <article class="summary-card">
+        <span>Visible Items</span>
+        <strong id="visibleCount">0</strong>
+      </article>
+      <article class="summary-card">
+        <span>Low Stock (&lt;= 5)</span>
+        <strong id="lowStockCount">0</strong>
+      </article>
+      <article class="summary-card">
+        <span>Selected Branch</span>
+        <strong id="branchLabel">-</strong>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="toolbar">
+        <div class="field">
+          <label for="branchFilter">Branch</label>
+          <select id="branchFilter"></select>
+        </div>
+        <div class="field">
+          <label for="searchInput">Search</label>
+          <input id="searchInput" type="text" placeholder="Search item name, unit, type, or code">
+        </div>
+        <button id="refreshBtn" type="button" class="secondary-btn"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+      </div>
+
+      <div id="statusText" class="status">Loading inventory stock...</div>
+
+      <div class="table-shell">
+        <table>
+          <thead>
+            <tr>
+              <th>Item Name</th>
+              <th>Item Code</th>
+              <th>Unit</th>
+              <th>Type</th>
+              <th>Branch Qty</th>
+              <th>Status</th>
+              <th>Updated</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryBody">
+            <tr><td colspan="7" class="empty">Loading inventory stock...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script src="../shared/app-client.js"></script>
+  <script src="inventory_stock.js"></script>
+</body>
+</html>
