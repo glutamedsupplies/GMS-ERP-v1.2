@@ -4,6 +4,17 @@
 
 Expose the attendance server over the public internet so the web app and the desktop client work outside the office Wi-Fi.
 
+## Render Setup
+
+This repo now includes a `render.yaml` blueprint for a Render web service backed by a persistent disk for SQLite.
+
+Important notes:
+
+- Use a Render web service with a persistent disk. SQLite data will not survive on ephemeral storage.
+- The app now honors Render's `PORT` automatically.
+- The install flow skips Electron rebuilds when deployed as a server on Render.
+- The blueprint defaults `ATTENDANCE_DATA_DIR` to `/var/data/attendance`, so tenant data is stored on the mounted disk.
+
 ## Recommended Setup
 
 1. Run the server on a dedicated Windows PC or VPS that stays online.
@@ -82,3 +93,15 @@ Check these after deployment:
 2. Login works from mobile data, not just office Wi-Fi.
 3. Cookies are marked secure in the browser when using HTTPS.
 4. The desktop client opens the public URL without needing private IPs.
+
+## Render Deploy Notes
+
+If you deploy with Render:
+
+1. Create or sync a web service from `render.yaml`.
+2. If you already have an existing Render service, update the service settings to match the blueprint:
+   - Build Command: `npm ci --omit=dev`
+   - Start Command: `npm run server:node`
+   - Health Check Path: `/api/server-info`
+3. Attach a persistent disk and keep `ATTENDANCE_DATA_DIR` pointed inside that disk.
+4. After the first deploy, open the Render URL and verify login plus `/api/server-info`.
