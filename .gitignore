@@ -3,4 +3,15 @@ dist/
 .vscode/
 *.log
 .env
+.env.*
+.pgpass
 cloudflared.exe.exe
+data/**/*.db
+data/**/*.db-wal
+data/**/*.db-shm
+head_admin/data/*.db
+head_admin/data/*.db-wal
+head_admin/data/*.db-shm
+employee/data/*.db
+employee/data/*.db-wal
+employee/data/*.db-shm

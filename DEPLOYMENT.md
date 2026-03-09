@@ -6,14 +6,14 @@ Expose the attendance server over the public internet so the web app and the des
 
 ## Render Setup
 
-This repo now includes a `render.yaml` blueprint for a Render web service backed by a persistent disk for SQLite.
+This repo includes a `render.yaml` blueprint for a Render web service that runs against PostgreSQL.
 
 Important notes:
 
-- Use a Render web service with a persistent disk. SQLite data will not survive on ephemeral storage.
+- Set `DATABASE_URL` as a secret environment variable in Render.
+- `ATTENDANCE_DATA_DIR` is now migration-only and is not required for the normal server runtime.
 - The app now honors Render's `PORT` automatically.
 - The install flow skips Electron rebuilds when deployed as a server on Render.
-- The blueprint defaults `ATTENDANCE_DATA_DIR` to `/var/data/attendance`, so tenant data is stored on the mounted disk.
 
 ## Recommended Setup
 
@@ -103,5 +103,5 @@ If you deploy with Render:
    - Build Command: `npm ci --omit=dev`
    - Start Command: `npm run server:node`
    - Health Check Path: `/api/server-info`
-3. Attach a persistent disk and keep `ATTENDANCE_DATA_DIR` pointed inside that disk.
+3. Add `DATABASE_URL` in the Render dashboard as a secret environment variable.
 4. After the first deploy, open the Render URL and verify login plus `/api/server-info`.

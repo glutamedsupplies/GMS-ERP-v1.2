@@ -118,14 +118,7 @@ function run() {
     const companyAAfterPlanRename = store.getCompanyById(companyAId);
     assert.strictEqual(companyAAfterPlanRename.plan_id, renamedLimitsPlanId, 'company plan_id should follow renamed plan id');
 
-    const activeSubAfterPlanRename = store.getMasterDb().prepare(`
-        SELECT plan_id
-        FROM subscriptions
-        WHERE company_id = ?
-          AND is_active = 1
-        ORDER BY id DESC
-        LIMIT 1
-    `).get(companyAId);
+    const activeSubAfterPlanRename = store.getActiveSubscription(companyAId);
     assert(activeSubAfterPlanRename, 'company should have an active subscription row');
     assert.strictEqual(activeSubAfterPlanRename.plan_id, renamedLimitsPlanId, 'active subscription should follow renamed plan id');
 

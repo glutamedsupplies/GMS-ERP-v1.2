@@ -6,17 +6,11 @@ services:
     buildCommand: npm ci --omit=dev
     startCommand: npm run server:node
     healthCheckPath: /api/server-info
-    disk:
-      name: attendance-data
-      mountPath: /var/data
-      sizeGB: 10
     envVars:
       - key: NODE_VERSION
         value: 22
       - key: ATTENDANCE_DEPLOY_TARGET
         value: server
-      - key: ATTENDANCE_DATA_DIR
-        value: /var/data/attendance
       - key: ATTENDANCE_TRUST_PROXY
         value: "true"
       - key: ATTENDANCE_SECURE_COOKIES
