@@ -15,7 +15,12 @@ async function initialize() {
         return;
     }
 
-    dateFilter.value = new Date().toISOString().slice(0, 10);
+    try {
+        const serverInfo = await appClient.getServerInfo();
+        dateFilter.value = String(serverInfo?.dateKey || '').trim() || new Date().toISOString().slice(0, 10);
+    } catch (_error) {
+        dateFilter.value = new Date().toISOString().slice(0, 10);
+    }
 
     filterBtn.addEventListener('click', renderReport);
     employeeFilter.addEventListener('change', renderReport);

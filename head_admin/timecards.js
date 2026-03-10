@@ -15,14 +15,15 @@ async function initialize() {
         return;
     }
 
-    initSelectors();
+    const dateKey = await resolveServerDateKey();
+    initSelectors(dateKey);
     await loadEmployees();
 }
 
-function initSelectors() {
-    const today = new Date();
-    weekDateInput.value = formatDateKey(today);
-    updateWeekRangeLabel(today);
+function initSelectors(dateKey) {
+    const todayDate = parseInputDate(dateKey);
+    weekDateInput.value = dateKey || formatDateKey(todayDate);
+    updateWeekRangeLabel(todayDate);
 
     weekDateInput.addEventListener('change', () => {
         const selectedDate = parseInputDate(weekDateInput.value);
@@ -31,6 +32,16 @@ function initSelectors() {
             renderTimecard(selectedEmployee);
         }
     });
+}
+
+async function resolveServerDateKey() {
+    try {
+        const serverInfo = await appClient.getServerInfo();
+        const dateKey = String(serverInfo?.dateKey || '').trim();
+        return dateKey || formatDateKey(new Date());
+    } catch (_error) {
+        return formatDateKey(new Date());
+    }
 }
 
 async function loadEmployees() {
