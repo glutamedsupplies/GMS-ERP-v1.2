@@ -15,6 +15,13 @@ async function initialize() {
         return;
     }
 
+    try {
+        const bootstrap = await appClient.getBootstrap();
+        appClient.applyBootstrapBrandTheme(bootstrap);
+    } catch (error) {
+        console.error('Failed to load head admin branding for attendance station:', error);
+    }
+
     sessionTimeZone = session.timeZone || '';
 
     updateClock();
@@ -22,6 +29,12 @@ async function initialize() {
 
     timeInBtn.addEventListener('click', () => handleAction('in'));
     timeOutBtn.addEventListener('click', () => handleAction('out'));
+    empIdInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            handleAction('in');
+        }
+    });
     empIdInput.focus();
 }
 
@@ -31,6 +44,8 @@ async function handleAction(type) {
         showMessage('Please enter an employee ID.', true);
         return;
     }
+
+    setButtonsDisabled(true);
 
     try {
         const result = type === 'in'
@@ -48,6 +63,8 @@ async function handleAction(type) {
     } catch (error) {
         console.error('Failed to record station attendance action:', error);
         showMessage(error.message, true);
+    } finally {
+        setButtonsDisabled(false);
     }
 }
 
@@ -66,7 +83,12 @@ function updateClock() {
 
 function showMessage(message, isError) {
     msgBox.textContent = message;
-    msgBox.style.color = isError ? '#ff9aa5' : '#8df56a';
+    msgBox.className = `status ${isError ? 'is-error' : 'is-success'}`.trim();
+}
+
+function setButtonsDisabled(disabled) {
+    timeInBtn.disabled = disabled;
+    timeOutBtn.disabled = disabled;
 }
 
 function buildTimeZoneOptions(options = {}) {

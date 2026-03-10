@@ -17,6 +17,12 @@ const brandingHintEl = document.getElementById('brandingHint');
 const brandLogoEl = document.getElementById('brandLogo');
 const themeColorMeta = document.querySelector('meta[name="theme-color"]');
 const pageTitleEl = document.getElementById('pageTitle');
+const welcomeOverlayEl = document.getElementById('welcomeOverlay');
+const welcomeLogoEl = document.getElementById('welcomeLogo');
+const welcomeRoleChipEl = document.getElementById('welcomeRoleChip');
+const welcomeDestinationChipEl = document.getElementById('welcomeDestinationChip');
+const welcomeTitleEl = document.getElementById('welcomeTitle');
+const welcomeCopyEl = document.getElementById('welcomeCopy');
 const DEFAULT_LOGO_PATH = '/logo.png';
 const DEFAULT_PRIMARY_COLOR = '#2575fc';
 const DEFAULT_BRANDING = Object.freeze({
@@ -32,6 +38,8 @@ let brandingTimer = null;
 let brandingRequestId = 0;
 let backgroundImageRequestId = 0;
 let lastBrandingSignature = '';
+let currentBranding = { ...DEFAULT_BRANDING };
+let welcomeTransitionActive = false;
 
 redirectIfSessionExists();
 refreshBranding();
@@ -97,6 +105,10 @@ if (companyCodeInput) {
 }
 
 async function handleLogin() {
+    if (welcomeTransitionActive) {
+        return;
+    }
+
     const id = idInput.value.trim();
     const password = passwordInput.value.trim();
     const companyCode = String(companyCodeInput?.value || '').trim();
@@ -115,9 +127,16 @@ async function handleLogin() {
             username: id,
             password
         });
+        const welcomeContext = await buildWelcomeContext(user, {
+            companyCode,
+            loginId: id
+        });
+        await playWelcomeTransition(welcomeContext);
         redirectByRole(user.role);
     } catch (error) {
         console.error('Login failed:', error);
+        welcomeTransitionActive = false;
+        resetWelcomeTransitionState();
         setMessage(error.message, '#ff7a7a');
     } finally {
         loginBtn.disabled = false;
@@ -150,6 +169,144 @@ function redirectByRole(role) {
     }
 
     window.location.replace('/employee/employee.html');
+}
+
+async function buildWelcomeContext(user, { companyCode = '', loginId = '' } = {}) {
+    let bootstrap = null;
+
+    try {
+        bootstrap = await appClient.getBootstrap();
+    } catch (error) {
+        console.error('Failed to load bootstrap for welcome intro:', error);
+    }
+
+    const fallbackBranding = {
+        ...currentBranding,
+        companyName: currentBranding.companyName || String(companyCode || '').trim().toUpperCase()
+    };
+    const branding = normalizeBranding({
+        ...fallbackBranding,
+        ...(bootstrap?.branding || {}),
+        companyName: bootstrap?.company?.name || bootstrap?.branding?.companyName || fallbackBranding.companyName,
+        appName: bootstrap?.company?.app_name || bootstrap?.branding?.appName || fallbackBranding.appName,
+        primaryColor: bootstrap?.company?.primary_color || bootstrap?.branding?.primaryColor || fallbackBranding.primaryColor,
+        logoPath: bootstrap?.company?.logo_path || bootstrap?.branding?.logoPath || fallbackBranding.logoPath
+    });
+    const userName = String(user?.name || loginId || user?.id || 'User').trim() || 'User';
+    const destination = resolveRoleDestination(user?.role);
+    const roleLabel = resolveRoleLabel(user?.role);
+    const companyName = String(bootstrap?.company?.name || branding.companyName || '').trim();
+    const appName = String(branding.appName || DEFAULT_BRANDING.appName).trim() || DEFAULT_BRANDING.appName;
+
+    applyBranding(branding, { companyCode });
+
+    return {
+        userName,
+        displayName: userName,
+        roleLabel,
+        destination,
+        companyName,
+        appName,
+        branding
+    };
+}
+
+function resolveRoleLabel(role) {
+    const normalizedRole = String(role || '').trim().toLowerCase();
+    if (normalizedRole === 'super_admin') {
+        return 'Super Admin';
+    }
+    if (normalizedRole === 'head_admin' || normalizedRole === 'company_admin') {
+        return 'Head Admin';
+    }
+    if (normalizedRole === 'staff') {
+        return 'Staff';
+    }
+    return 'Employee';
+}
+
+function resolveRoleDestination(role) {
+    const normalizedRole = String(role || '').trim().toLowerCase();
+    if (normalizedRole === 'super_admin') {
+        return 'Super Admin Console';
+    }
+    if (normalizedRole === 'head_admin' || normalizedRole === 'company_admin') {
+        return 'Head Admin Panel';
+    }
+    if (normalizedRole === 'staff') {
+        return 'Staff Workspace';
+    }
+    return 'Employee Workspace';
+}
+
+async function playWelcomeTransition(context = {}) {
+    if (!welcomeOverlayEl) {
+        return;
+    }
+
+    welcomeTransitionActive = true;
+    const branding = normalizeBranding(context.branding || currentBranding);
+
+    if (welcomeLogoEl) {
+        welcomeLogoEl.onerror = () => {
+            welcomeLogoEl.onerror = null;
+            welcomeLogoEl.src = DEFAULT_LOGO_PATH;
+        };
+        welcomeLogoEl.src = branding.logoPath || DEFAULT_LOGO_PATH;
+    }
+    if (welcomeRoleChipEl) {
+        welcomeRoleChipEl.textContent = context.displayName || context.userName || 'User';
+    }
+    if (welcomeDestinationChipEl) {
+        welcomeDestinationChipEl.textContent = context.roleLabel || context.destination || 'Opening panel';
+    }
+    if (welcomeTitleEl) {
+        welcomeTitleEl.textContent = `Welcome, ${context.displayName || context.userName || 'User'}`;
+    }
+    if (welcomeCopyEl) {
+        welcomeCopyEl.textContent = buildWelcomeCopy(context);
+    }
+
+    welcomeOverlayEl.hidden = false;
+    welcomeOverlayEl.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('is-welcome-active');
+    welcomeOverlayEl.classList.remove('is-zooming', 'is-exiting');
+    void welcomeOverlayEl.offsetWidth;
+    welcomeOverlayEl.classList.add('is-visible');
+
+    await wait(260);
+    welcomeOverlayEl.classList.add('is-zooming');
+    await wait(1180);
+    welcomeOverlayEl.classList.add('is-exiting');
+    await wait(380);
+}
+
+function resetWelcomeTransitionState() {
+    if (welcomeOverlayEl) {
+        welcomeOverlayEl.classList.remove('is-visible', 'is-zooming', 'is-exiting');
+        welcomeOverlayEl.hidden = true;
+        welcomeOverlayEl.setAttribute('aria-hidden', 'true');
+    }
+    document.body.classList.remove('is-welcome-active');
+}
+
+function buildWelcomeCopy(context = {}) {
+    const destination = context.destination || 'your workspace';
+    const appName = context.appName || DEFAULT_BRANDING.appName;
+    const companyName = String(context.companyName || '').trim();
+    const displayName = String(context.displayName || context.userName || 'User').trim() || 'User';
+
+    if (companyName) {
+        return `${displayName}, loading your ${destination}. Workspace: ${companyName} on ${appName}.`;
+    }
+
+    return `${displayName}, loading your ${destination} in ${appName}.`;
+}
+
+function wait(durationMs) {
+    return new Promise((resolve) => {
+        window.setTimeout(resolve, durationMs);
+    });
 }
 
 function setMessage(message, color) {
@@ -210,6 +367,7 @@ function applyBranding(rawBranding, { companyCode = '' } = {}) {
     const shouldAnimate = signature !== lastBrandingSignature;
 
     lastBrandingSignature = signature;
+    currentBranding = { ...branding };
     applyThemePalette(palette);
     applyThemeCopy(branding, companyCode);
     applyThemeLogo(branding.logoPath);

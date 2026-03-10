@@ -4,8 +4,10 @@ const rangeFilter = document.getElementById('rangeFilter');
 const dateFilter = document.getElementById('dateFilter');
 const filterBtn = document.getElementById('filterBtn');
 const reportBody = document.getElementById('reportBody');
+const recordCount = document.getElementById('recordCount');
 const totalLate = document.getElementById('totalLate');
 const totalAbsent = document.getElementById('totalAbsent');
+const reportStatus = document.getElementById('reportStatus');
 
 initialize();
 
@@ -13,6 +15,13 @@ async function initialize() {
     const session = await appClient.ensureSession({ role: 'head_admin' });
     if (!session) {
         return;
+    }
+
+    try {
+        const bootstrap = await appClient.getBootstrap();
+        appClient.applyBootstrapBrandTheme(bootstrap);
+    } catch (error) {
+        console.error('Failed to load head admin branding for attendance reports:', error);
     }
 
     try {
@@ -44,7 +53,8 @@ async function populateEmployees() {
         });
     } catch (error) {
         console.error('Failed to populate employees for reports:', error);
-        reportBody.innerHTML = `<tr><td colspan="6">${appClient.escapeHtml(error.message)}</td></tr>`;
+        reportBody.innerHTML = `<tr><td colspan="6" class="empty-row is-error">${appClient.escapeHtml(error.message)}</td></tr>`;
+        setReportStatus(error.message, true);
     }
 }
 
@@ -67,9 +77,11 @@ async function renderReport() {
         });
 
         reportBody.innerHTML = '';
+        setReportStatus('', false);
 
         if (!records.length) {
-            reportBody.innerHTML = '<tr><td colspan="6">No attendance records found for the selected filter.</td></tr>';
+            reportBody.innerHTML = '<tr><td colspan="6" class="empty-row">No attendance records found for the selected filter.</td></tr>';
+            recordCount.innerText = '0';
             totalLate.innerText = '0';
             totalAbsent.innerText = '0';
             return;
@@ -77,6 +89,7 @@ async function renderReport() {
 
         let lateTotal = 0;
         let absentTotal = 0;
+        recordCount.innerText = String(records.length);
 
         records.forEach((record) => {
             lateTotal += Number(record.lateMinutes || 0);
@@ -100,9 +113,11 @@ async function renderReport() {
         totalAbsent.innerText = String(absentTotal);
     } catch (error) {
         console.error('Failed to render attendance report:', error);
-        reportBody.innerHTML = `<tr><td colspan="6">${appClient.escapeHtml(error.message)}</td></tr>`;
+        reportBody.innerHTML = `<tr><td colspan="6" class="empty-row is-error">${appClient.escapeHtml(error.message)}</td></tr>`;
+        recordCount.innerText = '0';
         totalLate.innerText = '0';
         totalAbsent.innerText = '0';
+        setReportStatus(error.message, true);
     }
 }
 
@@ -118,4 +133,13 @@ function statusClass(status) {
         default:
             return 'status-excused';
     }
+}
+
+function setReportStatus(message, isError) {
+    if (!reportStatus) {
+        return;
+    }
+
+    reportStatus.textContent = message || '';
+    reportStatus.className = `report-status${isError ? ' is-error' : ''}`;
 }

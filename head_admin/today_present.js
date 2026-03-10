@@ -9,6 +9,14 @@ async function initialize() {
     if (!session) {
         return;
     }
+
+    try {
+        const bootstrap = await appClient.getBootstrap();
+        appClient.applyBootstrapBrandTheme(bootstrap);
+    } catch (error) {
+        console.error('Failed to load head admin branding for today attendance:', error);
+    }
+
     const timeZone = session.timeZone || '';
 
     const tbody = document.getElementById('todayTableBody');

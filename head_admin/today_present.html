@@ -1,86 +1,152 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Today Attendance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
-
   :root {
-    --bg: #eef3f8;
-    --card: #ffffff;
-    --text: #1c2430;
-    --muted: #6f7c8d;
-    --border: #dce5f0;
-    --accent: #2c7be5;
-    --on-time: #1f9d55;
-    --late: #f59f00;
-    --absent: #d64545;
-    --excuse: #2962ff;
+    --primary: var(--tenant-primary, #2575fc);
+    --primary-rgb: var(--tenant-primary-rgb, 37, 117, 252);
+    --primary-strong: var(--tenant-primary-strong, #1d4ed8);
+    --text: var(--tenant-text, #334155);
+    --text-strong: var(--tenant-text-strong, #0f172a);
+    --muted: var(--tenant-muted, #64748b);
+    --line: var(--tenant-line, #d8e2f0);
+    --line-strong: var(--tenant-line-strong, #aac0dc);
+    --panel: var(--tenant-panel, rgba(255, 255, 255, 0.82));
+    --button-gradient: var(--tenant-button-gradient, linear-gradient(135deg, #4a8cff 0%, #2575fc 58%, #1d4ed8 100%));
+    --shadow-soft: var(--tenant-shadow-soft, 0 18px 40px rgba(37, 117, 252, 0.12));
+    --shadow: var(--tenant-shadow, 0 28px 64px rgba(37, 117, 252, 0.18));
+    --success: var(--tenant-success, #0f766e);
+    --danger: var(--tenant-danger, #dc2626);
+    --warning: var(--tenant-warning, #d97706);
   }
 
-  * {
-    box-sizing: border-box;
-  }
+  * { box-sizing: border-box; }
+  html, body { min-height: 100%; }
 
   body {
     margin: 0;
     min-height: 100vh;
-    font-family: 'Roboto', sans-serif;
-    background: linear-gradient(180deg, #f7f9fc 0%, var(--bg) 100%);
-    color: var(--text);
+    font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+    background: var(--tenant-page-gradient, linear-gradient(155deg, #f8fbff 0%, #eef4ff 55%, #ffffff 100%));
+    color: var(--text-strong);
+    padding: 18px;
   }
 
   .page {
-    padding: 24px;
+    min-height: calc(100vh - 36px);
     display: grid;
     gap: 18px;
   }
 
-  .header {
+  .hero,
+  .summary-card,
+  .table-card {
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.76);
+    backdrop-filter: blur(16px);
+    box-shadow: var(--shadow);
+  }
+
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding: 24px 26px;
+    background:
+      radial-gradient(circle at top right, rgba(255, 255, 255, 0.34) 0%, transparent 28%),
+      linear-gradient(145deg, rgba(var(--primary-rgb), 0.18) 0%, rgba(var(--primary-rgb), 0.08) 45%, rgba(255, 255, 255, 0.94) 100%);
+  }
+
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: auto -70px -90px auto;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(var(--primary-rgb), 0.2) 0%, transparent 68%);
+  }
+
+  .hero-head {
+    position: relative;
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    padding: 22px 24px;
-    border-radius: 18px;
-    background: linear-gradient(135deg, #213b72, #2b6cb0);
-    color: #fff;
-    box-shadow: 0 16px 32px rgba(33, 59, 114, 0.18);
+    gap: 18px;
+    align-items: flex-start;
   }
 
-  .header h2 {
+  .hero-copy { max-width: 760px; }
+
+  .hero-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(var(--primary-rgb), 0.16);
+    background: rgba(var(--primary-rgb), 0.08);
+    color: var(--primary-strong);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .hero h1 {
     margin: 0;
-    font-size: 26px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    font-family: "Sora", "Segoe UI", sans-serif;
+    font-size: clamp(28px, 4vw, 40px);
+    line-height: 1.04;
   }
 
-  .header p {
-    margin: 8px 0 0;
-    color: rgba(255, 255, 255, 0.82);
-    font-size: 14px;
+  .hero p {
+    margin: 12px 0 0;
+    max-width: 720px;
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
   }
 
-  .header-meta {
+  .hero-meta {
+    min-width: 220px;
+    display: grid;
+    gap: 12px;
+    justify-items: end;
+  }
+
+  .meta-card {
+    min-width: 200px;
+    padding: 16px 18px;
+    border-radius: 22px;
+    border: 1px solid rgba(var(--primary-rgb), 0.12);
+    background: rgba(255, 255, 255, 0.76);
+    box-shadow: var(--shadow-soft);
     text-align: right;
   }
 
-  .date-label {
-    font-size: 14px;
-    font-weight: 500;
-    opacity: 0.9;
+  .meta-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
+  .meta-value { color: var(--text-strong); font-weight: 800; }
   .clock {
-    margin-top: 8px;
-    font-size: 28px;
-    font-weight: 700;
-    font-family: monospace;
+    font-family: "Sora", "Segoe UI", sans-serif;
+    font-size: clamp(28px, 4vw, 34px);
+    line-height: 1;
   }
 
   .summary-grid {
@@ -90,231 +156,244 @@
   }
 
   .summary-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 18px;
-    box-shadow: 0 10px 24px rgba(25, 35, 52, 0.06);
+    position: relative;
+    overflow: hidden;
+    padding: 20px 18px;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.96), var(--tenant-panel, rgba(255, 255, 255, 0.82)));
   }
 
-  .summary-card span {
+  .summary-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 6px;
+    border-radius: 28px 0 0 28px;
+    background: rgba(var(--primary-rgb), 0.28);
+  }
+
+  .summary-card.total::before { background: rgba(var(--primary-rgb), 0.4); }
+  .summary-card.on-time::before { background: rgba(15, 118, 110, 0.5); }
+  .summary-card.late::before { background: rgba(217, 119, 6, 0.48); }
+  .summary-card.absent::before { background: rgba(220, 38, 38, 0.48); }
+  .summary-card.excuse::before { background: rgba(var(--primary-rgb), 0.34); }
+
+  .summary-label {
     display: block;
-    font-size: 12px;
+    margin-bottom: 14px;
     color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 10px;
   }
 
-  .summary-card strong {
-    font-size: 28px;
+  .summary-value {
+    display: block;
+    font-family: "Sora", "Segoe UI", sans-serif;
+    font-size: clamp(28px, 4vw, 36px);
     line-height: 1;
   }
 
-  .summary-card.total strong { color: var(--accent); }
-  .summary-card.on-time strong { color: var(--on-time); }
-  .summary-card.late strong { color: var(--late); }
-  .summary-card.absent strong { color: var(--absent); }
-  .summary-card.excuse strong { color: var(--excuse); }
+  .summary-card.total .summary-value { color: var(--primary-strong); }
+  .summary-card.on-time .summary-value { color: var(--success); }
+  .summary-card.late .summary-value { color: var(--warning); }
+  .summary-card.absent .summary-value { color: var(--danger); }
+  .summary-card.excuse .summary-value { color: var(--primary); }
 
   .table-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 18px;
     overflow: hidden;
-    box-shadow: 0 10px 24px rgba(25, 35, 52, 0.06);
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.96), var(--tenant-panel, rgba(255, 255, 255, 0.82)));
   }
 
-  .table-header {
-    padding: 18px 20px;
-    border-bottom: 1px solid var(--border);
-    background: #f9fbfe;
+  .table-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 22px 24px 16px;
+    border-bottom: 1px solid rgba(var(--primary-rgb), 0.08);
   }
 
-  .table-header h3 {
+  .table-head h2 {
     margin: 0;
-    font-size: 18px;
+    font-family: "Sora", "Segoe UI", sans-serif;
+    font-size: 24px;
   }
 
-  .table-header p {
-    margin: 6px 0 0;
+  .table-head p {
+    margin: 10px 0 0;
     color: var(--muted);
-    font-size: 13px;
-  }
-
-  .table-header .status-note {
-    margin-top: 10px;
-    min-height: 18px;
-    font-size: 13px;
-    font-weight: 500;
-  }
-
-  .table-wrap {
-    overflow-x: auto;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 980px;
-  }
-
-  th,
-  td {
-    padding: 13px 14px;
-    text-align: center;
-    border-bottom: 1px solid var(--border);
+    line-height: 1.65;
     font-size: 14px;
   }
 
-  th {
-    background: #f2f6fb;
-    color: #314156;
+  .status-note {
+    min-height: 24px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    font-size: 13px;
     font-weight: 700;
+    background: rgba(var(--primary-rgb), 0.08);
+    color: var(--primary-strong);
+  }
+
+  .status-note:empty { display: none; }
+  .note-success { background: rgba(15, 118, 110, 0.1); color: var(--success); }
+  .note-error { background: rgba(220, 38, 38, 0.1); color: var(--danger); }
+
+  .table-wrap { overflow-x: auto; }
+
+  table {
+    width: 100%;
+    min-width: 1120px;
+    border-collapse: collapse;
+  }
+
+  th, td {
+    padding: 14px 12px;
+    text-align: center;
+    border-bottom: 1px solid rgba(var(--primary-rgb), 0.08);
+  }
+
+  th {
+    background: rgba(var(--primary-rgb), 0.08);
+    color: var(--primary-strong);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     white-space: nowrap;
   }
 
-  tr:hover {
-    background: rgba(44, 123, 229, 0.04);
+  td {
+    color: var(--text-strong);
+    font-size: 14px;
   }
 
+  tbody tr:hover { background: rgba(var(--primary-rgb), 0.035); }
+  tbody tr:last-child td { border-bottom: none; }
+
   .employee-img {
-    width: 42px;
-    height: 42px;
+    width: 46px;
+    height: 46px;
     border-radius: 50%;
     object-fit: cover;
     object-position: center;
-    border: 2px solid #dbe7f5;
-    background: #dde6f1;
+    border: 2px solid rgba(var(--primary-rgb), 0.18);
+    background: rgba(var(--primary-rgb), 0.08);
   }
 
   .status-pill {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 88px;
-    padding: 7px 12px;
+    min-width: 90px;
+    padding: 8px 14px;
     border-radius: 999px;
     font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.03em;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
   }
 
-  .status-on-time {
-    color: var(--on-time);
-    background: rgba(31, 157, 85, 0.12);
-  }
+  .status-on-time { color: var(--success); background: rgba(15, 118, 110, 0.12); }
+  .status-late { color: var(--warning); background: rgba(217, 119, 6, 0.14); }
+  .status-absent { color: var(--danger); background: rgba(220, 38, 38, 0.12); }
+  .status-excuse { color: var(--primary-strong); background: rgba(var(--primary-rgb), 0.12); }
 
-  .status-late {
-    color: #9a6700;
-    background: rgba(245, 159, 0, 0.18);
-  }
-
-  .status-absent {
-    color: var(--absent);
-    background: rgba(214, 69, 69, 0.12);
-  }
-
-  .status-excuse {
-    color: var(--excuse);
-    background: rgba(41, 98, 255, 0.12);
-  }
-
-  .no-data {
-    color: var(--muted);
-    font-style: italic;
-  }
+  .no-data { color: var(--muted); font-style: italic; }
 
   .status-editor {
     width: 100%;
-    min-width: 112px;
-    padding: 8px 10px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: #fff;
-    color: var(--text);
+    min-width: 118px;
+    min-height: 42px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.94);
+    color: var(--text-strong);
     font-size: 13px;
+    font-weight: 600;
+    outline: none;
   }
 
-  .status-editor:disabled {
-    opacity: 0.65;
-    cursor: wait;
+  .status-editor:focus {
+    border-color: var(--line-strong);
+    box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.12);
   }
 
-  .note-success {
-    color: var(--on-time);
+  .status-editor:disabled { opacity: 0.66; cursor: wait; }
+
+  @media (max-width: 1180px) {
+    .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 
-  .note-error {
-    color: var(--absent);
+  @media (max-width: 860px) {
+    body { padding: 12px; }
+    .page { min-height: calc(100vh - 24px); }
+    .hero-head, .table-head { flex-direction: column; align-items: stretch; }
+    .hero-meta { width: 100%; justify-items: stretch; }
+    .meta-card { min-width: 0; text-align: left; }
   }
 
-  @media (max-width: 1100px) {
-    .summary-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 700px) {
-    .page {
-      padding: 16px;
-    }
-
-    .header {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-
-    .header-meta {
-      text-align: left;
-    }
-
-    .summary-grid {
-      grid-template-columns: 1fr;
-    }
+  @media (max-width: 640px) {
+    .summary-grid { grid-template-columns: 1fr; }
+    .hero, .table-card, .summary-card { border-radius: 24px; }
+    .hero, .table-head { padding: 20px 18px; }
   }
 </style>
 </head>
 <body>
 <div class="page">
-  <div class="header">
-    <div>
-      <h2><i class="fa-regular fa-calendar-check"></i> Today Attendance Snapshot</h2>
-      <p>Current-date view of all employees with On Time, Late, Absent, and Excuse status.</p>
+  <section class="hero">
+    <div class="hero-head">
+      <div class="hero-copy">
+        <span class="hero-kicker"><i class="fa-regular fa-calendar-check"></i> Attendance Overview</span>
+        <h1>Today Attendance Snapshot</h1>
+        <p>Current-date view of all employees with On Time, Late, Absent, and Excuse status in a tenant-aware layout that stays balanced across company colors.</p>
+      </div>
+      <div class="hero-meta">
+        <div class="meta-card">
+          <span class="meta-label">Today</span>
+          <span class="meta-value" id="dateLabel">Loading date...</span>
+        </div>
+        <div class="meta-card">
+          <span class="meta-label">Live Time</span>
+          <span class="meta-value clock" id="clock">00:00:00</span>
+        </div>
+      </div>
     </div>
-    <div class="header-meta">
-      <div class="date-label" id="dateLabel">Loading date...</div>
-      <div class="clock" id="clock">00:00:00</div>
-    </div>
-  </div>
+  </section>
 
-  <div class="summary-grid">
-    <div class="summary-card total">
-      <span>Total Employees</span>
-      <strong id="totalCount">0</strong>
-    </div>
-    <div class="summary-card on-time">
-      <span>On Time</span>
-      <strong id="onTimeCount">0</strong>
-    </div>
-    <div class="summary-card late">
-      <span>Late</span>
-      <strong id="lateCount">0</strong>
-    </div>
-    <div class="summary-card absent">
-      <span>Absent</span>
-      <strong id="absentCount">0</strong>
-    </div>
-    <div class="summary-card excuse">
-      <span>Excuse</span>
-      <strong id="excuseCount">0</strong>
-    </div>
-  </div>
+  <section class="summary-grid">
+    <article class="summary-card total">
+      <span class="summary-label">Total Employees</span>
+      <strong class="summary-value" id="totalCount">0</strong>
+    </article>
+    <article class="summary-card on-time">
+      <span class="summary-label">On Time</span>
+      <strong class="summary-value" id="onTimeCount">0</strong>
+    </article>
+    <article class="summary-card late">
+      <span class="summary-label">Late</span>
+      <strong class="summary-value" id="lateCount">0</strong>
+    </article>
+    <article class="summary-card absent">
+      <span class="summary-label">Absent</span>
+      <strong class="summary-value" id="absentCount">0</strong>
+    </article>
+    <article class="summary-card excuse">
+      <span class="summary-label">Excuse</span>
+      <strong class="summary-value" id="excuseCount">0</strong>
+    </article>
+  </section>
 
-  <div class="table-card">
-    <div class="table-header">
-      <h3>Employee Attendance For Today</h3>
-      <p>Absent employees are inferred from the employee list when no current-date record exists in the attendance log.</p>
+  <section class="table-card">
+    <div class="table-head">
+      <div>
+        <h2>Employee Attendance For Today</h2>
+        <p>Absent employees are inferred from the employee list when no current-date record exists in the attendance log.</p>
+      </div>
       <div class="status-note" id="statusNote"></div>
     </div>
     <div class="table-wrap">
@@ -341,12 +420,10 @@
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
 </div>
 
 <script src="../shared/app-client.js"></script>
 <script src="today_present.js"></script>
 </body>
 </html>
-
-

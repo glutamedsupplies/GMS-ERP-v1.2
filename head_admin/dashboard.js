@@ -181,7 +181,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     applyPanelGating();
     populateWorkspaceSummary();
 
-    useGroupedNavigation = isGmsOrGwdCompany();
+    useGroupedNavigation = true;
     let groupedFallbackPanel = null;
     if (useGroupedNavigation) {
         groupedFallbackPanel = initializeGroupedNavigation();

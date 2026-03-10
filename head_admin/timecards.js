@@ -15,6 +15,13 @@ async function initialize() {
         return;
     }
 
+    try {
+        const bootstrap = await appClient.getBootstrap();
+        appClient.applyBootstrapBrandTheme(bootstrap);
+    } catch (error) {
+        console.error('Failed to load head admin branding for time cards:', error);
+    }
+
     const dateKey = await resolveServerDateKey();
     initSelectors(dateKey);
     await loadEmployees();
@@ -50,7 +57,7 @@ async function loadEmployees() {
         employeeListDiv.innerHTML = '';
 
         if (!employees.length) {
-            employeeListDiv.innerHTML = '<div style="padding:12px; opacity:0.8;">No attendance accounts found.</div>';
+            employeeListDiv.innerHTML = '<div class="empty-row" style="padding:12px;">No attendance accounts found.</div>';
             return;
         }
 
@@ -78,7 +85,7 @@ async function loadEmployees() {
         }
     } catch (error) {
         console.error('Failed to load employee list for time cards:', error);
-        employeeListDiv.innerHTML = `<div style="padding:12px; color:#ffdddd;">${appClient.escapeHtml(error.message)}</div>`;
+        employeeListDiv.innerHTML = `<div class="empty-row is-error" style="padding:12px;">${appClient.escapeHtml(error.message)}</div>`;
     }
 }
 
@@ -94,7 +101,7 @@ function isHeadAdminRole(role) {
 
 async function renderTimecard(employee) {
     employeeNameTitle.innerText = `${employee.name}'s Weekly Time Card`;
-    timecardTableBody.innerHTML = '<tr><td colspan="5" style="padding:30px; color:#999;">Loading logs...</td></tr>';
+    timecardTableBody.innerHTML = '<tr><td colspan="5" class="empty-row">Loading logs...</td></tr>';
 
     try {
         const selectedDate = parseInputDate(weekDateInput.value);
@@ -107,7 +114,7 @@ async function renderTimecard(employee) {
         timecardTableBody.innerHTML = '';
 
         if (!rows.length) {
-            timecardTableBody.innerHTML = '<tr><td colspan="5" style="padding:30px; color:#999;">No logs found for this week.</td></tr>';
+            timecardTableBody.innerHTML = '<tr><td colspan="5" class="empty-row">No logs found for this week.</td></tr>';
             return;
         }
 
@@ -124,7 +131,7 @@ async function renderTimecard(employee) {
         });
     } catch (error) {
         console.error('Failed to render employee time card:', error);
-        timecardTableBody.innerHTML = `<tr><td colspan="5" style="padding:30px; color:#d50000;">${appClient.escapeHtml(error.message)}</td></tr>`;
+        timecardTableBody.innerHTML = `<tr><td colspan="5" class="empty-row is-error">${appClient.escapeHtml(error.message)}</td></tr>`;
     }
 }
 

@@ -57,6 +57,13 @@
     transition:background .72s ease;
   }
 
+  body.is-welcome-active .login-shell{
+    transform:scale(0.94);
+    opacity:0.14;
+    filter:blur(14px);
+    transition:transform .45s ease, opacity .45s ease, filter .45s ease;
+  }
+
   body::after{
     content:"";
     position:fixed;
@@ -371,6 +378,209 @@
     margin-top:0;
   }
 
+  .welcome-overlay{
+    position:fixed;
+    inset:0;
+    z-index:6;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    opacity:0;
+    pointer-events:none;
+    background:
+      radial-gradient(circle at 18% 14%, rgba(var(--brand-primary-rgb),0.16) 0%, transparent 30%),
+      linear-gradient(140deg, rgba(2,6,23,0.34) 0%, rgba(2,6,23,0.76) 100%);
+    backdrop-filter:blur(10px);
+    transition:opacity .34s ease;
+  }
+
+  .welcome-overlay.is-visible{
+    opacity:1;
+    pointer-events:auto;
+  }
+
+  .welcome-overlay.is-exiting{
+    opacity:0;
+  }
+
+  .welcome-panel{
+    position:relative;
+    width:min(100%, 520px);
+    padding:28px 24px 22px;
+    border-radius:32px;
+    border:1px solid rgba(255,255,255,0.16);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+    box-shadow:0 36px 90px rgba(2, 6, 23, 0.46);
+    overflow:hidden;
+    transform:scale(.84) translateY(16px);
+    transition:transform .52s cubic-bezier(.22,.9,.27,1), opacity .36s ease;
+  }
+
+  .welcome-overlay.is-visible .welcome-panel{
+    transform:scale(1) translateY(0);
+  }
+
+  .welcome-overlay.is-zooming .welcome-panel{
+    transform:scale(1.08) translateY(-3px);
+  }
+
+  .welcome-overlay.is-exiting .welcome-panel{
+    transform:scale(1.14) translateY(-14px);
+    opacity:0;
+  }
+
+  .welcome-panel::before{
+    content:"";
+    position:absolute;
+    inset:-24% auto auto 54%;
+    width:220px;
+    height:220px;
+    border-radius:999px;
+    background:radial-gradient(circle, rgba(var(--brand-primary-rgb),0.34) 0%, rgba(var(--brand-primary-rgb),0) 72%);
+    filter:blur(10px);
+    pointer-events:none;
+  }
+
+  .welcome-emblem{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:132px;
+    height:132px;
+  }
+
+  .welcome-rings{
+    --ring-size:96px;
+    position:absolute;
+    top:50%;
+    left:50%;
+    width:var(--ring-size);
+    height:var(--ring-size);
+    margin-left:calc(var(--ring-size) / -2);
+    margin-top:calc(var(--ring-size) / -2);
+    border-radius:50%;
+    border:1px solid rgba(255,255,255,0.16);
+    background:radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 72%);
+    transform-origin:center;
+    animation:welcomePulse 1.7s ease-in-out infinite;
+  }
+
+  .welcome-rings::before,
+  .welcome-rings::after{
+    content:"";
+    position:absolute;
+    inset:-12px;
+    border-radius:50%;
+    border:1px solid rgba(var(--brand-primary-rgb),0.22);
+  }
+
+  .welcome-rings::after{
+    inset:-24px;
+    opacity:.72;
+  }
+
+  .welcome-content{
+    position:relative;
+    z-index:1;
+    display:grid;
+    gap:14px;
+    justify-items:center;
+    text-align:center;
+  }
+
+  .welcome-logo-wrap{
+    position:relative;
+    width:104px;
+    height:104px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:50%;
+    background:rgba(255,255,255,0.12);
+    border:1px solid rgba(255,255,255,0.18);
+    box-shadow:0 20px 38px rgba(2, 6, 23, 0.3);
+    overflow:hidden;
+  }
+
+  .welcome-logo-wrap img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    border-radius:50%;
+  }
+
+  .welcome-chip-row{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:8px;
+  }
+
+  .welcome-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    min-height:36px;
+    padding:0 14px;
+    border-radius:999px;
+    border:1px solid rgba(var(--brand-primary-rgb),0.22);
+    background:rgba(var(--brand-primary-rgb),0.12);
+    color:#fff;
+    font-size:12px;
+    font-weight:800;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+  }
+
+  .welcome-chip.is-soft{
+    border-color:rgba(255,255,255,0.14);
+    background:rgba(255,255,255,0.08);
+    color:var(--text-soft);
+  }
+
+  .welcome-title{
+    margin:0;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:clamp(28px, 6vw, 42px);
+    line-height:1.02;
+    letter-spacing:-0.04em;
+    text-shadow:0 16px 36px rgba(2, 6, 23, 0.34);
+  }
+
+  .welcome-copy{
+    margin:0;
+    max-width:360px;
+    color:var(--text-soft);
+    font-size:14px;
+    line-height:1.6;
+  }
+
+  .welcome-progress{
+    width:min(100%, 280px);
+    height:8px;
+    border-radius:999px;
+    overflow:hidden;
+    background:rgba(255,255,255,0.1);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+
+  .welcome-progress span{
+    display:block;
+    width:100%;
+    height:100%;
+    transform-origin:left center;
+    transform:scaleX(0);
+    background:var(--button-gradient);
+    border-radius:inherit;
+  }
+
+  .welcome-overlay.is-visible .welcome-progress span{
+    animation:welcomeLoad 1.22s cubic-bezier(.22,.9,.3,1) forwards;
+  }
+
   @keyframes floatOrb{
     0%,100%{transform:translate3d(0,0,0)}
     50%{transform:translate3d(0,-18px,0)}
@@ -386,6 +596,16 @@
     0%{transform:translateY(0) scale(1)}
     35%{transform:translateY(-6px) scale(1.04)}
     100%{transform:translateY(0) scale(1)}
+  }
+
+  @keyframes welcomePulse{
+    0%,100%{transform:scale(.98); opacity:.82}
+    50%{transform:scale(1.06); opacity:1}
+  }
+
+  @keyframes welcomeLoad{
+    from{transform:scaleX(0)}
+    to{transform:scaleX(1)}
   }
 
   @media (max-width: 520px){
@@ -426,6 +646,25 @@
     .install-btn{
       height:44px;
       margin-top:8px;
+    }
+
+    .welcome-panel{
+      padding:24px 18px 18px;
+      border-radius:26px;
+    }
+
+    .welcome-emblem{
+      width:112px;
+      height:112px;
+    }
+
+    .welcome-logo-wrap{
+      width:88px;
+      height:88px;
+    }
+
+    .welcome-title{
+      font-size:28px;
     }
   }
 
@@ -522,6 +761,26 @@
     <div id="message"></div>
   </section>
 </main>
+
+<div id="welcomeOverlay" class="welcome-overlay" hidden aria-hidden="true">
+  <section class="welcome-panel" aria-live="polite">
+    <div class="welcome-content">
+      <div class="welcome-emblem">
+        <div class="welcome-rings" aria-hidden="true"></div>
+        <div class="welcome-logo-wrap">
+          <img id="welcomeLogo" src="/logo.png" alt="Welcome Logo">
+        </div>
+      </div>
+      <div class="welcome-chip-row">
+        <span class="welcome-chip" id="welcomeRoleChip">Workspace</span>
+        <span class="welcome-chip is-soft" id="welcomeDestinationChip">Loading panel</span>
+      </div>
+      <h2 class="welcome-title" id="welcomeTitle">Welcome</h2>
+      <p class="welcome-copy" id="welcomeCopy">Preparing your workspace.</p>
+      <div class="welcome-progress" aria-hidden="true"><span></span></div>
+    </div>
+  </section>
+</div>
 
 <script src="shared/app-client.js"></script>
 <script src="shared/pwa.js"></script>

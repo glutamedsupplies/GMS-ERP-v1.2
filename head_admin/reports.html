@@ -1,74 +1,407 @@
-﻿<!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Attendance Reports</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-body{
-    margin:0;
-    font-family:'Poppins',sans-serif;
-    background:linear-gradient(135deg,#1e3c72,#2a5298);
-    color:white;
-}
-.container{ padding:30px; }
-h1{ text-align:center; margin-bottom:30px; }
-.filters{ display:flex; gap:15px; flex-wrap:wrap; justify-content:center; margin-bottom:30px; }
-select,input{ padding:10px 15px; border:none; border-radius:8px; font-size:14px; }
-button{ padding:10px 20px; border:none; border-radius:8px; background:#00c853; color:white; cursor:pointer; }
-button:hover{ background:#00e676; }
-.table-container{ background:rgba(255,255,255,0.1); padding:20px; border-radius:15px; backdrop-filter:blur(10px); }
-table{ width:100%; border-collapse:collapse; color:white; }
-th,td{ padding:12px; text-align:center; }
-th{ background:rgba(0,0,0,0.3); }
-tr:nth-child(even){ background:rgba(255,255,255,0.05); }
-.summary{ margin-top:20px; display:flex; justify-content:space-around; font-weight:600; }
-.status-present{ color:#00e676; }
-.status-late{ color:#ffea00; }
-.status-absent{ color:#ff1744; }
-.status-excused{ color:#00b0ff; }
+  :root {
+    --primary: var(--tenant-primary, #2575fc);
+    --primary-rgb: var(--tenant-primary-rgb, 37, 117, 252);
+    --primary-strong: var(--tenant-primary-strong, #1d4ed8);
+    --text: var(--tenant-text, #334155);
+    --text-strong: var(--tenant-text-strong, #0f172a);
+    --muted: var(--tenant-muted, #64748b);
+    --line: var(--tenant-line, #d8e2f0);
+    --line-strong: var(--tenant-line-strong, #aac0dc);
+    --panel: var(--tenant-panel, rgba(255, 255, 255, 0.82));
+    --button-gradient: var(--tenant-button-gradient, linear-gradient(135deg, #4a8cff 0%, #2575fc 58%, #1d4ed8 100%));
+    --shadow-soft: var(--tenant-shadow-soft, 0 18px 40px rgba(37, 117, 252, 0.12));
+    --shadow: var(--tenant-shadow, 0 28px 64px rgba(37, 117, 252, 0.18));
+    --success: var(--tenant-success, #0f766e);
+    --danger: var(--tenant-danger, #dc2626);
+    --warning: var(--tenant-warning, #d97706);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { min-height: 100%; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+    background: var(--tenant-page-gradient, linear-gradient(155deg, #f8fbff 0%, #eef4ff 55%, #ffffff 100%));
+    color: var(--text-strong);
+    padding: 18px;
+  }
+
+  .page {
+    min-height: calc(100vh - 36px);
+    display: grid;
+    gap: 18px;
+  }
+
+  .hero,
+  .stats-grid article,
+  .table-card {
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.76);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(16px);
+  }
+
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding: 24px 26px;
+    background:
+      radial-gradient(circle at top right, rgba(255, 255, 255, 0.34) 0%, transparent 28%),
+      linear-gradient(145deg, rgba(var(--primary-rgb), 0.18) 0%, rgba(var(--primary-rgb), 0.08) 45%, rgba(255, 255, 255, 0.94) 100%);
+  }
+
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: auto -80px -100px auto;
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(var(--primary-rgb), 0.18) 0%, transparent 70%);
+  }
+
+  .hero-head {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: flex-start;
+  }
+
+  .hero-copy { max-width: 700px; }
+
+  .hero-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(var(--primary-rgb), 0.16);
+    background: rgba(var(--primary-rgb), 0.08);
+    color: var(--primary-strong);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .hero h1 {
+    margin: 0;
+    font-family: "Sora", "Segoe UI", sans-serif;
+    font-size: clamp(28px, 4vw, 40px);
+    line-height: 1.04;
+  }
+
+  .hero p {
+    margin: 12px 0 0;
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  .filter-card {
+    min-width: 320px;
+    padding: 18px;
+    border-radius: 24px;
+    border: 1px solid rgba(var(--primary-rgb), 0.12);
+    background: rgba(255, 255, 255, 0.76);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .filter-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .field {
+    display: grid;
+    gap: 8px;
+  }
+
+  .field label {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .field select,
+  .field input {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 14px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.94);
+    color: var(--text-strong);
+    font-size: 14px;
+    font-weight: 600;
+    outline: none;
+  }
+
+  .field select:focus,
+  .field input:focus {
+    border-color: var(--line-strong);
+    box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.12);
+  }
+
+  .filter-btn {
+    min-height: 46px;
+    border: none;
+    border-radius: 14px;
+    padding: 0 18px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 800;
+    color: #ffffff;
+    background: var(--button-gradient);
+    box-shadow: 0 16px 26px rgba(var(--primary-rgb), 0.22);
+    transition: transform 160ms ease, filter 160ms ease;
+  }
+
+  .filter-btn:hover { transform: translateY(-1px); filter: brightness(1.02); }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .stats-grid article {
+    position: relative;
+    overflow: hidden;
+    padding: 18px;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.96), var(--tenant-panel, rgba(255, 255, 255, 0.82)));
+  }
+
+  .stats-grid article::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 6px;
+    border-radius: 28px 0 0 28px;
+    background: rgba(var(--primary-rgb), 0.36);
+  }
+
+  .stats-grid article.metric-late::before { background: rgba(217, 119, 6, 0.46); }
+  .stats-grid article.metric-absent::before { background: rgba(220, 38, 38, 0.46); }
+
+  .stats-label {
+    display: block;
+    margin-bottom: 12px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  .stats-value {
+    display: block;
+    font-family: "Sora", "Segoe UI", sans-serif;
+    font-size: clamp(28px, 4vw, 34px);
+    line-height: 1;
+  }
+
+  .metric-records .stats-value { color: var(--primary-strong); }
+  .metric-late .stats-value { color: var(--warning); }
+  .metric-absent .stats-value { color: var(--danger); }
+
+  .table-card {
+    overflow: hidden;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.96), var(--tenant-panel, rgba(255, 255, 255, 0.82)));
+  }
+
+  .table-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 22px 24px 16px;
+    border-bottom: 1px solid rgba(var(--primary-rgb), 0.08);
+  }
+
+  .table-head h2 {
+    margin: 0;
+    font-family: "Sora", "Segoe UI", sans-serif;
+    font-size: 24px;
+  }
+
+  .table-head p {
+    margin: 10px 0 0;
+    color: var(--muted);
+    line-height: 1.65;
+    font-size: 14px;
+  }
+
+  .report-status {
+    min-height: 24px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(var(--primary-rgb), 0.08);
+    color: var(--primary-strong);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .report-status:empty { display: none; }
+  .report-status.is-error { color: var(--danger); background: rgba(220, 38, 38, 0.1); }
+
+  .table-wrap { overflow-x: auto; }
+
+  table {
+    width: 100%;
+    min-width: 860px;
+    border-collapse: collapse;
+  }
+
+  th, td {
+    padding: 14px 12px;
+    text-align: center;
+    border-bottom: 1px solid rgba(var(--primary-rgb), 0.08);
+  }
+
+  th {
+    background: rgba(var(--primary-rgb), 0.08);
+    color: var(--primary-strong);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  td { color: var(--text-strong); font-size: 14px; }
+  tbody tr:hover { background: rgba(var(--primary-rgb), 0.035); }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .empty-row {
+    padding: 38px 18px !important;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .empty-row.is-error { color: var(--danger); }
+  .status-present { color: var(--success); font-weight: 800; }
+  .status-late { color: var(--warning); font-weight: 800; }
+  .status-absent { color: var(--danger); font-weight: 800; }
+  .status-excused { color: var(--primary-strong); font-weight: 800; }
+
+  @media (max-width: 1080px) {
+    .hero-head, .table-head { flex-direction: column; align-items: stretch; }
+    .filter-card { min-width: 0; width: 100%; }
+    .stats-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 720px) {
+    body { padding: 12px; }
+    .page { min-height: calc(100vh - 24px); }
+    .hero, .table-card, .stats-grid article { border-radius: 24px; }
+    .hero, .table-head, .filter-card { padding: 20px 18px; }
+    .filter-grid { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
-<div class="container">
-    <h1>Attendance Reports</h1>
-    <div class="filters">
-        <select id="employeeFilter">
-            <option value="all">All Accounts</option>
-        </select>
-        <select id="rangeFilter">
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-        </select>
-        <input type="date" id="dateFilter">
-        <button id="filterBtn" type="button">Filter</button>
-    </div>
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Account</th>
-                    <th>Time In</th>
-                    <th>Time Out</th>
-                    <th>Minutes Late</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="reportBody"></tbody>
-        </table>
-        <div class="summary">
-            <div>Total Late Minutes: <span id="totalLate">0</span></div>
-            <div>Total Absences: <span id="totalAbsent">0</span></div>
+<div class="page">
+  <section class="hero">
+    <div class="hero-head">
+      <div class="hero-copy">
+        <span class="hero-kicker"><i class="fa-regular fa-rectangle-list"></i> Attendance Analytics</span>
+        <h1>Attendance Reports</h1>
+        <p>Filter daily, weekly, or monthly attendance data in a cleaner tenant-aware report view with balanced colors and clearer summaries.</p>
+      </div>
+      <div class="filter-card">
+        <div class="filter-grid">
+          <div class="field">
+            <label for="employeeFilter">Account</label>
+            <select id="employeeFilter">
+              <option value="all">All Accounts</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="rangeFilter">Range</label>
+            <select id="rangeFilter">
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="dateFilter">Date</label>
+            <input type="date" id="dateFilter">
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button id="filterBtn" class="filter-btn" type="button">Apply Filter</button>
+          </div>
         </div>
+      </div>
     </div>
+  </section>
+
+  <section class="stats-grid">
+    <article class="metric-records">
+      <span class="stats-label">Visible Records</span>
+      <strong class="stats-value" id="recordCount">0</strong>
+    </article>
+    <article class="metric-late">
+      <span class="stats-label">Total Late Minutes</span>
+      <strong class="stats-value" id="totalLate">0</strong>
+    </article>
+    <article class="metric-absent">
+      <span class="stats-label">Total Absences</span>
+      <strong class="stats-value" id="totalAbsent">0</strong>
+    </article>
+  </section>
+
+  <section class="table-card">
+    <div class="table-head">
+      <div>
+        <h2>Attendance Results</h2>
+        <p>Review filtered attendance entries with clean semantic colors that stay readable across tenant themes.</p>
+      </div>
+      <div class="report-status" id="reportStatus"></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Account</th>
+            <th>Time In</th>
+            <th>Time Out</th>
+            <th>Minutes Late</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="reportBody">
+          <tr>
+            <td colspan="6" class="empty-row">Loading attendance records...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 </div>
 <script src="../shared/app-client.js"></script>
 <script src="reports.js"></script>
 </body>
 </html>
-
-
