@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS companies (
   subdomain TEXT UNIQUE,
   custom_domain TEXT UNIQUE,
   logo_path TEXT NOT NULL DEFAULT '',
+  login_background_path TEXT NOT NULL DEFAULT '',
   primary_color TEXT NOT NULL DEFAULT '#2575fc',
   app_name TEXT NOT NULL DEFAULT '',
   db_schema TEXT NOT NULL DEFAULT ''

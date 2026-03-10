@@ -1,6 +1,8 @@
 const appClient = window.appClient;
 const expensesPageTitle = document.getElementById('expensesPageTitle');
 const expensesPageCopy = document.getElementById('expensesPageCopy');
+const moduleSwitchButtons = Array.from(document.querySelectorAll('[data-module-switch]'));
+const moduleJumpButtons = Array.from(document.querySelectorAll('[data-module-jump][data-jump-target]'));
 
 const MODULES = {
     expense: {
@@ -8,7 +10,7 @@ const MODULES = {
         prefix: 'expense',
         label: 'Expense',
         pluralLabel: 'Expenses',
-        columnCount: 6,
+        columnCount: 5,
         dateColumn: 'expense_date',
         datePayloadKey: 'expenseDate',
         searchPlaceholder: 'expense',
@@ -24,7 +26,7 @@ const MODULES = {
         prefix: 'cashIncome',
         label: 'Cash Income',
         pluralLabel: 'Cash Income',
-        columnCount: 7,
+        columnCount: 5,
         dateColumn: 'income_date',
         datePayloadKey: 'incomeDate',
         searchPlaceholder: 'cash income',
@@ -40,7 +42,8 @@ const MODULES = {
 const state = {
     references: null,
     modules: {},
-    workspaceConfig: {}
+    workspaceConfig: {},
+    activeModule: 'expense'
 };
 
 initialize();
@@ -73,6 +76,7 @@ async function initialize() {
         applyPeriodPreset(module.key, 'this_month', { load: false });
     });
 
+    setActiveModule(state.activeModule);
     await Promise.all(Object.keys(MODULES).map((moduleKey) => loadRecords(moduleKey)));
 }
 
@@ -98,6 +102,9 @@ async function applyWorkspaceConfig() {
 
 function getModuleRefs(prefix) {
     return {
+        manager: document.getElementById(`${prefix}Manager`),
+        formPanel: document.getElementById(`${prefix}FormPanel`),
+        recordsPanel: document.getElementById(`${prefix}RecordsPanel`),
         editorTitle: document.getElementById(`${prefix}EditorTitle`),
         modeBadge: document.getElementById(`${prefix}ModeBadge`),
         dateInput: document.getElementById(`${prefix}DateInput`),
@@ -119,6 +126,7 @@ function getModuleRefs(prefix) {
         resetFiltersBtn: document.getElementById(`reset${capitalize(prefix)}FiltersBtn`),
         reportStatus: document.getElementById(`${prefix}ReportStatus`),
         summaryGrid: document.getElementById(`${prefix}SummaryGrid`),
+        countValue: document.getElementById(`${prefix}CountValue`),
         totalValue: document.getElementById(`${prefix}TotalValue`),
         pendingValue: document.getElementById(`${prefix}PendingValue`),
         tableBody: document.getElementById(`${prefix}TableBody`)
@@ -126,6 +134,19 @@ function getModuleRefs(prefix) {
 }
 
 function bindEvents() {
+    moduleSwitchButtons.forEach((button) => {
+        button.addEventListener('click', () => setActiveModule(button.dataset.moduleSwitch || 'expense', { scrollIntoView: true }));
+    });
+
+    moduleJumpButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const moduleKey = button.dataset.moduleJump || state.activeModule;
+            const target = button.dataset.jumpTarget || 'form';
+            setActiveModule(moduleKey);
+            scrollModulePanelIntoView(moduleKey, target);
+        });
+    });
+
     Object.values(MODULES).forEach((module) => {
         const moduleState = state.modules[module.key];
         const refs = moduleState.refs;
@@ -307,6 +328,9 @@ async function loadRecords(moduleKey) {
 
 function renderSummary(moduleKey, summary) {
     const refs = state.modules[moduleKey].refs;
+    if (refs.countValue) {
+        refs.countValue.textContent = String(summary.totalCount || state.modules[moduleKey].items.length || 0);
+    }
     refs.totalValue.textContent = summary.totalAmountDisplay || formatMoney(0);
     renderBranchSummaryCards(moduleKey, summary);
     if (refs.pendingValue) {
@@ -387,19 +411,25 @@ function renderTable(moduleKey, rows) {
         if (moduleKey === 'cashIncome') {
             const status = normalizeCashIncomeStatus(row.confirmation_status || row.confirmationStatus || 'Confirmed');
             const isAuto = Number(row.auto_generated || 0) === 1 || String(row.source || '').toLowerCase() === 'auto';
+            const sourceLabel = isAuto ? 'Auto-linked' : 'Manual';
+            const linkedLabel = isAuto
+                ? `Linked ${row.linked_order_number || row.linked_receipt_number || 'sales entry'}`
+                : (row.note || 'Manual cash income entry');
             return `
                 <tr>
                     <td>${appClient.escapeHtml(formatDate(row[module.dateColumn]))}</td>
                     <td>${appClient.escapeHtml(row.branch || '-')}</td>
-                    <td>
+                    <td class="details-cell">
                         <div class="cell-copy">
                             <strong>${appClient.escapeHtml(row.about || '-')}</strong>
-                            <small>${appClient.escapeHtml(isAuto ? `Auto-linked ${row.linked_order_number || row.linked_receipt_number || ''}`.trim() : 'Manual entry')}</small>
+                            <small>${appClient.escapeHtml(linkedLabel)}</small>
+                            <div class="meta-row">
+                                <span class="status-pill ${status.toLowerCase()}">${appClient.escapeHtml(status)}</span>
+                                <span class="source-pill">${appClient.escapeHtml(sourceLabel)}</span>
+                            </div>
                         </div>
                     </td>
-                    <td>${appClient.escapeHtml(formatMoney(row.amount || 0))}</td>
-                    <td><span class="status-pill ${status.toLowerCase()}">${appClient.escapeHtml(status)}</span></td>
-                    <td class="note-cell">${appClient.escapeHtml(row.note || '-')}</td>
+                    <td class="amount-cell">${appClient.escapeHtml(formatMoney(row.amount || 0))}</td>
                     <td>
                         <div class="table-actions">
                             ${status === 'Pending' ? `<button type="button" class="primary-btn tiny-btn" data-action="confirm" data-id="${row.id}">Confirm</button>` : ''}
@@ -415,9 +445,13 @@ function renderTable(moduleKey, rows) {
             <tr>
                 <td>${appClient.escapeHtml(formatDate(row[module.dateColumn]))}</td>
                 <td>${appClient.escapeHtml(row.branch || '-')}</td>
-                <td>${appClient.escapeHtml(row.about || '-')}</td>
-                <td>${appClient.escapeHtml(formatMoney(row.amount || 0))}</td>
-                <td class="note-cell">${appClient.escapeHtml(row.note || '-')}</td>
+                <td class="details-cell">
+                    <div class="cell-copy">
+                        <strong>${appClient.escapeHtml(row.about || '-')}</strong>
+                        <small>${appClient.escapeHtml(row.note || 'No note')}</small>
+                    </div>
+                </td>
+                <td class="amount-cell">${appClient.escapeHtml(formatMoney(row.amount || 0))}</td>
                 <td>
                     <div class="table-actions">
                         <button type="button" class="secondary-btn tiny-btn" data-action="edit" data-id="${row.id}">Edit</button>
@@ -482,6 +516,8 @@ function beginEdit(moduleKey, entryId) {
     refs.resetBtn.textContent = 'Cancel Edit';
     updateModeBadge(moduleKey, true, row.id);
     setFormStatus(moduleKey, `Editing ${module.searchPlaceholder} entry #${row.id}.`, false);
+    setActiveModule(moduleKey);
+    scrollModulePanelIntoView(moduleKey, 'form');
     refs.aboutInput.focus();
 }
 
@@ -624,6 +660,43 @@ function setReportStatus(moduleKey, message, isError) {
     const status = state.modules[moduleKey].refs.reportStatus;
     status.textContent = message;
     status.classList.toggle('error', Boolean(isError));
+}
+
+function setActiveModule(moduleKey, { scrollIntoView = false } = {}) {
+    if (!MODULES[moduleKey]) {
+        return;
+    }
+
+    state.activeModule = moduleKey;
+
+    moduleSwitchButtons.forEach((button) => {
+        const isActive = button.dataset.moduleSwitch === moduleKey;
+        button.classList.toggle('is-active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+
+    Object.values(MODULES).forEach((module) => {
+        const refs = state.modules[module.key]?.refs;
+        if (!refs?.manager) {
+            return;
+        }
+        refs.manager.hidden = module.key !== moduleKey;
+    });
+
+    if (scrollIntoView) {
+        const activeRefs = state.modules[moduleKey]?.refs;
+        activeRefs?.manager?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function scrollModulePanelIntoView(moduleKey, target = 'form') {
+    const refs = state.modules[moduleKey]?.refs;
+    if (!refs) {
+        return;
+    }
+
+    const panel = target === 'records' ? refs.recordsPanel : refs.formPanel;
+    panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function formatMoney(value) {

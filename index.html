@@ -1,5 +1,5 @@
-﻿<!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="en" data-app-page="index">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
@@ -12,89 +12,465 @@
 <title id="pageTitle">GMS ERP Login</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap');
+
+  :root{
+    --brand-primary:#2575fc;
+    --brand-primary-rgb:37,117,252;
+    --page-gradient:
+      radial-gradient(circle at 15% 20%, rgba(96, 165, 250, 0.28) 0%, transparent 34%),
+      radial-gradient(circle at 85% 0%, rgba(167, 139, 250, 0.24) 0%, transparent 28%),
+      linear-gradient(140deg, #123d94 0%, #0b1735 58%, #020617 100%);
+    --button-gradient:linear-gradient(135deg, #3b82f6 0%, #8b5cf6 58%, #ec4899 100%);
+    --card-surface:rgba(8, 15, 31, 0.46);
+    --card-border:rgba(255,255,255,0.16);
+    --card-shadow:0 30px 80px rgba(2, 6, 23, 0.45);
+    --input-surface:rgba(255,255,255,0.1);
+    --input-border:rgba(255,255,255,0.08);
+    --text-main:#ffffff;
+    --text-soft:rgba(226,232,240,0.82);
+    --text-faint:rgba(226,232,240,0.62);
+    --glow:rgba(37,117,252,0.32);
+    --background-image:none;
+  }
+
+  *{box-sizing:border-box}
+
+  html,
   body{
-    font-family:'Roboto',sans-serif;
+    min-height:100%;
+  }
+
+  body{
     margin:0;
     min-height:100vh;
     display:flex;
     justify-content:center;
     align-items:center;
-    background: linear-gradient(135deg,#6a11cb,#2575fc);
-    padding: 20px;
+    position:relative;
+    overflow-x:hidden;
+    padding:28px 18px;
+    font-family:'Manrope',sans-serif;
+    color:var(--text-main);
+    background:var(--page-gradient);
+    transition:background .72s ease;
   }
-  .login-card{
-    background: rgba(255,255,255,0.15);
-    backdrop-filter: blur(10px);
-    padding: 60px 40px 30px 40px;
-    border-radius:20px;
+
+  body::after{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background:
+      linear-gradient(135deg, rgba(2,6,23,0.18) 0%, rgba(2,6,23,0.74) 100%),
+      radial-gradient(circle at top, rgba(255,255,255,0.08) 0%, transparent 36%);
+  }
+
+  .background-photo{
+    position:fixed;
+    inset:-8%;
+    background-image:var(--background-image);
+    background-position:center;
+    background-size:cover;
+    filter:blur(18px) saturate(1.12) brightness(0.66);
+    transform:scale(1.02);
+    opacity:0;
+    transition:opacity .55s ease, transform .75s ease;
+    pointer-events:none;
+  }
+
+  .background-photo.has-image{
+    opacity:0.92;
+    transform:scale(1.08);
+  }
+
+  .ambient{
+    position:fixed;
+    border-radius:999px;
+    filter:blur(14px);
+    opacity:0.78;
+    pointer-events:none;
+    mix-blend-mode:screen;
+    animation:floatOrb 16s ease-in-out infinite;
+  }
+
+  .ambient-a{
+    top:-90px;
+    left:-70px;
+    width:320px;
+    height:320px;
+    background:radial-gradient(circle, rgba(var(--brand-primary-rgb),0.4) 0%, rgba(255,255,255,0) 68%);
+  }
+
+  .ambient-b{
+    right:-70px;
+    bottom:-90px;
     width:360px;
-    text-align:center;
-    box-shadow:0 10px 30px rgba(0,0,0,0.25);
+    height:360px;
+    background:radial-gradient(circle, rgba(236,72,153,0.26) 0%, rgba(255,255,255,0) 68%);
+    animation-delay:-5s;
   }
-  .logo-container{
-    margin:-50px auto 20px auto;
-    width:120px;
-    height:120px;
-    border-radius:50%;
-    background: rgba(255,255,255,0.1);
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    box-shadow:0 5px 15px rgba(0,0,0,0.3);
+
+  .ambient-c{
+    top:44%;
+    left:50%;
+    width:260px;
+    height:260px;
+    background:radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 72%);
+    animation-delay:-10s;
+  }
+
+  .login-shell{
+    position:relative;
+    z-index:1;
+    width:min(100%, 430px);
+  }
+
+  .login-card{
+    position:relative;
     overflow:hidden;
+    padding:56px 30px 28px;
+    border-radius:28px;
+    border:1px solid var(--card-border);
+    background:linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+    box-shadow:var(--card-shadow);
+    backdrop-filter:blur(18px);
+    transform:translateY(0);
+    transition:transform .35s ease, box-shadow .35s ease, border-color .35s ease;
   }
-  .logo-container img{width:100%; height:100%; object-fit:contain; background:#fff;}
-  h2{color:#fff; margin-bottom:10px; text-shadow:1px 1px 6px rgba(0,0,0,0.4);}
-  .subtitle { color:#e5e7eb; font-size:13px; margin-bottom:18px; }
-  .input-group{display:flex; align-items:center; margin:15px 0; background: rgba(255,255,255,0.2); border-radius:12px; overflow:hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);}
-  .input-group input{flex:1; padding:12px; border:none; font-size:16px; background:transparent; color:#fff;}
-  .toggle-pass{padding:0 12px; cursor:pointer; color:#fff; display:flex; align-items:center; font-size:18px;}
-  .login-btn{width:100%; padding:14px; margin-top:25px; border:none; border-radius:12px; font-size:18px; font-weight:500; color:white; background:linear-gradient(45deg,#ff512f,#dd2476); cursor:pointer;}
-  .customer-btn{width:100%; padding:12px; margin-top:10px; border:1px solid rgba(255,255,255,0.55); border-radius:12px; font-size:15px; font-weight:600; color:#fff; background:rgba(255,255,255,0.13); cursor:pointer;}
-  .install-btn{width:100%; padding:12px; margin-top:12px; border:none; border-radius:12px; font-size:15px; font-weight:500; color:#0b1d4d; background:#ffffff; cursor:pointer;}
+
+  .login-card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 36px 90px rgba(2, 6, 23, 0.5);
+  }
+
+  .login-card.is-branding-updating{
+    animation:cardPulse .72s ease;
+  }
+
+  .login-card-glow{
+    position:absolute;
+    inset:auto -18% 58% auto;
+    width:220px;
+    height:220px;
+    border-radius:999px;
+    background:radial-gradient(circle, rgba(var(--brand-primary-rgb),0.38) 0%, rgba(var(--brand-primary-rgb),0) 72%);
+    filter:blur(10px);
+    pointer-events:none;
+  }
+
+  .logo-container{
+    position:relative;
+    width:116px;
+    height:116px;
+    margin:0 auto 16px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:34px;
+    padding:6px;
+    background:rgba(255,255,255,0.96);
+    box-shadow:0 18px 38px rgba(2, 6, 23, 0.32);
+    overflow:hidden;
+    transition:transform .35s ease, box-shadow .35s ease;
+  }
+
+  .logo-container.is-branding-updating{
+    animation:logoBounce .7s ease;
+  }
+
+  .logo-container img{
+    width:auto;
+    height:auto;
+    max-width:100%;
+    max-height:100%;
+    object-fit:contain;
+    object-position:center;
+    display:block;
+  }
+
+  .branding-badge{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:max-content;
+    max-width:100%;
+    min-height:32px;
+    padding:6px 12px;
+    margin:0 auto 12px;
+    border-radius:999px;
+    background:rgba(var(--brand-primary-rgb),0.14);
+    border:1px solid rgba(var(--brand-primary-rgb),0.26);
+    color:#f8fafc;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    box-shadow:0 10px 22px rgba(var(--brand-primary-rgb),0.16);
+  }
+
+  h1{
+    margin:0 0 8px;
+    text-align:center;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:clamp(30px, 6vw, 36px);
+    line-height:1;
+    letter-spacing:-0.03em;
+    text-shadow:0 10px 28px rgba(2, 6, 23, 0.3);
+  }
+
+  .subtitle{
+    text-align:center;
+    color:var(--text-soft);
+    font-size:14px;
+    font-weight:600;
+  }
+
+  .company-hint{
+    margin:12px auto 20px;
+    max-width:280px;
+    text-align:center;
+    color:var(--text-faint);
+    font-size:12px;
+    line-height:1.55;
+  }
+
+  .input-group{
+    position:relative;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:12px 0;
+    border:1px solid var(--input-border);
+    border-radius:18px;
+    padding:0 14px;
+    background:var(--input-surface);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.08);
+    transition:border-color .22s ease, box-shadow .22s ease, transform .22s ease, background .22s ease;
+  }
+
+  .input-group:focus-within{
+    border-color:rgba(var(--brand-primary-rgb),0.5);
+    box-shadow:0 0 0 4px rgba(var(--brand-primary-rgb),0.12), inset 0 1px 0 rgba(255,255,255,0.1);
+    background:rgba(255,255,255,0.14);
+    transform:translateY(-1px);
+  }
+
+  .input-group.is-searching{
+    box-shadow:0 0 0 4px rgba(var(--brand-primary-rgb),0.08), 0 0 28px rgba(var(--brand-primary-rgb),0.18);
+  }
+
+  .input-group.is-brand-loaded{
+    border-color:rgba(var(--brand-primary-rgb),0.36);
+  }
+
+  .input-icon{
+    width:18px;
+    text-align:center;
+    color:var(--text-soft);
+    font-size:15px;
+    flex:0 0 auto;
+  }
+
+  .input-group input{
+    flex:1;
+    height:54px;
+    border:none;
+    outline:none;
+    background:transparent;
+    color:var(--text-main);
+    font-size:16px;
+    font-weight:600;
+    min-width:0;
+  }
+
+  .input-group input::placeholder{
+    color:rgba(226,232,240,0.56);
+    font-weight:500;
+  }
+
+  .toggle-pass{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:34px;
+    height:34px;
+    border-radius:12px;
+    cursor:pointer;
+    color:var(--text-main);
+    transition:background .18s ease, transform .18s ease;
+  }
+
+  .toggle-pass:hover{
+    background:rgba(255,255,255,0.1);
+    transform:translateY(-1px);
+  }
+
+  .login-btn,
+  .customer-btn,
+  .install-btn{
+    width:100%;
+    height:54px;
+    margin-top:14px;
+    border:none;
+    border-radius:18px;
+    font:inherit;
+    cursor:pointer;
+    transition:transform .18s ease, box-shadow .18s ease, filter .18s ease, border-color .18s ease;
+  }
+
+  .login-btn{
+    margin-top:18px;
+    background:var(--button-gradient);
+    color:#fff;
+    font-size:18px;
+    font-weight:800;
+    box-shadow:0 18px 34px rgba(var(--brand-primary-rgb),0.28);
+  }
+
+  .login-btn:hover,
+  .customer-btn:hover,
+  .install-btn:hover{
+    transform:translateY(-2px);
+  }
+
+  .login-btn:disabled{
+    opacity:.74;
+    cursor:wait;
+    transform:none;
+    filter:saturate(.85);
+  }
+
+  .customer-btn{
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.22);
+    color:#fff;
+    font-size:15px;
+    font-weight:700;
+    box-shadow:0 10px 24px rgba(2, 6, 23, 0.14);
+  }
+
+  .install-btn{
+    background:rgba(255,255,255,0.92);
+    color:#102341;
+    font-size:15px;
+    font-weight:800;
+  }
+
   .forgot-link{
     display:block;
-    width:100%;
-    margin-top:12px;
-    padding:4px 0;
-    color:#eaf1ff;
-    font-size:13px;
-    text-decoration:underline;
+    margin-top:14px;
     text-align:center;
-    cursor:pointer;
-    position:relative;
-    z-index:2;
+    color:var(--text-soft);
+    font-size:13px;
+    font-weight:700;
+    text-decoration:underline;
+    text-underline-offset:3px;
   }
-  #message{margin-top:20px; font-weight:bold; min-height:24px; text-align:center;}
+
+  #message{
+    min-height:24px;
+    margin-top:16px;
+    text-align:center;
+    font-size:14px;
+    font-weight:700;
+  }
+
+  @keyframes floatOrb{
+    0%,100%{transform:translate3d(0,0,0)}
+    50%{transform:translate3d(0,-18px,0)}
+  }
+
+  @keyframes cardPulse{
+    0%{transform:translateY(0) scale(1)}
+    35%{transform:translateY(-4px) scale(1.01)}
+    100%{transform:translateY(0) scale(1)}
+  }
+
+  @keyframes logoBounce{
+    0%{transform:translateY(0) scale(1)}
+    35%{transform:translateY(-6px) scale(1.04)}
+    100%{transform:translateY(0) scale(1)}
+  }
+
+  @media (max-width: 520px){
+    body{
+      padding:18px 14px;
+      align-items:flex-start;
+    }
+
+    .login-shell{
+      width:100%;
+    }
+
+    .login-card{
+      padding:40px 18px 22px;
+      border-radius:24px;
+    }
+
+    .logo-container{
+      width:96px;
+      height:96px;
+      border-radius:30px;
+      margin-bottom:14px;
+    }
+
+    h1{
+      font-size:28px;
+    }
+
+    .input-group input{
+      height:50px;
+    }
+
+    .login-btn,
+    .customer-btn,
+    .install-btn{
+      height:50px;
+    }
+  }
 </style>
 </head>
 <body>
+<div id="backgroundPhoto" class="background-photo" aria-hidden="true"></div>
+<div class="ambient ambient-a" aria-hidden="true"></div>
+<div class="ambient ambient-b" aria-hidden="true"></div>
+<div class="ambient ambient-c" aria-hidden="true"></div>
 
-<div class="login-card">
-  <div class="logo-container"><img id="brandLogo" src="logo.png" alt="Company Logo"></div>
-  <h2 id="loginTitle">GMS ERP Login</h2>
-  <div class="subtitle" id="loginSubtitle">Sign in to continue</div>
+<main class="login-shell">
+  <section class="login-card" id="loginCard">
+    <div class="login-card-glow" aria-hidden="true"></div>
+    <div class="logo-container" id="logoContainer">
+      <img id="brandLogo" src="/logo.png" alt="Company Logo">
+    </div>
+    <div class="branding-badge" id="brandingBadge">Default Sign-In Theme</div>
+    <h1 id="loginTitle">GMS ERP Login</h1>
+    <div class="subtitle" id="loginSubtitle">Sign in to continue</div>
+    <div class="company-hint" id="brandingHint">Type your company code to preview your company theme before logging in.</div>
 
-  <div class="input-group">
-    <input type="text" id="companyCode" placeholder="Company Code (required for tenant users)">
-  </div>
+    <div class="input-group company-code-group" id="companyCodeGroup">
+      <span class="input-icon"><i class="fa-regular fa-building"></i></span>
+      <input type="text" id="companyCode" placeholder="Company Code">
+    </div>
 
-  <div class="input-group">
-    <input type="text" id="idNumber" placeholder="ID Number">
-  </div>
+    <div class="input-group">
+      <span class="input-icon"><i class="fa-regular fa-user"></i></span>
+      <input type="text" id="idNumber" placeholder="ID Number">
+    </div>
 
-  <div class="input-group">
-    <input type="password" id="password" placeholder="Password">
-    <div class="toggle-pass" id="togglePass"><i class="fa-regular fa-eye"></i></div>
-  </div>
+    <div class="input-group">
+      <span class="input-icon"><i class="fa-solid fa-lock"></i></span>
+      <input type="password" id="password" placeholder="Password">
+      <div class="toggle-pass" id="togglePass"><i class="fa-regular fa-eye"></i></div>
+    </div>
 
-  <button id="loginBtn" class="login-btn">Log In</button>
-  <a id="forgotPasswordBtn" class="forgot-link" href="/renderer/forgot_password.html">Forgot Password?</a>
-  <button id="customerPortalBtn" class="customer-btn" type="button">Customer Request & Chat</button>
-  <button id="installAppBtn" class="install-btn" type="button">Install</button>
-  <div id="message"></div>
-</div>
+    <button id="loginBtn" class="login-btn">Log In</button>
+    <a id="forgotPasswordBtn" class="forgot-link" href="/renderer/forgot_password.html">Forgot Password?</a>
+    <button id="customerPortalBtn" class="customer-btn" type="button">Customer Request &amp; Chat</button>
+    <button id="installAppBtn" class="install-btn" type="button">Install</button>
+    <div id="message"></div>
+  </section>
+</main>
 
 <script src="shared/app-client.js"></script>
 <script src="shared/pwa.js"></script>

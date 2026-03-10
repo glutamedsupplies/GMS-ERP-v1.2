@@ -3,6 +3,8 @@ const DEFAULT_LOGO_PATH = '/logo.png';
 const DEFAULT_PRIMARY_COLOR = '#2575fc';
 const MAX_LOGO_BYTES = 700 * 1024;
 const MAX_LOGO_DIMENSION = 900;
+const MAX_BACKGROUND_BYTES = 1600 * 1024;
+const MAX_BACKGROUND_DIMENSION = 1800;
 
 const fields = {
     name: document.getElementById('name'),
@@ -45,10 +47,20 @@ const toggles = {
 const logoFileInput = document.getElementById('logoFile');
 const logoPreview = document.getElementById('logoPreview');
 const logoMeta = document.getElementById('logoMeta');
+const backgroundImageFileInput = document.getElementById('backgroundImageFile');
+const backgroundMeta = document.getElementById('backgroundMeta');
+const clearBackgroundBtn = document.getElementById('clearBackgroundBtn');
+const brandingPreview = document.getElementById('brandingPreview');
+const brandingPreviewImage = document.getElementById('brandingPreviewImage');
+const brandingPreviewLogo = document.getElementById('brandingPreviewLogo');
+const brandingPreviewTitle = document.getElementById('brandingPreviewTitle');
+const brandingPreviewSubtitle = document.getElementById('brandingPreviewSubtitle');
 const saveBtn = document.getElementById('saveBtn');
 const statusEl = document.getElementById('status');
 let currentLogoPath = '';
 let pendingUploadedLogoPath = '';
+let currentLoginBackgroundPath = '';
+let pendingUploadedBackgroundPath = '';
 
 initialize();
 
@@ -63,6 +75,11 @@ async function initialize() {
     fields.primaryColorHex.addEventListener('input', onPrimaryColorHexInput);
     fields.primaryColorHex.addEventListener('blur', onPrimaryColorHexBlur);
     logoFileInput.addEventListener('change', onLogoFileChange);
+    backgroundImageFileInput.addEventListener('change', onBackgroundImageFileChange);
+    clearBackgroundBtn.addEventListener('click', clearBackgroundImage);
+    [fields.name, fields.appName, fields.companyCode].forEach((field) => {
+        field?.addEventListener('input', updateBrandingPreview);
+    });
     setOrderFormWorkspaceFieldsReadonly();
     await loadProfile();
 }
@@ -83,11 +100,15 @@ async function loadProfile() {
         fields.primaryColorHex.value = resolvedPrimaryColor;
         fields.appName.value = profile.app_name || '';
         currentLogoPath = String(profile.logo_path || '').trim();
+        currentLoginBackgroundPath = String(profile.login_background_path || '').trim();
         pendingUploadedLogoPath = '';
+        pendingUploadedBackgroundPath = '';
         fields.address.value = profile.address || '';
         fields.contact.value = profile.contact || '';
         applyWorkspaceConfig(workspaceConfig || {});
         updateLogoPreview(resolveLogoSourceForPreview());
+        updateBackgroundMeta();
+        updateBrandingPreview();
         if (isImageDataUrl(currentLogoPath)) {
             logoMeta.textContent = 'Current logo is an uploaded image.';
         } else if (currentLogoPath) {
@@ -115,6 +136,7 @@ async function saveProfile() {
             primary_color: getPrimaryColorForSave(),
             app_name: fields.appName.value.trim(),
             logo_path: buildLogoPathForSave(),
+            login_background_path: buildLoginBackgroundPathForSave(),
             address: fields.address.value.trim(),
             contact: fields.contact.value.trim()
         });
@@ -286,12 +308,14 @@ function setOrderFormWorkspaceFieldsReadonly() {
 
 function onPrimaryColorPickerInput() {
     fields.primaryColorHex.value = normalizeHexColor(fields.primaryColor.value, DEFAULT_PRIMARY_COLOR);
+    updateBrandingPreview();
 }
 
 function onPrimaryColorHexInput() {
     const normalized = normalizeHexColor(fields.primaryColorHex.value, '');
     if (normalized) {
         fields.primaryColor.value = normalized;
+        updateBrandingPreview();
     }
 }
 
@@ -299,6 +323,7 @@ function onPrimaryColorHexBlur() {
     const normalized = normalizeHexColor(fields.primaryColorHex.value, fields.primaryColor.value || DEFAULT_PRIMARY_COLOR);
     fields.primaryColor.value = normalized;
     fields.primaryColorHex.value = normalized;
+    updateBrandingPreview();
 }
 
 function getPrimaryColorForSave() {
@@ -323,13 +348,15 @@ async function onLogoFileChange(event) {
     setStatus('Preparing logo upload...');
     try {
         const rawDataUrl = await readFileAsDataUrl(file);
-        const optimizedDataUrl = await optimizeLogoDataUrl(rawDataUrl, {
+        const optimizedDataUrl = await optimizeImageDataUrl(rawDataUrl, {
             maxBytes: MAX_LOGO_BYTES,
-            maxDimension: MAX_LOGO_DIMENSION
+            maxDimension: MAX_LOGO_DIMENSION,
+            label: 'Logo'
         });
 
         pendingUploadedLogoPath = optimizedDataUrl;
         updateLogoPreview(pendingUploadedLogoPath);
+        updateBrandingPreview();
         logoMeta.textContent = `New logo selected: ${file.name} (${formatBytes(file.size)}). Click Save Profile to apply.`;
         setStatus('Logo ready. Click Save Profile to apply.');
     } catch (error) {
@@ -337,6 +364,39 @@ async function onLogoFileChange(event) {
         setStatus(error.message || 'Failed to process logo file.', true);
     } finally {
         logoFileInput.value = '';
+    }
+}
+
+async function onBackgroundImageFileChange(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) {
+        return;
+    }
+
+    if (!String(file.type || '').startsWith('image/')) {
+        setStatus('Please choose a valid background image file.', true);
+        backgroundImageFileInput.value = '';
+        return;
+    }
+
+    setStatus('Preparing login background...');
+    try {
+        const rawDataUrl = await readFileAsDataUrl(file);
+        const optimizedDataUrl = await optimizeImageDataUrl(rawDataUrl, {
+            maxBytes: MAX_BACKGROUND_BYTES,
+            maxDimension: MAX_BACKGROUND_DIMENSION,
+            label: 'Background image'
+        });
+
+        pendingUploadedBackgroundPath = optimizedDataUrl;
+        updateBackgroundMeta(`New background selected: ${file.name} (${formatBytes(file.size)}). Click Save Profile to apply.`);
+        updateBrandingPreview();
+        setStatus('Login background ready. Click Save Profile to apply.');
+    } catch (error) {
+        console.error('Failed to process login background upload:', error);
+        setStatus(error.message || 'Failed to process background image.', true);
+    } finally {
+        backgroundImageFileInput.value = '';
     }
 }
 
@@ -357,6 +417,105 @@ function updateLogoPreview(source) {
 
 function buildLogoPathForSave() {
     return pendingUploadedLogoPath || currentLogoPath || '';
+}
+
+function resolveLoginBackgroundSourceForPreview() {
+    return pendingUploadedBackgroundPath
+        || currentLoginBackgroundPath
+        || '';
+}
+
+function buildLoginBackgroundPathForSave() {
+    return pendingUploadedBackgroundPath || currentLoginBackgroundPath || '';
+}
+
+function clearBackgroundImage() {
+    if (!pendingUploadedBackgroundPath && !currentLoginBackgroundPath) {
+        updateBackgroundMeta();
+        setStatus('Gradient background is already active.');
+        return;
+    }
+
+    pendingUploadedBackgroundPath = '';
+    currentLoginBackgroundPath = '';
+    updateBackgroundMeta('Custom login background removed. Click Save Profile to apply.');
+    updateBrandingPreview();
+    setStatus('Login background removed. Click Save Profile to apply.');
+}
+
+function updateBackgroundMeta(customMessage = '') {
+    if (!backgroundMeta) {
+        return;
+    }
+
+    if (customMessage) {
+        backgroundMeta.textContent = customMessage;
+        return;
+    }
+
+    const backgroundSource = resolveLoginBackgroundSourceForPreview();
+    if (pendingUploadedBackgroundPath) {
+        backgroundMeta.textContent = 'New login background selected. Click Save Profile to apply.';
+        return;
+    }
+    if (isImageDataUrl(backgroundSource)) {
+        backgroundMeta.textContent = 'Current login background is an uploaded image. Blur is applied automatically on the login page.';
+        return;
+    }
+    if (backgroundSource) {
+        backgroundMeta.textContent = 'Current login background is loaded from saved company settings. Blur is applied automatically on the login page.';
+        return;
+    }
+    backgroundMeta.textContent = 'No custom login background image. Gradient background will be used.';
+}
+
+function updateBrandingPreview() {
+    if (!brandingPreview) {
+        return;
+    }
+
+    const primaryColor = normalizeHexColor(fields.primaryColorHex.value, fields.primaryColor.value || DEFAULT_PRIMARY_COLOR);
+    const previewLogoSource = resolveLogoSourceForPreview();
+    const previewBackgroundSource = resolveLoginBackgroundSourceForPreview();
+    const appName = fields.appName.value.trim() || fields.name.value.trim() || 'GMS ERP';
+    const companyName = fields.name.value.trim() || fields.companyCode.value.trim();
+
+    brandingPreview.style.setProperty('--preview-primary', primaryColor);
+
+    if (brandingPreviewLogo) {
+        brandingPreviewLogo.onerror = () => {
+            brandingPreviewLogo.onerror = null;
+            brandingPreviewLogo.src = DEFAULT_LOGO_PATH;
+        };
+        brandingPreviewLogo.src = previewLogoSource || DEFAULT_LOGO_PATH;
+    }
+
+    if (brandingPreviewTitle) {
+        brandingPreviewTitle.textContent = `${appName} Login`;
+    }
+    if (brandingPreviewSubtitle) {
+        brandingPreviewSubtitle.textContent = companyName
+            ? `Company: ${companyName}`
+            : 'Sign in to continue';
+    }
+
+    if (!brandingPreviewImage) {
+        return;
+    }
+
+    if (!previewBackgroundSource) {
+        brandingPreview.classList.remove('has-image');
+        brandingPreviewImage.removeAttribute('src');
+        return;
+    }
+
+    brandingPreviewImage.onerror = () => {
+        brandingPreviewImage.onerror = null;
+        brandingPreview.classList.remove('has-image');
+        brandingPreviewImage.removeAttribute('src');
+    };
+    brandingPreview.classList.add('has-image');
+    brandingPreviewImage.src = previewBackgroundSource;
 }
 
 function isImageDataUrl(value) {
@@ -401,12 +560,8 @@ function loadImage(dataUrl) {
     });
 }
 
-async function optimizeLogoDataUrl(dataUrl, { maxBytes, maxDimension }) {
+async function optimizeImageDataUrl(dataUrl, { maxBytes, maxDimension, label = 'Image' }) {
     const originalSize = dataUrlByteLength(dataUrl);
-    if (originalSize <= maxBytes) {
-        return dataUrl;
-    }
-
     const image = await loadImage(dataUrl);
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
@@ -417,7 +572,11 @@ async function optimizeLogoDataUrl(dataUrl, { maxBytes, maxDimension }) {
     let width = image.naturalWidth || image.width || 0;
     let height = image.naturalHeight || image.height || 0;
     if (!width || !height) {
-        throw new Error('Invalid logo size.');
+        throw new Error(`Invalid ${String(label || 'image').toLowerCase()} size.`);
+    }
+
+    if (originalSize <= maxBytes && Math.max(width, height) <= maxDimension) {
+        return dataUrl;
     }
 
     const initialScale = Math.min(1, maxDimension / Math.max(width, height));
@@ -441,7 +600,7 @@ async function optimizeLogoDataUrl(dataUrl, { maxBytes, maxDimension }) {
         height = Math.max(1, Math.round(height * 0.85));
     }
 
-    throw new Error('Logo is too large after optimization. Please use a smaller image.');
+    throw new Error(`${label} is too large after optimization. Please use a smaller image.`);
 }
 
 function dataUrlByteLength(dataUrl) {

@@ -249,7 +249,7 @@ async function initialize() {
     }
     appClient.attachEmployeeBackButton(session);
     if (openOrderFormSetupBtn) {
-        openOrderFormSetupBtn.hidden = session.role !== 'head_admin';
+        openOrderFormSetupBtn.hidden = !canCustomizeOrderForm(session.role);
     }
 
     await loadReceiptConfig();
@@ -267,6 +267,13 @@ async function initialize() {
 
 function getWorkspaceLabels() {
     return state.workspaceConfig?.labels || {};
+}
+
+function canCustomizeOrderForm(role) {
+    const normalizedRole = String(role || '').trim().toLowerCase().replace(/\s+/g, '_');
+    return normalizedRole === 'head_admin'
+        || normalizedRole === 'company_admin'
+        || normalizedRole === 'super_admin';
 }
 
 function getOrderFormWorkspaceConfig() {

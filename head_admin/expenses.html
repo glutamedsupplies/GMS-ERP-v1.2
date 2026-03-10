@@ -80,6 +80,52 @@
     color: var(--muted);
     line-height: 1.7;
   }
+  .module-switcher {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+  }
+  .module-switch {
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    justify-content: center;
+    min-width: 220px;
+    min-height: 72px;
+    padding: 14px 18px;
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--muted);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  }
+  .module-switch strong,
+  .module-switch small {
+    display: block;
+    text-align: left;
+  }
+  .module-switch strong {
+    color: var(--ink);
+    font-size: 16px;
+  }
+  .module-switch small {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .module-switch.is-active {
+    border-color: rgba(37, 103, 76, 0.28);
+    background: linear-gradient(180deg, #f7fbf8 0%, #edf5f0 100%);
+    box-shadow: 0 18px 36px rgba(37, 103, 76, 0.12);
+    transform: translateY(-1px);
+  }
+  .module-switch.is-active.warn {
+    border-color: rgba(180, 83, 9, 0.28);
+    background: linear-gradient(180deg, #fffaf2 0%, #fff1df 100%);
+    box-shadow: 0 18px 36px rgba(180, 83, 9, 0.12);
+  }
   .hero-metrics {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -123,6 +169,9 @@
   .manager {
     padding: 22px;
   }
+  .manager[hidden] {
+    display: none;
+  }
   .manager-head {
     display: flex;
     justify-content: space-between;
@@ -130,6 +179,12 @@
     align-items: start;
     flex-wrap: wrap;
     margin-bottom: 18px;
+  }
+  .manager-tools {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
   }
   .mode-badge {
     display: inline-flex;
@@ -150,7 +205,7 @@
   }
   .manager-grid {
     display: grid;
-    grid-template-columns: minmax(320px, 0.9fr) minmax(520px, 1.2fr);
+    grid-template-columns: 1fr;
     gap: 18px;
   }
   .subpanel {
@@ -307,7 +362,7 @@
   }
   table {
     width: 100%;
-    min-width: 980px;
+    min-width: 720px;
     border-collapse: collapse;
   }
   th,
@@ -338,6 +393,13 @@
     gap: 8px;
     flex-wrap: wrap;
   }
+  .details-cell {
+    min-width: 260px;
+  }
+  .amount-cell {
+    white-space: nowrap;
+    font-weight: 800;
+  }
   .cell-copy strong,
   .cell-copy small {
     display: block;
@@ -346,6 +408,13 @@
     margin-top: 4px;
     color: var(--muted);
     font-size: 12px;
+  }
+  .meta-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 8px;
   }
   .status-pill {
     display: inline-flex;
@@ -370,6 +439,19 @@
     background: var(--danger-soft);
     color: var(--danger);
   }
+  .source-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: #eef6f1;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
   .empty {
     padding: 28px 12px;
     text-align: center;
@@ -381,8 +463,7 @@
     min-width: 180px;
   }
   @media (max-width: 1240px) {
-    .hero-grid,
-    .manager-grid {
+    .hero-grid {
       grid-template-columns: 1fr;
     }
   }
@@ -394,6 +475,11 @@
     .manager {
       padding: 18px;
       border-radius: 24px;
+    }
+    .module-switcher,
+    .manager-tools {
+      flex-direction: column;
+      align-items: stretch;
     }
     .hero-metrics,
     .form-grid,
@@ -427,21 +513,36 @@
           </article>
         </div>
       </div>
+
+      <div class="module-switcher" aria-label="Finance modules">
+        <button type="button" class="module-switch is-active" data-module-switch="expense">
+          <strong>Expenses</strong>
+          <small>Focus sa gastos at branch expense records.</small>
+        </button>
+        <button type="button" class="module-switch warn" data-module-switch="cashIncome">
+          <strong>Cash Income</strong>
+          <small>Hiwalay para sa cash-in at manual or auto-linked entries.</small>
+        </button>
+      </div>
     </section>
 
     <div class="manager-list">
-      <section class="manager" id="expenseManager">
+      <section class="manager" id="expenseManager" data-module-section="expense">
         <div class="manager-head">
           <div>
             <p class="eyebrow">Module One</p>
             <h2>Expenses</h2>
             <p class="panel-copy">I-log, i-edit, i-delete, o i-reset lahat ng expense entries per branch.</p>
           </div>
-          <div id="expenseModeBadge" class="mode-badge">Add Mode</div>
+          <div class="manager-tools">
+            <button type="button" class="secondary-btn tiny-btn" data-module-jump="expense" data-jump-target="form">Entry Form</button>
+            <button type="button" class="secondary-btn tiny-btn" data-module-jump="expense" data-jump-target="records">Records</button>
+            <div id="expenseModeBadge" class="mode-badge">Add Mode</div>
+          </div>
         </div>
 
         <div class="manager-grid">
-          <section class="subpanel">
+          <section class="subpanel" id="expenseFormPanel">
             <div class="subpanel-title">
               <div>
                 <h3 id="expenseEditorTitle">Add Expense</h3>
@@ -481,7 +582,7 @@
             <div id="expenseFormStatus" class="status">Loading expense manager...</div>
           </section>
 
-          <section class="subpanel">
+          <section class="subpanel" id="expenseRecordsPanel">
             <div class="subpanel-title">
               <div>
                 <h3>Expense Records</h3>
@@ -522,6 +623,10 @@
             </div>
 
             <div class="summary-grid" id="expenseSummaryGrid">
+              <article class="summary-card" data-static-card="count">
+                <span>Visible Records</span>
+                <strong id="expenseCountValue">0</strong>
+              </article>
               <article class="summary-card" data-static-card="total">
                 <span>Total Expenses</span>
                 <strong id="expenseTotalValue">PHP 0.00</strong>
@@ -536,14 +641,13 @@
                   <tr>
                     <th>Date</th>
                     <th>Branch</th>
-                    <th>About</th>
+                    <th>Details</th>
                     <th>Amount</th>
-                    <th>Note</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="expenseTableBody">
-                  <tr><td colspan="6" class="empty">Loading expense records...</td></tr>
+                  <tr><td colspan="5" class="empty">Loading expense records...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -551,18 +655,22 @@
         </div>
       </section>
 
-      <section class="manager" id="cashIncomeManager">
+      <section class="manager" id="cashIncomeManager" data-module-section="cashIncome" hidden>
         <div class="manager-head">
           <div>
             <p class="eyebrow">Module Two</p>
             <h2>Cash Income</h2>
             <p class="panel-copy">Automatic cash tracker from sales orders plus manual cash income records per branch.</p>
           </div>
-          <div id="cashIncomeModeBadge" class="mode-badge warn">Add Mode</div>
+          <div class="manager-tools">
+            <button type="button" class="secondary-btn tiny-btn" data-module-jump="cashIncome" data-jump-target="form">Entry Form</button>
+            <button type="button" class="secondary-btn tiny-btn" data-module-jump="cashIncome" data-jump-target="records">Records</button>
+            <div id="cashIncomeModeBadge" class="mode-badge warn">Add Mode</div>
+          </div>
         </div>
 
         <div class="manager-grid">
-          <section class="subpanel warning">
+          <section class="subpanel warning" id="cashIncomeFormPanel">
             <div class="subpanel-title">
               <div>
                 <h3 id="cashIncomeEditorTitle">Add Cash Income</h3>
@@ -610,7 +718,7 @@
             <div id="cashIncomeFormStatus" class="status">Loading cash income manager...</div>
           </section>
 
-          <section class="subpanel warning">
+          <section class="subpanel warning" id="cashIncomeRecordsPanel">
             <div class="subpanel-title">
               <div>
                 <h3>Cash Income Records</h3>
@@ -651,6 +759,10 @@
             </div>
 
             <div class="summary-grid" id="cashIncomeSummaryGrid">
+              <article class="summary-card warn" data-static-card="count">
+                <span>Visible Records</span>
+                <strong id="cashIncomeCountValue">0</strong>
+              </article>
               <article class="summary-card warn" data-static-card="total">
                 <span>Confirmed Cash</span>
                 <strong id="cashIncomeTotalValue">PHP 0.00</strong>
@@ -669,15 +781,13 @@
                   <tr>
                     <th>Date</th>
                     <th>Branch</th>
-                    <th>About</th>
+                    <th>Details</th>
                     <th>Amount</th>
-                    <th>Status</th>
-                    <th>Note</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="cashIncomeTableBody">
-                  <tr><td colspan="7" class="empty">Loading cash income records...</td></tr>
+                  <tr><td colspan="5" class="empty">Loading cash income records...</td></tr>
                 </tbody>
               </table>
             </div>
