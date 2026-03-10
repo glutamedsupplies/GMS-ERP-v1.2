@@ -4,6 +4,17 @@ const timeInOutBtn = document.getElementById('timeInOutBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 const featureAccessSection = document.getElementById('featureAccessSection');
 const featureCards = document.getElementById('featureCards');
+const dashboardKicker = document.getElementById('dashboardKicker');
+const dashboardTitle = document.getElementById('dashboardTitle');
+const dashboardCopy = document.getElementById('dashboardCopy');
+const companyBadge = document.getElementById('companyBadge');
+const userBadge = document.getElementById('userBadge');
+const roleBadge = document.getElementById('roleBadge');
+const heroDateLabel = document.getElementById('heroDateLabel');
+const coreToolCount = document.getElementById('coreToolCount');
+const featureCount = document.getElementById('featureCount');
+const workspaceMode = document.getElementById('workspaceMode');
+const featureAccessSummary = document.getElementById('featureAccessSummary');
 
 const FEATURE_UI_CONFIG = Object.freeze([
     {
@@ -56,9 +67,22 @@ async function initialize() {
         return;
     }
 
+    const bootstrap = await loadBootstrap();
     bindCoreCards();
-    await renderGrantedFeatureCards(session);
+    renderWorkspaceOverview(session, bootstrap);
+    await renderGrantedFeatureCards(session, bootstrap);
     bindLogoutListener();
+}
+
+async function loadBootstrap() {
+    try {
+        const bootstrap = await appClient.getBootstrap();
+        appClient.applyBootstrapBrandTheme(bootstrap);
+        return bootstrap || null;
+    } catch (error) {
+        console.error('Failed to load employee bootstrap:', error);
+        return null;
+    }
 }
 
 function bindCoreCards() {
@@ -81,7 +105,55 @@ function bindCoreCards() {
     }
 }
 
-async function renderGrantedFeatureCards(session) {
+function renderWorkspaceOverview(session, bootstrap) {
+    const normalizedRole = String(session?.role || '').trim().toLowerCase();
+    const isStaffUser = normalizedRole === 'staff';
+    const roleLabel = isStaffUser ? 'Staff' : 'Employee';
+    const companyName = String(bootstrap?.company?.name || '').trim() || 'Your company';
+    const activeModules = Object.values(bootstrap?.modules || {}).filter(Boolean).length;
+
+    if (dashboardKicker) {
+        dashboardKicker.textContent = isStaffUser ? 'Shared Staff Workspace' : 'Personal Employee Workspace';
+    }
+    if (dashboardTitle) {
+        dashboardTitle.textContent = isStaffUser ? 'Staff Workspace' : 'Employee Workspace';
+    }
+    if (dashboardCopy) {
+        dashboardCopy.textContent = isStaffUser
+            ? 'Move between operational tools faster with a clearer layout that stays readable on phones, tablets, and desktop screens.'
+            : 'Keep your attendance, records, and account details in one cleaner workspace built for both desktop and mobile use.';
+    }
+    if (companyBadge) {
+        companyBadge.textContent = companyName;
+    }
+    if (userBadge) {
+        userBadge.textContent = session?.userName ? `Signed in as ${session.userName}` : 'Signed in';
+    }
+    if (roleBadge) {
+        roleBadge.textContent = `${roleLabel} access`;
+    }
+    if (heroDateLabel) {
+        heroDateLabel.textContent = new Date().toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'short',
+            day: 'numeric'
+        });
+    }
+    if (coreToolCount) {
+        coreToolCount.textContent = '3';
+    }
+    if (workspaceMode) {
+        workspaceMode.textContent = isStaffUser ? 'Collaborative' : 'Focused';
+    }
+
+    document.title = `${roleLabel} Workspace`;
+
+    if (activeModules && dashboardCopy) {
+        dashboardCopy.textContent = `${dashboardCopy.textContent} ${activeModules} plan modules are active for this tenant.`;
+    }
+}
+
+async function renderGrantedFeatureCards(session, bootstrap = null) {
     if (!featureAccessSection || !featureCards) {
         return;
     }
@@ -90,7 +162,6 @@ async function renderGrantedFeatureCards(session) {
     featureAccessSection.hidden = true;
 
     try {
-        const bootstrap = await appClient.getBootstrap();
         const modules = (bootstrap && typeof bootstrap.modules === 'object' && !Array.isArray(bootstrap.modules))
             ? bootstrap.modules
             : {};
@@ -120,12 +191,16 @@ async function renderGrantedFeatureCards(session) {
                 : item.description;
 
             return `
-            <button type="button" class="card feature-card" data-target-path="${targetPath}">
-              <i class="${item.iconClass}"></i>
-              <h3>${item.label}</h3>
-              <p>${description}</p>
-            </button>
-        `;
+                <button type="button" class="action-card feature-card" data-target-path="${targetPath}">
+                  <span class="action-icon"><i class="${item.iconClass}"></i></span>
+                  <h3 class="action-title">${item.label}</h3>
+                  <p class="action-copy">${description}</p>
+                  <div class="action-footer">
+                    <span>Open module</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                  </div>
+                </button>
+            `;
         }).join('');
 
         Array.from(featureCards.querySelectorAll('button[data-target-path]')).forEach((button) => {
@@ -134,9 +209,18 @@ async function renderGrantedFeatureCards(session) {
             });
         });
 
+        if (featureCount) {
+            featureCount.textContent = String(allowedCards.length);
+        }
+        if (featureAccessSummary) {
+            featureAccessSummary.innerHTML = `<i class="fa-solid fa-key"></i> ${allowedCards.length} extra tool${allowedCards.length === 1 ? '' : 's'}`;
+        }
         featureAccessSection.hidden = false;
     } catch (error) {
         console.error('Failed to render employee feature access cards:', error);
+        if (featureCount) {
+            featureCount.textContent = '0';
+        }
     }
 }
 

@@ -14,6 +14,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     const navItems = Array.from(panelNav?.querySelectorAll('li[data-panel]') || []);
     const navItemByPanel = new Map(navItems.map((item) => [item.dataset.panel, item]));
     const panelFrame = document.getElementById('panelFrame');
+    const workspaceName = document.getElementById('workspaceName');
+    const workspaceCopy = document.getElementById('workspaceCopy');
+    const workspaceUser = document.getElementById('workspaceUser');
+    const workspaceRole = document.getElementById('workspaceRole');
+    const sidebarStatusText = document.getElementById('sidebarStatusText');
+    const heroKicker = document.getElementById('heroKicker');
+    const heroTitle = document.getElementById('heroTitle');
+    const heroCopy = document.getElementById('heroCopy');
+    const moduleBadge = document.getElementById('moduleBadge');
+    const featureBadge = document.getElementById('featureBadge');
     let currentPanelSrc = '';
     let bootstrap = null;
     let useGroupedNavigation = false;
@@ -122,6 +132,28 @@ window.addEventListener('DOMContentLoaded', async () => {
             ]
         }
     ];
+    const panelDescriptions = {
+        employees: 'Create, update, and schedule employee accounts without losing readability on smaller screens.',
+        client_database: 'Review client records, track account activity, and keep customer data organized.',
+        inventory_manager: 'Maintain product pricing, labels, and inventory setup from a cleaner workspace.',
+        inventory_levels: 'Monitor stock counts and inventory movement with less visual noise.',
+        composite_items: 'Manage bundled and recipe-based items in a layout built for quick scanning.',
+        order_form: 'Encode customer orders quickly while keeping important actions visible.',
+        communication_panel: 'Stay on top of tenant and customer messages from a dedicated communication view.',
+        sales_report: 'Read sales performance summaries with faster navigation between report panels.',
+        lbc_tracking: 'Track shipment details and update records without leaving the admin shell.',
+        invoice_summary: 'Review invoice activity with a simpler, more focused summary panel.',
+        expenses: 'Capture expenses and cash flow entries in a cleaner transactional workspace.',
+        timecards: 'Open employee time cards and attendance history from one organized section.',
+        today: 'Check who is present today with fewer clicks and a more readable layout.',
+        time_in_out: 'Manage attendance station actions and live time controls.',
+        reports: 'Generate attendance reports with better access to filters and output panels.',
+        settings: 'Adjust workspace settings and account preferences.',
+        users: 'Control user access, feature permissions, and account setup.',
+        branches: 'Manage branch structure, availability, and tenant branch data.',
+        company_profile: 'Customize tenant branding, logo, and company profile details.',
+        invoice_template: 'Maintain invoice template visuals and output settings.'
+    };
     const groupByPanel = panelGroups.reduce((lookup, group) => {
         group.panels.forEach((panel) => lookup.set(panel, group.id));
         return lookup;
@@ -129,6 +161,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     try {
         bootstrap = await appClient.getBootstrap();
+        appClient.applyBootstrapBrandTheme(bootstrap);
     } catch (error) {
         console.error('Failed to load bootstrap:', error);
     }
@@ -146,6 +179,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
 
     applyPanelGating();
+    populateWorkspaceSummary();
 
     useGroupedNavigation = isGmsOrGwdCompany();
     let groupedFallbackPanel = null;
@@ -218,11 +252,13 @@ window.addEventListener('DOMContentLoaded', async () => {
         });
 
         if (!useGroupedNavigation) {
+            updateActivePanelSummary(panel);
             return;
         }
 
         const nextGroupId = groupByPanel.get(panel);
         if (!nextGroupId) {
+            updateActivePanelSummary(panel);
             return;
         }
 
@@ -233,6 +269,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
 
         setActiveTopPanelButton(panel);
+        updateActivePanelSummary(panel);
     }
 
     function buildPanelSrc(fileName, options = {}) {
@@ -405,6 +442,64 @@ window.addEventListener('DOMContentLoaded', async () => {
                 ? 'Not allowed for this user account.'
                 : 'Not available in your current plan.';
         });
+    }
+
+    function populateWorkspaceSummary() {
+        const companyName = String(bootstrap?.company?.name || '').trim() || 'Company Workspace';
+        const companyCode = String(
+            bootstrap?.company?.company_code
+            || session?.company_code
+            || session?.companyCode
+            || ''
+        ).trim();
+        const normalizedRole = String(session?.role || 'head_admin').trim().toLowerCase();
+        const roleLabel = normalizedRole === 'company_admin' ? 'Company Admin' : 'Head Admin';
+        const enabledModules = Object.entries(bootstrap?.modules || {}).filter(([, isEnabled]) => Boolean(isEnabled));
+        const readyPanels = navItems.filter((item) => item.dataset.hidden !== 'true' && item.dataset.disabled !== 'true').length;
+
+        if (workspaceName) {
+            workspaceName.textContent = companyName;
+        }
+        if (workspaceCopy) {
+            workspaceCopy.textContent = companyCode
+                ? `Tenant code: ${companyCode}. Operations, staff tools, and setup panels are now available below.`
+                : 'Operations, staff tools, and setup panels are now available below.';
+        }
+        if (workspaceUser) {
+            workspaceUser.textContent = session?.userName || 'Admin User';
+        }
+        if (workspaceRole) {
+            workspaceRole.textContent = roleLabel;
+        }
+        if (moduleBadge) {
+            moduleBadge.textContent = `${enabledModules.length} module${enabledModules.length === 1 ? '' : 's'} active`;
+        }
+        if (featureBadge) {
+            featureBadge.textContent = `${readyPanels} panel${readyPanels === 1 ? '' : 's'} ready`;
+        }
+        if (sidebarStatusText) {
+            sidebarStatusText.textContent = `${readyPanels} panel${readyPanels === 1 ? '' : 's'} available`;
+        }
+    }
+
+    function updateActivePanelSummary(panel) {
+        const activeLabel = panelLabels.get(panel) || panel || 'Workspace';
+        const activeGroupLabel = panelGroups.find((group) => group.id === groupByPanel.get(panel))?.label || 'Operations Control';
+
+        if (heroKicker) {
+            heroKicker.textContent = activeGroupLabel;
+        }
+        if (heroTitle) {
+            heroTitle.textContent = activeLabel;
+        }
+        if (heroCopy) {
+            heroCopy.textContent = panelDescriptions[panel] || 'Manage this workspace panel from a more responsive shell.';
+        }
+        if (sidebarStatusText) {
+            sidebarStatusText.textContent = `${activeLabel} ready`;
+        }
+
+        document.title = `${activeLabel} | Head Admin`;
     }
 
     function initializeGroupedNavigation() {

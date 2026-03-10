@@ -1,111 +1,105 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Employee Dashboard</title>
+<title>Employee Workspace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
-  * { margin:0; padding:0; box-sizing:border-box; font-family: 'Roboto', sans-serif; }
-
-  body { background-color:#f4f7fa; color:#333; }
-
-  .container { max-width: 1040px; margin: 50px auto; padding: 20px; }
-
-  h2 { text-align:center; margin-bottom:40px; color:#2c3e50; }
-  .section-title {
-    margin: 34px 0 6px;
-    color: #2c3e50;
-    font-size: 24px;
-    text-align: left;
-  }
-  .section-copy {
-    margin-bottom: 16px;
-    color: #6b7280;
-    line-height: 1.5;
-  }
-
-  .dashboard {
-    display:flex;
-    justify-content:space-between;
-    gap:20px;
-    flex-wrap:wrap;
-  }
-
-  .card {
-    flex:1;
-    min-width:220px;
-    background-color:#fff;
-    padding:30px;
-    border-radius:12px;
-    box-shadow:0 5px 20px rgba(0,0,0,0.05);
-    text-align:center;
-    cursor:pointer;
-    transition:0.3s;
-  }
-  .card:hover { transform:translateY(-5px); box-shadow:0 10px 25px rgba(0,0,0,0.1); }
-
-  .card i {
-    font-size:50px;
-    color:#27ae60;
-    margin-bottom:15px;
-  }
-  .card h3 { font-size:20px; color:#2c3e50; }
-  .card p {
-    margin-top: 10px;
-    color: #6b7280;
-    line-height: 1.5;
-    font-size: 14px;
-  }
-  .feature-card {
-    border: none;
-    display: block;
-    width: 100%;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-  }
-  .feature-card i {
-    font-size: 34px;
-  }
-  #featureAccessSection[hidden] {
-    display: none;
-  }
-
-  @media (max-width:768px){
-    .dashboard { flex-direction:column; gap:20px; }
-  }
-</style>
+<link rel="stylesheet" href="./portal.css">
 </head>
-<body>
-  <div class="container">
-    <h2>Employee Dashboard</h2>
+<body class="employee-page">
+  <main class="employee-shell">
+    <section class="hero-card">
+      <div class="hero-grid">
+        <div>
+          <p class="hero-kicker" id="dashboardKicker">Daily Workspace</p>
+          <h1 class="hero-title" id="dashboardTitle">Employee Workspace</h1>
+          <p class="hero-copy" id="dashboardCopy">Open your essential tools, move faster through daily tasks, and keep your workflow clean on any screen size.</p>
+          <div class="hero-pills">
+            <span class="pill" id="companyBadge">Tenant Ready</span>
+            <span class="pill pill-soft" id="userBadge">Signed in</span>
+            <span class="pill pill-soft" id="roleBadge">Employee</span>
+          </div>
+        </div>
 
-    <div class="dashboard">
-      <div class="card" id="timeCardBtn">
-        <i class="fa-solid fa-clock"></i>
-        <h3>Time Card</h3>
+        <aside class="hero-side">
+          <div class="hero-side-label">Today</div>
+          <div class="hero-side-value" id="heroDateLabel">Loading...</div>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span class="stat-label">Core Tools</span>
+              <strong class="stat-value" id="coreToolCount">3</strong>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Extra Access</span>
+              <strong class="stat-value" id="featureCount">0</strong>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Workspace Mode</span>
+              <strong class="stat-value" id="workspaceMode">Live</strong>
+            </div>
+          </div>
+        </aside>
       </div>
-
-      <div class="card" id="timeInOutBtn">
-        <i class="fa-solid fa-right-to-bracket"></i>
-        <h3>Time In / Time Out</h3>
-      </div>
-
-      <div class="card" id="settingsBtn">
-        <i class="fa-solid fa-gear"></i>
-        <h3>Settings</h3>
-      </div>
-    </div>
-
-    <section id="featureAccessSection" hidden>
-      <h3 class="section-title">Granted Module Access</h3>
-      <p class="section-copy">Ito ang additional tools na in-enable sa account mo mula User Management.</p>
-      <div id="featureCards" class="dashboard"></div>
     </section>
-  </div>
+
+    <section class="section-block">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Core Actions</h2>
+          <p class="section-copy">The fastest routes for attendance, records, and account updates.</p>
+        </div>
+        <span class="surface-note"><i class="fa-solid fa-mobile-screen-button"></i> Responsive on phone and desktop</span>
+      </div>
+
+      <div class="card-grid">
+        <button type="button" class="action-card" id="timeCardBtn">
+          <span class="action-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+          <h3 class="action-title">Time Card</h3>
+          <p class="action-copy">Review weekly attendance, worked hours, and status updates in one clean table.</p>
+          <div class="action-footer">
+            <span>Open attendance history</span>
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          </div>
+        </button>
+
+        <button type="button" class="action-card" id="timeInOutBtn">
+          <span class="action-icon"><i class="fa-solid fa-right-to-bracket"></i></span>
+          <h3 class="action-title">Time In / Out</h3>
+          <p class="action-copy">Track your shift using a live clock, larger action buttons, and clearer status feedback.</p>
+          <div class="action-footer">
+            <span>Start or end your shift</span>
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          </div>
+        </button>
+
+        <button type="button" class="action-card" id="settingsBtn">
+          <span class="action-icon"><i class="fa-solid fa-sliders"></i></span>
+          <h3 class="action-title">Settings</h3>
+          <p class="action-copy">Update your account details, profile photo, and password with a mobile-friendly layout.</p>
+          <div class="action-footer">
+            <span>Manage account details</span>
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <section id="featureAccessSection" class="section-block" hidden>
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Granted Module Access</h2>
+          <p class="section-copy">These tools were enabled for your account from User Management.</p>
+        </div>
+        <span id="featureAccessSummary" class="surface-note"><i class="fa-solid fa-key"></i> 0 extra tools</span>
+      </div>
+      <div id="featureCards" class="card-grid"></div>
+    </section>
+  </main>
 
   <script src="../shared/app-client.js"></script>
   <script src="employee_dashboard.js"></script>

@@ -18,6 +18,13 @@ async function initialize() {
         return;
     }
 
+    try {
+        const bootstrap = await appClient.getBootstrap();
+        appClient.applyBootstrapBrandTheme(bootstrap);
+    } catch (error) {
+        console.error('Failed to load employee branding for attendance station:', error);
+    }
+
     sessionTimeZone = session.timeZone || '';
     welcomeUser.innerText = `Welcome, ${session.userName || 'Employee'}`;
     backBtn?.addEventListener('click', () => {
@@ -38,16 +45,16 @@ async function handleAction(type) {
     try {
         if (type === 'in') {
             const result = await appClient.recordTimeIn(session.userId);
-            statusText.innerText = `${result.status} - timed in at ${result.time}`;
+            setStatusMessage(`${result.status} - timed in at ${result.time}`, false);
         } else {
             const result = await appClient.recordTimeOut(session.userId);
-            statusText.innerText = `Timed out at ${result.time}. Total hours: ${result.workedHours}`;
+            setStatusMessage(`Timed out at ${result.time}. Total hours: ${result.workedHours}`, false);
         }
 
         await refreshState();
     } catch (error) {
         console.error('Attendance action failed:', error);
-        statusText.innerText = error.message;
+        setStatusMessage(error.message, true);
     } finally {
         setBusy(false);
     }
@@ -73,23 +80,23 @@ async function refreshState() {
         if (!record) {
             timeInBtn.disabled = false;
             timeOutBtn.disabled = true;
-            statusText.innerText = 'Ready to time in.';
+            setStatusMessage('Ready to time in.', false);
             return;
         }
 
         if (record.timeIn && !record.timeOut) {
             timeInBtn.disabled = true;
             timeOutBtn.disabled = false;
-            statusText.innerText = `${record.status} - logged in at ${record.timeIn}`;
+            setStatusMessage(`${record.status} - logged in at ${record.timeIn}`, false);
             return;
         }
 
         timeInBtn.disabled = true;
         timeOutBtn.disabled = true;
-        statusText.innerText = `Shift ended. Total hours: ${record.workedHours}`;
+        setStatusMessage(`Shift ended. Total hours: ${record.workedHours}`, false);
     } catch (error) {
         console.error('Failed to refresh attendance state:', error);
-        statusText.innerText = error.message;
+        setStatusMessage(error.message, true);
     }
 }
 
@@ -104,4 +111,10 @@ function buildTimeZoneOptions(options = {}) {
     return sessionTimeZone
         ? { ...options, timeZone: sessionTimeZone }
         : options;
+}
+
+function setStatusMessage(message, isError) {
+    statusText.innerText = message;
+    statusText.classList.toggle('is-error', Boolean(isError));
+    statusText.classList.toggle('is-success', Boolean(message) && !isError);
 }

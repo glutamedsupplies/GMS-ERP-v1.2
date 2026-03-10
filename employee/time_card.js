@@ -14,6 +14,13 @@ async function initialize() {
         return;
     }
 
+    try {
+        const bootstrap = await appClient.getBootstrap();
+        appClient.applyBootstrapBrandTheme(bootstrap);
+    } catch (error) {
+        console.error('Failed to load employee branding for time card:', error);
+    }
+
     backBtn?.addEventListener('click', () => {
         window.location.href = '/employee/employee.html';
     });

@@ -1,77 +1,58 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Time Card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
-
-  * { margin:0; padding:0; box-sizing:border-box; font-family: 'Roboto', sans-serif; }
-
-  body { background-color:#f4f7fa; color:#333; }
-
-  .container { max-width:900px; margin:50px auto; padding:20px; }
-
-  h2 { text-align:center; margin-bottom:30px; color:#2c3e50; }
-
-  /* Table Styling */
-  table { width:100%; border-collapse:collapse; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 5px 20px rgba(0,0,0,0.05); }
-  thead { background-color:#27ae60; color:white; }
-  thead th { padding:12px; text-align:left; }
-  tbody tr { border-bottom:1px solid #e0e0e0; }
-  tbody tr:nth-child(even) { background-color:#f9f9f9; }
-  tbody td { padding:12px; }
-
-  /* Buttons */
-  .backBtn {
-    display:inline-block;
-    margin-bottom:20px;
-    padding:10px 20px;
-    background-color:#2980b9;
-    color:white;
-    border:none;
-    border-radius:8px;
-    cursor:pointer;
-    transition:0.3s;
-  }
-  .backBtn:hover { background-color:#3498db; }
-
-  /* Responsive */
-  @media (max-width:768px){
-    table, thead, tbody, th, td, tr { display:block; }
-    thead { display:none; }
-    tbody td { display:flex; justify-content:space-between; padding:10px; }
-    tbody td::before { font-weight:bold; content:attr(data-label); }
-  }
-</style>
+<link rel="stylesheet" href="./portal.css">
 </head>
-<body>
-  <div class="container">
-    <button class="backBtn" id="backBtn"><i class="fa-solid fa-arrow-left"></i> Back</button>
-    <h2>My Weekly Time Card</h2>
-    <p id="weekRange" style="text-align:center; margin: -12px 0 24px; color:#5f6f82; font-weight:500;">Loading current week...</p>
+<body class="employee-page">
+  <main class="employee-shell employee-shell--narrow">
+    <div class="page-topbar">
+      <button class="back-link" id="backBtn" type="button"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</button>
+      <span class="surface-note"><i class="fa-solid fa-calendar-week"></i> Weekly attendance view</span>
+    </div>
 
-    <table id="timeCardTable">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Time In</th>
-          <th>Time Out</th>
-          <th>Total Hours</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Rows populated dynamically -->
-      </tbody>
-    </table>
-  </div>
+    <section class="hero-card" style="margin-bottom:20px;">
+      <p class="hero-kicker">Attendance History</p>
+      <h1 class="page-title">My Weekly Time Card</h1>
+      <p class="hero-copy">Review your current week with cleaner spacing, better readability, and a layout that stays usable on small devices.</p>
+      <div class="hero-pills">
+        <span class="pill pill-soft" id="weekRange">Loading current week...</span>
+      </div>
+    </section>
+
+    <section class="table-card">
+      <div class="table-head">
+        <div>
+          <h2>Attendance Records</h2>
+          <p class="section-copy">Daily logs update based on your current work week.</p>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="timeCardTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Time In</th>
+              <th>Time Out</th>
+              <th>Total Hours</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
 
   <script src="../shared/app-client.js"></script>
-<script src="time_card.js"></script>
+  <script src="time_card.js"></script>
 </body>
 </html>
-

@@ -13,7 +13,6 @@ const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
 const togglePassIcon = document.getElementById('togglePass')?.querySelector('i');
 const loginTitleEl = document.getElementById('loginTitle');
 const loginSubtitleEl = document.getElementById('loginSubtitle');
-const brandingBadgeEl = document.getElementById('brandingBadge');
 const brandingHintEl = document.getElementById('brandingHint');
 const brandLogoEl = document.getElementById('brandLogo');
 const themeColorMeta = document.querySelector('meta[name="theme-color"]');
@@ -252,11 +251,6 @@ function applyThemeCopy(branding, companyCode) {
         loginSubtitleEl.textContent = companyName
             ? `Company: ${companyName}`
             : 'Sign in to continue';
-    }
-    if (brandingBadgeEl) {
-        brandingBadgeEl.textContent = companyName
-            ? 'Active Company'
-            : 'Default Sign-In Theme';
     }
     if (brandingHintEl) {
         brandingHintEl.textContent = resolveBrandingHint(branding, companyCode);

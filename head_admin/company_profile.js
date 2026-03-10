@@ -109,6 +109,12 @@ async function loadProfile() {
         updateLogoPreview(resolveLogoSourceForPreview());
         updateBackgroundMeta();
         updateBrandingPreview();
+        if (logoFileInput) {
+            logoFileInput.value = '';
+        }
+        if (backgroundImageFileInput) {
+            backgroundImageFileInput.value = '';
+        }
         if (isImageDataUrl(currentLogoPath)) {
             logoMeta.textContent = 'Current logo is an uploaded image.';
         } else if (currentLogoPath) {
@@ -362,7 +368,6 @@ async function onLogoFileChange(event) {
     } catch (error) {
         console.error('Failed to process logo upload:', error);
         setStatus(error.message || 'Failed to process logo file.', true);
-    } finally {
         logoFileInput.value = '';
     }
 }
@@ -395,7 +400,6 @@ async function onBackgroundImageFileChange(event) {
     } catch (error) {
         console.error('Failed to process login background upload:', error);
         setStatus(error.message || 'Failed to process background image.', true);
-    } finally {
         backgroundImageFileInput.value = '';
     }
 }

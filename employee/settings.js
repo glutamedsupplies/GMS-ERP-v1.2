@@ -21,6 +21,13 @@ async function initialize() {
         return;
     }
 
+    try {
+        const bootstrap = await appClient.getBootstrap();
+        appClient.applyBootstrapBrandTheme(bootstrap);
+    } catch (error) {
+        console.error('Failed to load employee branding for settings:', error);
+    }
+
     document.getElementById('backBtn').addEventListener('click', () => {
         window.location.href = '/employee/employee.html';
     });
@@ -80,7 +87,9 @@ async function saveSettings() {
         appClient.setSessionUser({
             id: updatedUser.id,
             name: updatedUser.name,
-            role: updatedUser.role
+            role: updatedUser.role,
+            company_id: updatedUser.company_id || session.companyId || '',
+            company_code: updatedUser.company_code || session.companyCode || ''
         });
 
         passwordInput.value = '';
@@ -126,5 +135,6 @@ function setupPasswordToggle(toggleId, inputId) {
 
 function setStatus(message, isError) {
     statusText.innerText = message;
-    statusText.style.color = isError ? '#ff5252' : '#00e676';
+    statusText.classList.toggle('is-error', Boolean(isError));
+    statusText.classList.toggle('is-success', Boolean(message) && !isError);
 }

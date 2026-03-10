@@ -4,6 +4,10 @@ const statusEl = document.getElementById('status');
 const customerChatBtn = document.getElementById('customerChatBtn');
 const refreshBtn = document.getElementById('refreshBtn');
 const logoutBtn = document.getElementById('logoutBtn');
+const metricCompanies = document.getElementById('metricCompanies');
+const metricPlans = document.getElementById('metricPlans');
+const metricUsers = document.getElementById('metricUsers');
+const metricWhiteLabel = document.getElementById('metricWhiteLabel');
 
 const companyPlan = document.getElementById('companyPlan');
 const createCompanyBtn = document.getElementById('createCompanyBtn');
@@ -141,6 +145,7 @@ async function loadData() {
         state.plans = plans || [];
         state.logs = logs || [];
 
+        renderOverviewStats();
         renderPlans();
         renderCompanies();
         renderLogs();
@@ -151,6 +156,24 @@ async function loadData() {
     } catch (error) {
         console.error('Failed to load super admin data:', error);
         setStatus(error.message || 'Failed to load data.', true);
+    }
+}
+
+function renderOverviewStats() {
+    const stats = state.bootstrap?.stats || {};
+    const whiteLabelCount = state.companies.filter((company) => Boolean(company?.addons?.white_label?.is_active)).length;
+
+    if (metricCompanies) {
+        metricCompanies.textContent = String(state.companies.length);
+    }
+    if (metricPlans) {
+        metricPlans.textContent = String(state.plans.length);
+    }
+    if (metricUsers) {
+        metricUsers.textContent = String(Number(stats.users || 0));
+    }
+    if (metricWhiteLabel) {
+        metricWhiteLabel.textContent = String(whiteLabelCount);
     }
 }
 
@@ -172,12 +195,20 @@ function renderPlans() {
 
     plansList.innerHTML = state.plans.map((plan) => `
         <div class="row" data-plan-id="${escape(plan.id)}">
-            <strong>${escape(plan.name)}</strong> (${escape(plan.id)})<br>
-            <span class="muted">Price: ${Number(plan.price_monthly || 0)} | Branches: ${Number(plan.max_branches || 0)} | Users: ${Number(plan.max_users || 0)} | Invoices: ${Number(plan.max_invoices_monthly || 0)} | AI quota: ${Number(plan.ai_monthly_quota || 0)}</span>
-            <div class="plan-actions">
-                <button type="button" data-action="edit-plan" class="btn-soft">Edit</button>
-                <button type="button" data-action="delete-plan" class="btn-danger">Delete</button>
+            <div class="row-head">
+                <div class="plan-meta">
+                    <div class="plan-title">
+                        <strong>${escape(plan.name)}</strong>
+                        <span class="inline-chip">${escape(plan.id)}</span>
+                    </div>
+                    <span class="muted">Price: ${Number(plan.price_monthly || 0)} | Branches: ${Number(plan.max_branches || 0)} | Users: ${Number(plan.max_users || 0)} | Invoices: ${Number(plan.max_invoices_monthly || 0)} | AI quota: ${Number(plan.ai_monthly_quota || 0)}</span>
+                </div>
+                <div class="plan-actions">
+                    <button type="button" data-action="edit-plan" class="btn-soft">Edit</button>
+                    <button type="button" data-action="delete-plan" class="btn-danger">Delete</button>
+                </div>
             </div>
+            <div class="chip-row">${buildPlanModuleChips(plan)}</div>
         </div>
     `).join('');
 }
@@ -228,6 +259,7 @@ function renderCompanies() {
         const previewLogoPath = rawLogoPath || String(company.branding?.logoPath || '/logo.png').trim() || '/logo.png';
         const appName = String(company.app_name || '').trim();
         const primaryColor = String(company.primary_color || '').trim() || DEFAULT_PRIMARY_COLOR;
+        const previewTheme = appClient.buildBrandTheme(primaryColor);
         const currentStatus = normalizeSearchText(company.status || 'active') || 'active';
         const statusOptions = COMPANY_STATUS_OPTIONS.includes(currentStatus)
             ? COMPANY_STATUS_OPTIONS
@@ -247,16 +279,32 @@ function renderCompanies() {
         const adminPasswordHint = hasRecoveryPassword
             ? 'Saved recovery password is available.'
             : 'No saved recovery password. Use Reset Admin Password.';
+        const companyStatusClass = buildStatusPillClass(currentStatus);
+        const usageChips = [
+            `Users ${Number(company.counts?.users || 0)}/${Number(limits.max_users || 0)}`,
+            `Branches ${Number(company.counts?.branches || 0)}/${Number(limits.max_branches || 0)}`,
+            `Invoices ${Number(usage.invoices_count || 0)}/${Number(limits.max_invoices_monthly || 0)}`
+        ].map((label) => `<span class="inline-chip">${escape(label)}</span>`).join('');
+        const addonChips = [
+            whiteLabelAddon.is_active ? 'White Label' : 'Parent Brand',
+            customDomainAddon.is_active ? 'Custom Domain' : '',
+            aiAddon.is_active ? 'AI Reader' : ''
+        ].filter(Boolean).map((label) => `<span class="inline-chip">${escape(label)}</span>`).join('');
 
         return `
             <div class="row" data-company-id="${escape(company.id)}">
                 <div class="company-header">
                     <div class="company-meta">
-                        <strong>${escape(company.name)}</strong> (${escape(company.company_code)})<br>
-                        <span class="muted">Status: ${escape(company.status || '')} | Users: ${Number(company.counts?.users || 0)}/${Number(limits.max_users || 0)} | Branches: ${Number(company.counts?.branches || 0)}/${Number(limits.max_branches || 0)} | Invoices: ${Number(usage.invoices_count || 0)}/${Number(limits.max_invoices_monthly || 0)}</span><br>
-                        <span class="muted">Branding mode: ${whiteLabelAddon.is_active ? 'White Label (custom)' : 'Parent Brand (default login theme)'}</span>
+                        <div class="company-title-row">
+                            <strong>${escape(company.name)}</strong>
+                            <span class="${companyStatusClass}">${escape(company.status || 'active')}</span>
+                            <span class="color-dot" style="background:${escape(primaryColor)};"></span>
+                        </div>
+                        <span class="muted">Code: ${escape(company.company_code)} | App: ${escape(appName || 'GMS ERP')}</span>
+                        <div class="chip-row">${usageChips}</div>
+                        <div class="chip-row">${addonChips}</div>
                     </div>
-                    <div class="company-preview" style="box-shadow: 0 0 0 1px ${escape(primaryColor)} inset;">
+                    <div class="company-preview" style="background: linear-gradient(145deg, ${escape(previewTheme.primarySoftest)}, #ffffff); box-shadow: 0 0 0 1px ${escape(primaryColor)} inset;">
                         <img src="${escape(previewLogoPath)}" alt="Company logo preview">
                     </div>
                 </div>
@@ -313,6 +361,41 @@ function renderLogs() {
             <span class="muted">${escape(log.company_id || 'global')} | ${escape(log.actor_user_id || '-')} | ${escape(log.created_at || '')}</span>
         </div>
     `).join('');
+}
+
+function buildPlanModuleChips(plan) {
+    const modules = plan?.modules || {};
+    const enabledModules = Object.entries(modules)
+        .filter(([, isEnabled]) => Boolean(isEnabled))
+        .map(([moduleKey]) => formatModuleLabel(moduleKey));
+
+    if (!enabledModules.length) {
+        return '<span class="inline-chip">No active modules</span>';
+    }
+
+    return enabledModules.map((label) => `<span class="inline-chip">${escape(label)}</span>`).join('');
+}
+
+function formatModuleLabel(moduleKey) {
+    const labels = {
+        attendance: 'Attendance',
+        sales: 'Sales',
+        inventory: 'Inventory',
+        invoicing: 'Invoicing',
+        reports: 'Reports',
+        ai_reader: 'AI Reader'
+    };
+    return labels[moduleKey] || String(moduleKey || '').replace(/_/g, ' ');
+}
+
+function buildStatusPillClass(statusValue) {
+    if (statusValue === 'inactive') {
+        return 'status-pill status-pill--inactive';
+    }
+    if (statusValue === 'suspended') {
+        return 'status-pill status-pill--suspended';
+    }
+    return 'status-pill status-pill--active';
 }
 
 async function createCompany() {

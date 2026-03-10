@@ -47,7 +47,7 @@ html[data-app-mobile="true"] body {
   html[data-app-page="settings"] body,
   html[data-app-page="time_in_time_out"] body {
     padding: 16px;
-    overflow-y: auto;
+    overflow-y: hidden;
   }
 
   html[data-app-page="index"] .login-card,
@@ -58,18 +58,32 @@ html[data-app-mobile="true"] body {
   }
 
   html[data-app-page="index"] .login-card {
-    padding: 56px 20px 24px !important;
+    width: min(100%, 420px) !important;
+    max-width: 100%;
+    max-height: calc(100dvh - 20px);
+    padding: 18px 14px 14px !important;
   }
 
   html[data-app-page="index"] .logo-container {
-    width: 96px !important;
-    height: 96px !important;
-    margin: -38px auto 16px !important;
+    width: 74px !important;
+    height: 74px !important;
+    margin: 0 auto 10px !important;
   }
 
-  html[data-app-page="index"] h2 {
-    margin-bottom: 24px !important;
-    font-size: 28px;
+  html[data-app-page="index"] h1 {
+    margin-bottom: 4px !important;
+    font-size: 24px !important;
+  }
+
+  html[data-app-page="index"] .company-hint {
+    display: none !important;
+  }
+
+  html[data-app-page="index"] .input-group input,
+  html[data-app-page="index"] .login-btn,
+  html[data-app-page="index"] .customer-btn,
+  html[data-app-page="index"] .install-btn {
+    height: 44px !important;
   }
 
   html[data-app-page="employee"] .container,
