@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS companies (
   custom_domain TEXT UNIQUE,
   logo_path TEXT NOT NULL DEFAULT '',
   primary_color TEXT NOT NULL DEFAULT '#2575fc',
-  app_name TEXT NOT NULL DEFAULT ''
+  app_name TEXT NOT NULL DEFAULT '',
+  db_schema TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS users (
@@ -84,4 +85,4 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_master_users_scope
-ON users (COALESCE(company_id, ''), username);
+ON users ((COALESCE(company_id, '')), username);

@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS branches (
 );
 
 CREATE TABLE IF NOT EXISTS attendance (
+  row_id BIGSERIAL PRIMARY KEY,
   id TEXT,
   branch_id TEXT,
   name TEXT,

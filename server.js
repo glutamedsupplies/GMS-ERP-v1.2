@@ -1,7 +1,9 @@
 const store = require('./lib/sqlite');
-const { startServer } = require('./lib/http-server');
+const { startServer, SERVER_CONFIG } = require('./lib/http-server');
 
 let server = null;
+
+console.log(`Starting GMS server on ${SERVER_CONFIG.bindHost}:${SERVER_CONFIG.port}`);
 
 startServer()
     .then((info) => {
