@@ -89,9 +89,9 @@ function Wait-ForLegacyElectronExit {
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     while ((Get-Date) -lt $deadline) {
         $remaining = @()
-        foreach ($pid in $pendingIds) {
-            if (Get-Process -Id $pid -ErrorAction SilentlyContinue) {
-                $remaining += $pid
+        foreach ($processId in $pendingIds) {
+            if (Get-Process -Id $processId -ErrorAction SilentlyContinue) {
+                $remaining += $processId
             }
         }
 

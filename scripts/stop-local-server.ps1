@@ -8,19 +8,19 @@ if (-not (Test-Path $pidFile)) {
     exit 0
 }
 
-$pid = Get-Content $pidFile -ErrorAction SilentlyContinue | Select-Object -First 1
-if (-not $pid) {
+$managedPid = Get-Content $pidFile -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $managedPid) {
     Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
     Write-Host 'Removed empty PID file.'
     exit 0
 }
 
-$process = Get-Process -Id $pid -ErrorAction SilentlyContinue
+$process = Get-Process -Id $managedPid -ErrorAction SilentlyContinue
 if ($process) {
-    & taskkill /PID $pid /T /F *> $null
-    Write-Host "Stopped managed local server PID $pid."
+    & taskkill /PID $managedPid /T /F *> $null
+    Write-Host "Stopped managed local server PID $managedPid."
 } else {
-    Write-Host "Managed local server PID $pid is no longer running."
+    Write-Host "Managed local server PID $managedPid is no longer running."
 }
 
 Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
