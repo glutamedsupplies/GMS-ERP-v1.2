@@ -11,6 +11,7 @@
     "server:node": "node server.js",
     "migrate:multi-tenant": "node migrations/run-migrations.js",
     "migrate:legacy": "node migrations/legacy-import.js",
+    "migrate:postgres": "node migrations/import-sqlite-to-postgres.js",
     "test:multi-tenant": "node tests/multi-tenant-integration.js",
     "desktop": "electron .",
     "dist:server": "electron-builder --win nsis --config.productName=\"Attendance Server\" --config.directories.output=dist/server",

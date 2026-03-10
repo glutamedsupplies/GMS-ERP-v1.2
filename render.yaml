@@ -21,3 +21,5 @@ services:
         value: "true"
       - key: ATTENDANCE_SECURE_COOKIES
         value: "true"
+      - key: ATTENDANCE_TIME_ZONE
+        value: Asia/Manila

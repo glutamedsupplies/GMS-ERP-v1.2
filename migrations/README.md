@@ -7,12 +7,15 @@
 - `legacy-import.js`: one-time legacy import trigger from:
   - `head_admin/data/users.db`
   - `employee/data/attendance.db`
+- `import-sqlite-to-postgres.js`: one-time export/import of master, tenant, and legacy SQLite data into PostgreSQL schema tables.
 
 ## Commands
 - `npm run migrate:multi-tenant`
 - `npm run migrate:legacy`
+- `npm run migrate:postgres`
 
 Use `--force` to re-apply schema snapshots:
 - `node migrations/run-migrations.js --force`
+- `node migrations/import-sqlite-to-postgres.js --force`
 
 Use `--skip-backup` only if backups are handled externally.

@@ -104,4 +104,5 @@ If you deploy with Render:
    - Start Command: `npm run server:node`
    - Health Check Path: `/api/server-info`
 3. Attach a persistent disk and keep `ATTENDANCE_DATA_DIR` pointed inside that disk.
-4. After the first deploy, open the Render URL and verify login plus `/api/server-info`.
+4. Set `ATTENDANCE_TIME_ZONE=Asia/Manila` so attendance records and live clocks stay on Philippine time.
+5. After the first deploy, open the Render URL and verify login plus `/api/server-info`.
