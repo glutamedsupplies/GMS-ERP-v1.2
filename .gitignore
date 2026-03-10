@@ -15,3 +15,5 @@ head_admin/data/*.db-shm
 employee/data/*.db
 employee/data/*.db-wal
 employee/data/*.db-shm
+.tmp-local-check/
+render_backup.sql
