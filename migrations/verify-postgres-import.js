@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const SqliteDatabase = require('better-sqlite3');
 
@@ -9,9 +10,8 @@ process.env.ATTENDANCE_AUTO_SEED = '0';
 const store = require('../lib/sqlite');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
-const DATA_ROOT = process.env.ATTENDANCE_DATA_DIR
-    ? path.resolve(process.env.ATTENDANCE_DATA_DIR)
-    : ROOT_DIR;
+const args = process.argv.slice(2);
+const DATA_ROOT = resolveSourceRoot();
 const DATA_DIR = path.join(DATA_ROOT, 'data');
 const TENANTS_DIR = path.join(DATA_DIR, 'tenants');
 const MASTER_DB_PATH = path.join(DATA_DIR, 'master.db');
@@ -48,6 +48,36 @@ const TENANT_TABLES = [
 
 function normalizeText(value) {
     return String(value || '').trim();
+}
+
+function readArgValue(flagName) {
+    const index = args.indexOf(flagName);
+    if (index === -1 || index === args.length - 1) {
+        return '';
+    }
+    return String(args[index + 1] || '').trim();
+}
+
+function resolveSourceRoot() {
+    const explicitSourceRoot = readArgValue('--source-root');
+    const candidates = [
+        explicitSourceRoot,
+        process.env.SQLITE_SOURCE_ROOT,
+        process.env.ATTENDANCE_SOURCE_DIR,
+        process.env.ATTENDANCE_DATA_DIR,
+        ROOT_DIR,
+        path.join(os.homedir(), 'AttendanceApp')
+    ]
+        .map((value) => normalizeText(value))
+        .filter(Boolean)
+        .map((value) => path.resolve(value));
+
+    const uniqueCandidates = [...new Set(candidates)];
+    const resolved = uniqueCandidates.find((candidate) => fs.existsSync(path.join(candidate, 'data', 'master.db')));
+    if (!resolved) {
+        throw new Error(`Source SQLite master.db not found. Checked: ${uniqueCandidates.join(', ')}`);
+    }
+    return resolved;
 }
 
 function tableExists(db, tableName) {
