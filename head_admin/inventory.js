@@ -12,6 +12,8 @@ const inventoryTableBody = document.getElementById('inventoryTableBody');
 const variantCount = document.getElementById('variantCount');
 const productCount = document.getElementById('productCount');
 const averagePrice = document.getElementById('averagePrice');
+const costPriceCount = document.getElementById('costPriceCount');
+const totalCostPrice = document.getElementById('totalCostPrice');
 const pageTitle = document.getElementById('pageTitle');
 const pageCopy = document.getElementById('pageCopy');
 
@@ -21,6 +23,7 @@ const productNameInput = document.getElementById('productNameInput');
 const itemCodeInput = document.getElementById('itemCodeInput');
 const setNameInput = document.getElementById('setNameInput');
 const priceInput = document.getElementById('priceInput');
+const costPriceInput = document.getElementById('costPriceInput');
 
 const state = {
     rows: [],
@@ -50,7 +53,7 @@ async function applyWorkspaceConfig() {
         }
         if (pageCopy) {
             pageCopy.textContent = labels.inventoryPageCopy
-                || 'Manage product variants used by the order form. Search by product or set, import the latest CSV, and maintain item code and price in one place.';
+                || 'Manage product variants used by the order form. Search by product or set, import the latest CSV, and maintain item code, selling price, and cost price in one place.';
         }
     } catch (_error) {
         if (pageTitle) {
@@ -115,7 +118,7 @@ async function loadVariants() {
 
 function renderTable() {
     if (!state.rows.length) {
-        inventoryTableBody.innerHTML = '<tr><td colspan="6" class="empty">No inventory variants found.</td></tr>';
+        inventoryTableBody.innerHTML = '<tr><td colspan="7" class="empty">No inventory variants found.</td></tr>';
         return;
     }
 
@@ -125,6 +128,7 @@ function renderTable() {
             <td>${appClient.escapeHtml(row.item_code)}</td>
             <td>${appClient.escapeHtml(row.set_name)}</td>
             <td class="price-cell">${appClient.escapeHtml(formatMoney(row.price))}</td>
+            <td class="price-cell cost-price-cell">${appClient.escapeHtml(formatOptionalMoney(row.cost_price))}</td>
             <td>${appClient.escapeHtml(formatDateTime(row.updated_at || row.created_at))}</td>
             <td>
                 <div class="row-actions">
@@ -141,10 +145,14 @@ function renderSummary() {
     const average = state.rows.length
         ? state.rows.reduce((sum, row) => sum + Number(row.price || 0), 0) / state.rows.length
         : 0;
+    const rowsWithCost = state.rows.filter((row) => Number(row.cost_price || 0) > 0);
+    const totalCost = rowsWithCost.reduce((sum, row) => sum + Number(row.cost_price || 0), 0);
 
     variantCount.textContent = String(state.rows.length);
     productCount.textContent = String(uniqueProducts.size);
     averagePrice.textContent = formatMoney(average);
+    costPriceCount.textContent = String(rowsWithCost.length);
+    totalCostPrice.textContent = formatMoney(totalCost);
 }
 
 function handleTableClick(event) {
@@ -177,6 +185,7 @@ function openModal(row = null) {
     itemCodeInput.value = row ? row.item_code : '';
     setNameInput.value = row ? row.set_name : '';
     priceInput.value = row ? String(Number(row.price || 0).toFixed(2)) : '';
+    costPriceInput.value = row ? String(Number(row.cost_price || 0).toFixed(2)) : '';
     variantModal.classList.add('is-open');
     variantModal.setAttribute('aria-hidden', 'false');
     productNameInput.focus();
@@ -189,6 +198,7 @@ function closeModal() {
     itemCodeInput.value = '';
     setNameInput.value = '';
     priceInput.value = '';
+    costPriceInput.value = '';
     variantModal.classList.remove('is-open');
     variantModal.setAttribute('aria-hidden', 'true');
 }
@@ -198,7 +208,8 @@ async function saveVariant() {
         product_name: productNameInput.value.trim(),
         item_code: itemCodeInput.value.trim(),
         set_name: setNameInput.value.trim(),
-        price: priceInput.value
+        price: priceInput.value,
+        cost_price: costPriceInput.value
     };
 
     saveVariantBtn.disabled = true;
@@ -266,6 +277,14 @@ function formatMoney(value) {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     });
+}
+
+function formatOptionalMoney(value) {
+    const amount = Number(value || 0);
+    if (!(amount > 0)) {
+        return '-';
+    }
+    return formatMoney(amount);
 }
 
 function formatDateTime(value) {

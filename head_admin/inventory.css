@@ -88,7 +88,7 @@ h1 {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
   margin: 18px 0;
 }
@@ -235,6 +235,10 @@ tbody tr:hover {
 
 .price-cell {
   font-weight: 700;
+}
+
+.cost-price-cell {
+  color: var(--accent-strong);
 }
 
 .row-actions {

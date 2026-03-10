@@ -14,7 +14,7 @@
       <div>
         <p class="eyebrow">Head Admin</p>
         <h1 id="pageTitle">Product Pricing</h1>
-        <p id="pageCopy" class="hero-copy">Manage product variants used by the order form. Search by product or set, import the latest CSV, and maintain item code and price in one place.</p>
+        <p id="pageCopy" class="hero-copy">Manage product variants used by the order form. Search by product or set, import the latest CSV, and maintain item code, selling price, and cost price in one place.</p>
       </div>
       <div class="hero-actions">
         <button id="importCsvBtn" type="button" class="secondary-btn"><i class="fa-solid fa-file-import"></i> Import CSV</button>
@@ -34,6 +34,14 @@
       <article class="summary-card">
         <span class="summary-label">Average Price</span>
         <strong id="averagePrice" class="summary-value">PHP 0.00</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">With Cost Price</span>
+        <strong id="costPriceCount" class="summary-value">0</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Total Cost Price</span>
+        <strong id="totalCostPrice" class="summary-value">PHP 0.00</strong>
       </article>
     </section>
 
@@ -62,12 +70,13 @@
               <th>Item Code</th>
               <th>Set</th>
               <th>Price</th>
+              <th>Cost Price</th>
               <th>Updated</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody id="inventoryTableBody">
-            <tr><td colspan="6" class="empty">Loading inventory variants...</td></tr>
+            <tr><td colspan="7" class="empty">Loading inventory variants...</td></tr>
           </tbody>
         </table>
       </div>
@@ -102,6 +111,10 @@
         <div class="field">
           <label for="priceInput">Price</label>
           <input id="priceInput" type="number" min="0" step="0.01" placeholder="0.00">
+        </div>
+        <div class="field">
+          <label for="costPriceInput">Cost Price</label>
+          <input id="costPriceInput" type="number" min="0" step="0.01" placeholder="0.00">
         </div>
       </div>
 
