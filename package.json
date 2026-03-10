@@ -6,8 +6,8 @@
   "scripts": {
     "postinstall": "node scripts/postinstall.js",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3,sqlite3",
-    "start": "electron .",
-    "server": "electron server.js",
+    "start": "node server.js",
+    "server": "node server.js",
     "server:node": "node server.js",
     "migrate:multi-tenant": "node migrations/run-migrations.js",
     "migrate:legacy": "node migrations/legacy-import.js",

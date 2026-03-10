@@ -8,6 +8,7 @@ const clockEl = document.getElementById('clock');
 const dateEl = document.getElementById('date');
 
 let session = null;
+let sessionTimeZone = '';
 
 initialize();
 
@@ -17,6 +18,7 @@ async function initialize() {
         return;
     }
 
+    sessionTimeZone = session.timeZone || '';
     welcomeUser.innerText = `Welcome, ${session.userName || 'Employee'}`;
     backBtn?.addEventListener('click', () => {
         window.location.href = '/employee/employee.html';
@@ -53,8 +55,15 @@ async function handleAction(type) {
 
 function updateClock() {
     const now = new Date();
-    clockEl.innerText = now.toLocaleTimeString('en-GB', { hour12: false });
-    dateEl.innerText = now.toDateString();
+    clockEl.innerText = now.toLocaleTimeString('en-GB', buildTimeZoneOptions({ hour12: false }));
+    dateEl.innerText = now
+        .toLocaleDateString('en-US', buildTimeZoneOptions({
+            weekday: 'short',
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric'
+        }))
+        .replace(/,/g, '');
 }
 
 async function refreshState() {
@@ -89,4 +98,10 @@ function setBusy(isBusy) {
         timeInBtn.disabled = true;
         timeOutBtn.disabled = true;
     }
+}
+
+function buildTimeZoneOptions(options = {}) {
+    return sessionTimeZone
+        ? { ...options, timeZone: sessionTimeZone }
+        : options;
 }

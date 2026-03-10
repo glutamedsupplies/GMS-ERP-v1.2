@@ -650,6 +650,7 @@
             role: user.role || '',
             companyId: user.company_id || '',
             companyCode: user.company_code || '',
+            timeZone: user.time_zone || user.timezone || user.timeZone || '',
             feature_access: normalizeUserFeatureAccess(user.feature_access || {})
         };
     }

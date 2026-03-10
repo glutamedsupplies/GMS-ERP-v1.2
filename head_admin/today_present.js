@@ -9,6 +9,7 @@ async function initialize() {
     if (!session) {
         return;
     }
+    const timeZone = session.timeZone || '';
 
     const tbody = document.getElementById('todayTableBody');
     const clock = document.getElementById('clock');
@@ -37,7 +38,7 @@ async function initialize() {
             updateSummary(rows);
 
             if (!rows.length) {
-                tbody.innerHTML = '<tr><td colspan="10" class="no-data">No employee accounts found. Add employees first so today\'s list can show Absent, Late, On Time, or Excuse status for the current date.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" class="no-data">No employee accounts found. Add employees first so today\'s list can show Absent, Late, On Time, or Excuse status for the current date.</td></tr>';
                 return;
             }
 
@@ -49,6 +50,7 @@ async function initialize() {
                     <td><img src="${appClient.escapeHtml(row.avatarUrl)}" class="employee-img" alt="${appClient.escapeHtml(row.name)}"></td>
                     <td>${formatTime(row.scheduledTimeIn)}</td>
                     <td>${formatTime(row.timeIn)}</td>
+                    <td>${formatTime(row.scheduledTimeOut)}</td>
                     <td>${formatTime(row.timeOut)}</td>
                     <td>${row.statusGroup === 'late' ? row.lateMinutes : 0}</td>
                     <td><span class="status-pill ${statusClass(row.statusGroup)}">${appClient.escapeHtml(row.status)}</span></td>
@@ -82,7 +84,7 @@ async function initialize() {
             });
         } catch (error) {
             console.error('Failed to load today attendance snapshot:', error);
-            tbody.innerHTML = `<tr><td colspan="10" class="no-data">${appClient.escapeHtml(error.message)}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="11" class="no-data">${appClient.escapeHtml(error.message)}</td></tr>`;
             updateSummary([]);
             showStatus(error.message, true, true);
         }
@@ -112,16 +114,16 @@ async function initialize() {
 
     function updateClock() {
         const now = new Date();
-        clock.textContent = now.toLocaleTimeString('en-GB', { hour12: false });
+        clock.textContent = now.toLocaleTimeString('en-GB', buildTimeZoneOptions({ hour12: false }));
     }
 
     function updateDateLabel() {
-        dateLabel.textContent = new Date().toLocaleDateString('en-US', {
+        dateLabel.textContent = new Date().toLocaleDateString('en-US', buildTimeZoneOptions({
             weekday: 'long',
             year: 'numeric',
             month: 'long',
             day: 'numeric'
-        });
+        }));
     }
 
     function buildActionCell(row) {
@@ -159,6 +161,12 @@ async function initialize() {
                 statusNote.className = 'status-note';
             }, 3000);
         }
+    }
+
+    function buildTimeZoneOptions(options = {}) {
+        return timeZone
+            ? { ...options, timeZone }
+            : options;
     }
 }
 

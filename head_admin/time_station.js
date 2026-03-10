@@ -5,6 +5,7 @@ const timeOutBtn = document.getElementById('timeOutBtn');
 const msgBox = document.getElementById('msgBox');
 const clock = document.getElementById('clock');
 const dateLabel = document.getElementById('date');
+let sessionTimeZone = '';
 
 initialize();
 
@@ -13,6 +14,8 @@ async function initialize() {
     if (!session) {
         return;
     }
+
+    sessionTimeZone = session.timeZone || '';
 
     updateClock();
     window.setInterval(updateClock, 1000);
@@ -50,11 +53,24 @@ async function handleAction(type) {
 
 function updateClock() {
     const now = new Date();
-    clock.innerText = now.toLocaleTimeString('en-GB', { hour12: false });
-    dateLabel.innerText = now.toDateString();
+    clock.innerText = now.toLocaleTimeString('en-GB', buildTimeZoneOptions({ hour12: false }));
+    dateLabel.innerText = now
+        .toLocaleDateString('en-US', buildTimeZoneOptions({
+            weekday: 'short',
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric'
+        }))
+        .replace(/,/g, '');
 }
 
 function showMessage(message, isError) {
     msgBox.textContent = message;
     msgBox.style.color = isError ? '#ff9aa5' : '#8df56a';
+}
+
+function buildTimeZoneOptions(options = {}) {
+    return sessionTimeZone
+        ? { ...options, timeZone: sessionTimeZone }
+        : options;
 }

@@ -8,6 +8,8 @@ const path = require('path');
 const TEMP_DATA_ROOT = path.join(os.tmpdir(), `attendance-mt-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`);
 process.env.ATTENDANCE_DATA_DIR = TEMP_DATA_ROOT;
 
+const inventoryVariantStore = require('../lib/inventory-variants-store');
+const salesStore = require('../lib/sales-store');
 const store = require('../lib/sqlite');
 
 function expectThrows(fn, messagePattern, label) {
@@ -209,6 +211,49 @@ function run() {
     store.runWithTenantContextByCompany(companyBId, () => {
         const clients = store.listClients();
         assert.strictEqual(clients.length, 0, 'Company B should not see Company A clients');
+    });
+
+    // Inventory schema and seed state must stay isolated per tenant DB.
+    store.runWithTenantContextByCompany(companyAId, () => {
+        inventoryVariantStore.createInventoryVariant({
+            productName: 'Tenant A Inventory Box',
+            itemCode: 'TA-001',
+            setName: 'M',
+            price: 100
+        });
+
+        const rows = salesStore.listInventory({ branch: 'Main Branch' });
+        assert(
+            rows.some((row) => row.item_name === 'Tenant A Inventory Box' && row.inventory_unit === 'Box'),
+            'Company A inventory should include its own seeded variant'
+        );
+    });
+
+    store.runWithTenantContextByCompany(companyCId, () => {
+        inventoryVariantStore.createInventoryVariant({
+            productName: 'Tenant C Inventory Box',
+            itemCode: 'TC-001',
+            setName: 'M',
+            price: 120
+        });
+
+        const rows = salesStore.listInventory({ branch: 'Main Branch' });
+        assert(
+            rows.some((row) => row.item_name === 'Tenant C Inventory Box' && row.inventory_unit === 'Box'),
+            'Company C inventory should include its own seeded variant'
+        );
+        assert(
+            !rows.some((row) => row.item_name === 'Tenant A Inventory Box'),
+            'Company C inventory should not include Company A variants'
+        );
+    });
+
+    store.runWithTenantContextByCompany(companyAId, () => {
+        const rows = salesStore.listInventory({ branch: 'Main Branch' });
+        assert(
+            !rows.some((row) => row.item_name === 'Tenant C Inventory Box'),
+            'Company A inventory should not include Company C variants'
+        );
     });
 
     // Branch/user/invoice limits in Company A.
