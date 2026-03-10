@@ -24,6 +24,9 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": "22.x"
+  },
   "build": {
     "appId": "com.attendanceapp.lan",
     "asar": true,
