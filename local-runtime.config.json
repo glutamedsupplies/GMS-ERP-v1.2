@@ -5,6 +5,7 @@
   "timeZone": "Asia/Manila",
   "trustProxy": true,
   "secureCookies": true,
+  "stopLegacyElectron": true,
   "publicUrl": "",
   "cloudflaredPath": "cloudflared.exe",
   "cloudflaredProtocol": "http2"

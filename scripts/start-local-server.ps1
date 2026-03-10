@@ -52,6 +52,59 @@ function Test-LegacyElectronRunning {
     return @($processes)
 }
 
+function Stop-LegacyElectronProcesses {
+    param(
+        [array]$Processes
+    )
+
+    $stoppedPids = New-Object System.Collections.Generic.List[string]
+
+    foreach ($process in @($Processes | Sort-Object Id -Unique)) {
+        if (-not $process) {
+            continue
+        }
+
+        try {
+            & taskkill /PID $process.Id /T /F *> $null
+            $stoppedPids.Add([string]$process.Id) | Out-Null
+        } catch {
+            throw "Failed to stop legacy Attendance/Electron process PID $($process.Id): $($_.Exception.Message)"
+        }
+    }
+
+    return @($stoppedPids)
+}
+
+function Wait-ForLegacyElectronExit {
+    param(
+        [array]$Processes,
+        [int]$TimeoutSeconds = 15
+    )
+
+    $pendingIds = @($Processes | ForEach-Object { $_.Id } | Sort-Object -Unique)
+    if ($pendingIds.Count -eq 0) {
+        return $true
+    }
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ((Get-Date) -lt $deadline) {
+        $remaining = @()
+        foreach ($pid in $pendingIds) {
+            if (Get-Process -Id $pid -ErrorAction SilentlyContinue) {
+                $remaining += $pid
+            }
+        }
+
+        if ($remaining.Count -eq 0) {
+            return $true
+        }
+
+        Start-Sleep -Milliseconds 500
+    }
+
+    return $false
+}
+
 function Set-AppEnvironment {
     param(
         [pscustomobject]$Config
@@ -94,7 +147,20 @@ if (-not (Test-Path $masterDbPath)) {
 $legacyElectronProcesses = Test-LegacyElectronRunning -DataDir $dataDir
 if ($legacyElectronProcesses.Count -gt 0) {
     $processList = ($legacyElectronProcesses | ForEach-Object { "$($_.ProcessName)#$($_.Id)" }) -join ', '
-    throw "Close the old Attendance/Electron app first before using this repo server. Running processes: $processList"
+    if ($config.stopLegacyElectron -eq $false) {
+        throw "Close the old Attendance/Electron app first before using this repo server. Running processes: $processList"
+    }
+
+    if (-not $ManagedChild) {
+        Write-Host "Stopping old Attendance/Electron app: $processList" -ForegroundColor Yellow
+    }
+
+    $stoppedPids = Stop-LegacyElectronProcesses -Processes $legacyElectronProcesses
+    if (-not (Wait-ForLegacyElectronExit -Processes $legacyElectronProcesses -TimeoutSeconds 15)) {
+        throw "Stopped legacy Attendance/Electron processes but some are still exiting. Try running the launcher again in a few seconds. PIDs: $($stoppedPids -join ', ')"
+    }
+
+    Start-Sleep -Seconds 2
 }
 
 Set-AppEnvironment -Config $config
