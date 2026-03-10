@@ -1,0 +1,18 @@
+{
+  "functions": {
+    "api/index.js": {
+      "runtime": "nodejs22.x",
+      "includeFiles": "lib/postgres-worker.js"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api",
+      "destination": "/api/index?__pathname=/api"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "/api/index?__pathname=/api/:path*"
+    }
+  ]
+}

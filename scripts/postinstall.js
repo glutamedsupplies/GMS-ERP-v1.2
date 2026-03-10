@@ -5,7 +5,9 @@ function normalizeFlag(value = '') {
 }
 
 const isRender = normalizeFlag(process.env.RENDER) || Boolean(String(process.env.RENDER_EXTERNAL_HOSTNAME || '').trim());
+const isVercel = normalizeFlag(process.env.VERCEL) || Boolean(String(process.env.VERCEL_URL || '').trim());
 const skipElectronRebuild = isRender
+    || isVercel
     || normalizeFlag(process.env.SKIP_ELECTRON_REBUILD)
     || String(process.env.ATTENDANCE_DEPLOY_TARGET || '').trim().toLowerCase() === 'server';
 
