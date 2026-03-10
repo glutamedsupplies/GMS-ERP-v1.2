@@ -202,6 +202,7 @@ function resetForm(moduleKey) {
 
     moduleState.editingId = null;
     refs.dateInput.value = new Date().toISOString().slice(0, 10);
+    refs.dateInput.value = toDateInputValue(new Date());
     refs.branchInput.value = state.references?.branches?.[0] || '';
     refs.aboutInput.value = '';
     refs.amountInput.value = '';
@@ -470,6 +471,7 @@ function beginEdit(moduleKey, entryId) {
 
     moduleState.editingId = entryId;
     refs.dateInput.value = row[module.dateColumn] || new Date().toISOString().slice(0, 10);
+    refs.dateInput.value = row[module.dateColumn] || toDateInputValue(new Date());
     refs.branchInput.value = row.branch || '';
     refs.aboutInput.value = row.about || '';
     refs.amountInput.value = String(Number(row.amount || 0));
