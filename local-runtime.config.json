@@ -1,0 +1,11 @@
+{
+  "dataDir": "C:\\Users\\pc\\AttendanceApp",
+  "bindHost": "127.0.0.1",
+  "port": 3000,
+  "timeZone": "Asia/Manila",
+  "trustProxy": true,
+  "secureCookies": true,
+  "publicUrl": "",
+  "cloudflaredPath": "cloudflared.exe",
+  "cloudflaredProtocol": "http2"
+}
