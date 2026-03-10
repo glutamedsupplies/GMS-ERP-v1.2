@@ -1,0 +1,20 @@
+[Unit]
+Description=GMS FastAPI Service
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/gms
+EnvironmentFile=/opt/gms/.env
+ExecStart=/opt/gms/venv/bin/gunicorn app.main:app \
+  -k uvicorn.workers.UvicornWorker \
+  --bind 127.0.0.1:8000 \
+  --workers 2 \
+  --access-logfile /opt/gms/logs/gunicorn-access.log \
+  --error-logfile /opt/gms/logs/gunicorn-error.log
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,7 @@
+db:
+  - path: /opt/gms/database/app.db
+    replicas:
+      - url: s3://<R2_BUCKET_NAME>/gms/app.db
+        endpoint: https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com
+        force-path-style: true
+        sync-interval: 1s

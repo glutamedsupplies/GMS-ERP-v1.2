@@ -1,0 +1,19 @@
+[Unit]
+Description=GMS Local SQLite Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gms
+Group=gms
+WorkingDirectory=/srv/gms/app
+EnvironmentFile=/srv/gms/.env
+ExecStart=/usr/bin/node /srv/gms/app/server.js
+Restart=always
+RestartSec=5
+StandardOutput=append:/srv/gms/logs/server.log
+StandardError=append:/srv/gms/logs/server-error.log
+
+[Install]
+WantedBy=multi-user.target

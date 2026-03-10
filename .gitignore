@@ -17,3 +17,6 @@ employee/data/*.db-wal
 employee/data/*.db-shm
 .tmp-local-check/
 render_backup.sql
+/backups/
+/exports/
+/logs/

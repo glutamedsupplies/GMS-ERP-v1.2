@@ -1,0 +1,16 @@
+[Unit]
+Description=Litestream Replication For GMS SQLite
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/litestream.yml
+
+[Service]
+Type=simple
+User=gms
+Group=gms
+ExecStart=/usr/local/bin/litestream replicate -config /etc/litestream.yml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

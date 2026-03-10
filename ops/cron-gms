@@ -1,0 +1,9 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+15 1 * * * gms cd /srv/gms/app && bash ./scripts/backup-sqlite.sh /srv/gms/data /srv/gms/backups >> /srv/gms/logs/backup.log 2>&1
+45 1 * * * gms cd /srv/gms/app && bash ./scripts/export-sqlite-csv.sh /srv/gms/data /srv/gms/exports >> /srv/gms/logs/export.log 2>&1
+15 2 * * * gms cd /srv/gms/app && bash ./scripts/check-sqlite-integrity.sh /srv/gms/data >> /srv/gms/logs/integrity.log 2>&1
+45 2 * * 0 gms cd /srv/gms/app && bash ./scripts/export-sqlite-schema.sh /srv/gms/data /srv/gms/exports >> /srv/gms/logs/export.log 2>&1
+0 4 * * 0 gms find /srv/gms/backups -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} +
+15 4 * * 0 gms find /srv/gms/exports -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} +
