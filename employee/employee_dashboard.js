@@ -183,17 +183,25 @@ async function renderGrantedFeatureCards(session, bootstrap = null) {
 
         featureCards.innerHTML = allowedCards.map((item) => {
             const isInventoryCard = item.key === 'inventory';
+            const isWorkflowCard = item.key === 'order_form';
             const targetPath = isInventoryCard && isStaffUser
                 ? '/head_admin/inventory_levels.html'
-                : item.path;
+                : (isWorkflowCard ? '/head_admin/communication_panel.html' : item.path);
             const description = isInventoryCard && isStaffUser
                 ? 'View and update current stock levels.'
-                : item.description;
+                : (isWorkflowCard
+                    ? (isStaffUser
+                        ? 'Open the shared order workflow for staff receipt, prep, and dispatch lanes.'
+                        : 'Submit orders to the shared workflow and monitor head admin approval and prep status.')
+                    : item.description);
+            const title = isWorkflowCard
+                ? (isStaffUser ? 'Workflow Panel' : 'Order Workflow')
+                : item.label;
 
             return `
                 <button type="button" class="action-card feature-card" data-target-path="${targetPath}">
                   <span class="action-icon"><i class="${item.iconClass}"></i></span>
-                  <h3 class="action-title">${item.label}</h3>
+                  <h3 class="action-title">${title}</h3>
                   <p class="action-copy">${description}</p>
                   <div class="action-footer">
                     <span>Open module</span>

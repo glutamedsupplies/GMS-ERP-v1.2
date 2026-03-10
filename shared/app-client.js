@@ -943,6 +943,8 @@
             role: user.role || '',
             companyId: user.company_id || '',
             companyCode: user.company_code || '',
+            branchId: user.branch_id || '',
+            branchName: user.branch_name || '',
             timeZone: user.time_zone || user.timezone || user.timeZone || '',
             feature_access: normalizeUserFeatureAccess(user.feature_access || {})
         };
@@ -1092,6 +1094,17 @@
         ),
         addSale: (payload) => request('/api/sales', {
             method: 'POST',
+            body: payload
+        }),
+        listCommunicationWorkflow: ({ branch = '', search = '' } = {}) => request(
+            `/api/communication-workflow?branch=${encodeURIComponent(branch)}&search=${encodeURIComponent(search)}`
+        ),
+        createCommunicationWorkflowEntry: (payload) => request('/api/communication-workflow', {
+            method: 'POST',
+            body: payload
+        }),
+        updateCommunicationWorkflowEntry: (entryId, payload) => request(`/api/communication-workflow/${encodeURIComponent(entryId)}`, {
+            method: 'PATCH',
             body: payload
         }),
         listLbcTracking: ({ branch = '', search = '', deliveryStatus = '', quickFilter = 'all' } = {}) => request(

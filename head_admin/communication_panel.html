@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' https: data:">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Communication Panel</title>
+<title>Operations Flow Panel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -12,313 +12,259 @@
 <link rel="stylesheet" href="communication_panel.css">
 </head>
 <body>
-  <div class="comm-shell">
+  <div class="workflow-shell">
     <header class="hero-card">
-      <div>
-        <p class="eyebrow">GMS / GWD Coordination</p>
-        <h1>Communication Panel</h1>
-        <p class="hero-copy">Centralize branch messaging, order confirmations, and invoice workflow tracking in one dashboard view.</p>
+      <div class="hero-copy-block">
+        <p class="eyebrow">GMS / GWD Order Flow</p>
+        <h1>Operations Flow Panel</h1>
+        <p id="heroCopy" class="hero-copy">Track employee order intake, head admin confirmation, staff receipt and prep, then split ready items into separate delivery and shipping panels.</p>
       </div>
-      <div class="hero-stats">
-        <article class="stat-card">
-          <span>Pending Confirmations</span>
-          <strong id="pendingCount">0</strong>
-        </article>
-        <article class="stat-card">
-          <span>Ready for Booking</span>
-          <strong id="readyCount">0</strong>
-        </article>
-        <article class="stat-card">
-          <span>Active Invoices</span>
-          <strong id="invoiceCount">0</strong>
-        </article>
+      <div class="hero-side">
+        <span id="roleChip" class="role-chip">Loading role...</span>
+        <div class="hero-metrics">
+          <article class="metric-card">
+            <span>For Confirmation</span>
+            <strong id="metricPending">0</strong>
+          </article>
+          <article class="metric-card">
+            <span>For Prep</span>
+            <strong id="metricPrep">0</strong>
+          </article>
+          <article class="metric-card">
+            <span>Dispatch Queue</span>
+            <strong id="metricDispatch">0</strong>
+          </article>
+          <article class="metric-card">
+            <span>Total Orders</span>
+            <strong id="metricTotal">0</strong>
+          </article>
+        </div>
       </div>
     </header>
 
-    <nav id="panelSwitcher" class="panel-switcher" aria-label="Communication Views">
-      <button type="button" class="panel-switch-tab active" data-panel="chat" aria-selected="true">Chat</button>
-      <button type="button" class="panel-switch-tab" data-panel="order" aria-selected="false">Order Confirmation</button>
-      <button type="button" class="panel-switch-tab" data-panel="workflow" aria-selected="false">Invoice Workflow</button>
-    </nav>
-
-    <section class="card chat-card panel-section" data-panel-view="chat">
-        <header class="section-heading">
-          <div>
-            <p class="eyebrow">Panel 1</p>
-            <h2>Branch Communication Panel</h2>
-          </div>
-          <div id="chatTabs" class="chat-tabs" role="tablist" aria-label="Branch Chats">
-            <button type="button" class="chat-tab active" data-branch="cubao" role="tab" aria-selected="true">Cubao Branch Chat</button>
-            <button type="button" class="chat-tab" data-branch="pampanga" role="tab" aria-selected="false">Pampanga Branch Chat</button>
-          </div>
-        </header>
-
-        <div class="chat-room-tabs-wrap">
-          <div id="chatRoomTabs" class="chat-room-tabs" role="tablist" aria-label="Communication Type">
-            <button type="button" class="chat-room-tab active" data-room="delivery" role="tab" aria-selected="true">Booking</button>
-            <button type="button" class="chat-room-tab" data-room="shipment" role="tab" aria-selected="false">Shipment</button>
-          </div>
-          <p id="chatRoomHint" class="chat-room-hint">Booking methods: Lalamove, Meet-Up, Client book, TOKTOK, MAXIM.</p>
-        </div>
-
-        <div class="feature-row">
-          <span class="feature-pill"><i class="fa-regular fa-comments"></i> Team messaging</span>
-          <span class="feature-pill"><i class="fa-solid fa-at"></i> Mentions</span>
-          <span class="feature-pill"><i class="fa-solid fa-paperclip"></i> File sharing</span>
-          <span class="feature-pill"><i class="fa-solid fa-boxes-stacked"></i> Order discussion</span>
-        </div>
-
-        <p class="chat-rule">
-          <i class="fa-solid fa-circle-info"></i>
-          <strong>Invoices from Send Order auto-post in this chat thread.</strong>
-          Use this room for updates, coordination, and invoice follow-ups.
-        </p>
-
-        <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
-
-        <form id="chatForm" class="chat-form">
-          <label class="field">
-            <span>Message</span>
-            <textarea id="chatInput" rows="3" placeholder="Type update, mention teammates with @name, or post order coordination notes..." required></textarea>
-          </label>
-          <div id="mentionSuggestions" class="mention-suggestions" hidden></div>
-
-          <div class="chat-actions">
-            <label class="file-pill" for="chatFileInput">
-              <i class="fa-solid fa-paperclip"></i>
-              <span>Attach File</span>
-            </label>
-            <input id="chatFileInput" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" hidden>
-            <span id="chatFileName" class="file-name">No file selected</span>
-            <button type="submit" class="primary-btn">Send Message</button>
-          </div>
-          <p id="chatFeedback" class="feedback" role="status" aria-live="polite"></p>
-        </form>
-    </section>
-
-    <section class="card order-card panel-section" data-panel-view="order" hidden>
-        <header class="section-heading">
-          <div>
-            <p class="eyebrow">Panel 2</p>
-            <h2>Order Confirmation Panel</h2>
-            <p class="section-copy">Uses order form style fields so confirmation details stay aligned with your sales order encoding flow.</p>
-          </div>
-        </header>
-
-        <form id="sendOrderForm" class="order-form">
-          <div class="form-grid">
-            <label class="field">
-              <span>Order No.</span>
-              <input id="orderNumber" type="text" readonly>
-            </label>
-
-            <label class="field">
-              <span>Date</span>
-              <input id="orderDate" type="date" required>
-            </label>
-
-            <label class="field">
-              <span>Invoice Branch</span>
-              <select id="branchSelect" required>
-                <option value="">Select branch</option>
-                <option value="Cubao">Cubao</option>
-                <option value="Pampanga">Pampanga</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Cash Branch</span>
-              <select id="cashBranchSelect" required>
-                <option value="">Select cash branch</option>
-                <option value="Cubao">Cubao</option>
-                <option value="Pampanga">Pampanga</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Client Name</span>
-              <input id="clientName" type="text" list="clientNameList" placeholder="Search from client database" required>
-            </label>
-
-            <label class="field">
-              <span>Contact Number</span>
-              <input id="contactNumber" type="text" required>
-            </label>
-
-            <label class="field">
-              <span>Courier</span>
-              <select id="courierSelect" required>
-                <option value="">Select courier</option>
-                <option value="LBC">LBC</option>
-                <option value="Lalamove">Lalamove</option>
-                <option value="J&T">J&T</option>
-                <option value="SPX">SPX</option>
-                <option value="Victory Liner">Victory Liner</option>
-                <option value="AP Cargo">AP Cargo</option>
-                <option value="Meet-Up">Meet-Up</option>
-                <option value="Client book">Client book</option>
-                <option value="TOKTOK">TOKTOK</option>
-                <option value="MAXIM">MAXIM</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Fulfillment Type</span>
-              <select id="fulfillmentType" required>
-                <option value="">Select fulfillment type</option>
-                <option value="Booking">Booking</option>
-                <option value="Shipment">Shipment</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Booking / Shipment Option</span>
-              <select id="fulfillmentOption" required disabled>
-                <option value="">Select fulfillment type first</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Payment Type</span>
-              <input id="paymentType" type="text" placeholder="Auto from payment method" readonly>
-            </label>
-
-            <label class="field">
-              <span>Quantity</span>
-              <input id="quantity" type="number" min="1" step="1" readonly required>
-            </label>
-
-            <label class="field">
-              <span>Delivery Fee</span>
-              <input id="deliveryFee" type="number" min="0" step="0.01" value="0">
-            </label>
-
-            <label class="field">
-              <span>Handling Fee</span>
-              <input id="handlingFee" type="number" min="0" step="0.01" value="0">
-            </label>
-
-            <label class="field">
-              <span>Admin</span>
-              <select id="adminSelect" required>
-                <option value="">Select admin</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Sales Representative</span>
-              <select id="salesRepSelect">
-                <option value="">Select sales representative</option>
-              </select>
-            </label>
-
-            <label class="field field-span-2">
-              <span>Address</span>
-              <textarea id="deliveryAddress" rows="2" required></textarea>
-            </label>
-
-            <div class="field field-span-2 order-items-builder">
-              <div class="order-items-head">
-                <span>Order Items</span>
-                <button id="addOrderItemBtn" type="button" class="mini-secondary-btn">
-                  <i class="fa-solid fa-plus"></i> Add Item
-                </button>
-              </div>
-              <div class="order-items-table-wrap">
-                <table class="order-items-table">
-                  <thead>
-                    <tr>
-                      <th>Product Name</th>
-                      <th>Set</th>
-                      <th>Item Code</th>
-                      <th>Price</th>
-                      <th>Qty</th>
-                      <th>Subtotal</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody id="orderItemsTableBody">
-                    <tr><td colspan="7" class="empty">Loading item references...</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <textarea id="orderItems" rows="2" placeholder="Auto-generated item summary" readonly required></textarea>
-            </div>
-
-            <label class="field">
-              <span>Total Amount</span>
-              <input id="totalAmount" type="number" min="0" step="0.01" readonly required>
-            </label>
-
-            <label class="field">
-              <span>Payment Method</span>
-              <select id="paymentMethod" required>
-                <option value="">Select payment method</option>
-                <option value="Cash">Cash</option>
-                <option value="Online Payment">Online Payment</option>
-                <option value="Bank Transfer">Bank Transfer</option>
-                <option value="LBC Collection">LBC Collection</option>
-              </select>
-            </label>
-          </div>
-          <datalist id="clientNameList"></datalist>
-          <datalist id="orderProductNameList"></datalist>
-
-          <label id="paymentReceiptField" class="field field-block" hidden>
-            <span>Payment Receipt (Required for Online Payment)</span>
-            <input id="paymentReceipt" type="file" accept="image/*,.pdf">
-            <div id="paymentReceiptPasteZone" class="receipt-paste-zone" tabindex="0">
-              Click here then press <strong>Ctrl+V</strong> to paste receipt image
-            </div>
-            <small id="paymentReceiptPasteStatus" class="paste-status">No pasted receipt image.</small>
-            <button id="clearPastedReceiptBtn" type="button" class="mini-secondary-btn" hidden>Clear Pasted Image</button>
-          </label>
-
-          <button type="submit" class="primary-btn wide">Submit Order</button>
-          <p id="orderFeedback" class="feedback" role="status" aria-live="polite"></p>
-        </form>
-
-        <div class="queue-wrap">
-          <div class="queue-head">
-            <h3>Head Admin Confirmation Queue</h3>
-            <span id="queueCount" class="pill">0 Pending</span>
-          </div>
-          <div id="confirmationQueue" class="queue-list"></div>
-        </div>
-    </section>
-
-    <section class="card workflow-card panel-section" data-panel-view="workflow" hidden>
-      <header class="section-heading feed-heading">
-        <div>
-          <p class="eyebrow">Panel 3</p>
-          <h2>Invoice Workflow Panel</h2>
-          <p class="section-copy">Confirmed orders are split into Booking and Shipment workflow lanes. Shipment lane records sending receipts and tracking updates.</p>
-        </div>
-        <div class="legend">
-          <span class="legend-item submitted">Soft Yellow</span>
-          <span class="legend-item ready">Soft Green</span>
-          <span class="legend-item transit">Soft Blue</span>
-          <span class="legend-item own-booking">Soft Violet</span>
-        </div>
-      </header>
-      <div id="workflowBranchTabs" class="workflow-branch-switch" role="tablist" aria-label="Workflow Branch">
-        <button type="button" class="workflow-branch-tab active" data-workflow-branch="cubao" role="tab" aria-selected="true">Cubao Workflow</button>
-        <button type="button" class="workflow-branch-tab" data-workflow-branch="pampanga" role="tab" aria-selected="false">Pampanga Workflow</button>
+    <section class="toolbar-card">
+      <div id="branchTabs" class="branch-tabs" role="tablist" aria-label="Branch Workflow"></div>
+      <div class="toolbar-actions">
+        <button id="refreshBtn" type="button" class="secondary-btn"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+        <p id="boardStatus" class="status-copy" role="status" aria-live="polite"></p>
       </div>
-      <div id="invoiceFeed" class="invoice-feed workflow-lanes">
-        <section class="workflow-lane">
-          <header class="workflow-lane-head">
-            <h3>Booking Workflow</h3>
-            <p>Lalamove, Meet-Up, Client book, TOKTOK, MAXIM</p>
+    </section>
+
+    <section id="submissionSection" class="surface-card" hidden>
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Employee Intake</p>
+          <h2>Submit Order For Head Admin Review</h2>
+          <p class="section-copy">Employee-submitted orders stay here first. Payment receipt goes to the confirmation queue, then Head Admin reviews before the staff workflow starts.</p>
+        </div>
+      </div>
+
+      <form id="workflowForm" class="workflow-form">
+        <div class="form-grid">
+          <label class="field">
+            <span>Order No.</span>
+            <input id="orderNumber" type="text" readonly>
+          </label>
+
+          <label class="field">
+            <span>Date</span>
+            <input id="orderDate" type="date" required>
+          </label>
+
+          <label class="field">
+            <span>Invoice Branch</span>
+            <select id="branchSelect" required></select>
+          </label>
+
+          <label class="field">
+            <span>Cash Branch</span>
+            <select id="cashBranchSelect" required></select>
+          </label>
+
+          <label class="field">
+            <span>Client Name</span>
+            <input id="clientName" list="clientNameList" type="text" required>
+          </label>
+
+          <label class="field">
+            <span>Contact Number</span>
+            <input id="contactNumber" type="text" required>
+          </label>
+
+          <label class="field">
+            <span>Courier</span>
+            <select id="courierSelect" required></select>
+          </label>
+
+          <label class="field">
+            <span>Fulfillment Type</span>
+            <select id="fulfillmentType" required>
+              <option value="">Select type</option>
+              <option value="Booking">Booking / Delivery</option>
+              <option value="Shipment">Shipment / Shipping</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Specific Option</span>
+            <select id="fulfillmentOption" required disabled>
+              <option value="">Select fulfillment type first</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Payment Method</span>
+            <select id="paymentMethod" required></select>
+          </label>
+
+          <label class="field">
+            <span>Payment Type</span>
+            <input id="paymentType" type="text" readonly>
+          </label>
+
+          <label class="field">
+            <span>Admin</span>
+            <select id="adminSelect" required></select>
+          </label>
+
+          <label class="field">
+            <span>Sales Representative</span>
+            <select id="salesRepSelect" required></select>
+          </label>
+
+          <label class="field">
+            <span>Delivery Fee</span>
+            <input id="deliveryFee" type="number" min="0" step="0.01" value="0">
+          </label>
+
+          <label class="field">
+            <span>Handling Fee</span>
+            <input id="handlingFee" type="number" min="0" step="0.01" value="0">
+          </label>
+
+          <label class="field field-span-2">
+            <span>Delivery Address</span>
+            <textarea id="deliveryAddress" rows="2" required></textarea>
+          </label>
+
+          <label class="field field-span-2">
+            <span>Payment Receipt</span>
+            <input id="paymentReceipt" type="file" accept="image/*,.pdf">
+            <small class="field-hint">Required for online or transfer payments.</small>
+            <div id="paymentReceiptPreview" class="attachment-preview empty">No payment receipt uploaded yet.</div>
+          </label>
+        </div>
+
+        <div class="items-card">
+          <div class="items-head">
+            <div>
+              <p class="eyebrow">Receipt Lines</p>
+              <h3>Order Items</h3>
+            </div>
+            <button id="addItemRowBtn" type="button" class="secondary-btn"><i class="fa-solid fa-plus"></i> Add Item</button>
+          </div>
+          <div class="table-wrap">
+            <table class="item-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Set</th>
+                  <th>Code</th>
+                  <th>Unit Price</th>
+                  <th>Qty</th>
+                  <th>Subtotal</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="itemRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="form-footer">
+          <div class="totals-box">
+            <span>Total Amount</span>
+            <strong id="totalAmount">PHP 0.00</strong>
+          </div>
+          <button type="submit" class="primary-btn">Send To Head Admin</button>
+        </div>
+        <p id="workflowStatus" class="status-copy" role="status" aria-live="polite"></p>
+      </form>
+
+      <datalist id="clientNameList"></datalist>
+      <datalist id="productNameList"></datalist>
+    </section>
+
+    <section id="employeeBoardSection" class="surface-card" hidden>
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">My Orders</p>
+          <h2>Employee Status Board</h2>
+          <p class="section-copy">See if your order is waiting for confirmation, returned for correction, already in prep, or moved to delivery or shipping.</p>
+        </div>
+      </div>
+      <div id="myOrdersFeed" class="feed-grid"></div>
+    </section>
+
+    <section id="headAdminSection" class="surface-card" hidden>
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Head Admin</p>
+          <h2>Confirmation Queue</h2>
+          <p class="section-copy">Verify totals, payment method, and uploaded payment receipt before confirming the order into the staff workflow.</p>
+        </div>
+      </div>
+      <div id="confirmationFeed" class="feed-grid"></div>
+    </section>
+
+    <section id="staffSection" class="surface-card" hidden>
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Staff Workflow</p>
+          <h2>Receipt And Prep Panels</h2>
+          <p class="section-copy">Staff sends the final receipt first. After that, prep photo confirms packing and triggers inventory deduction before the order moves to the final dispatch lane.</p>
+        </div>
+      </div>
+      <div class="dual-lanes">
+        <section class="lane-card">
+          <header class="lane-head">
+            <h3>Staff Receipt Panel</h3>
+            <p>Orders already confirmed by Head Admin.</p>
           </header>
-          <div id="bookingWorkflowFeed" class="workflow-lane-body"></div>
+          <div id="receiptFeed" class="feed-grid"></div>
         </section>
-        <section class="workflow-lane">
-          <header class="workflow-lane-head">
-            <h3>Shipment Workflow</h3>
-            <p>LBC, J&amp;T, SPX, Victory Liner, AP Cargo</p>
+        <section class="lane-card">
+          <header class="lane-head">
+            <h3>Prep Panel</h3>
+            <p>Upload prep photo, then inventory is deducted automatically.</p>
           </header>
-          <div id="shipmentWorkflowFeed" class="workflow-lane-body"></div>
+          <div id="prepFeed" class="feed-grid"></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="dispatchBoardSection" class="surface-card" hidden>
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Final Dispatch</p>
+          <h2>Delivery And Shipping Panels</h2>
+          <p class="section-copy">Cubao and Pampanga stay separated through the branch filter above. Booking orders go to Delivery. Shipment orders go to Shipping.</p>
+        </div>
+      </div>
+      <div class="dual-lanes">
+        <section class="lane-card lane-delivery">
+          <header class="lane-head">
+            <h3>Delivery Panel</h3>
+            <p>Lalamove, Meet-Up, Client book, TOKTOK, MAXIM.</p>
+          </header>
+          <div id="deliveryFeed" class="feed-grid"></div>
+        </section>
+        <section class="lane-card lane-shipping">
+          <header class="lane-head">
+            <h3>Shipping Panel</h3>
+            <p>LBC, J&amp;T, SPX, Victory Liner, AP Cargo.</p>
+          </header>
+          <div id="shippingFeed" class="feed-grid"></div>
         </section>
       </div>
     </section>
