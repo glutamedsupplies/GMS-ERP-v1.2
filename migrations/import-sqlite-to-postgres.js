@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
 const { Pool } = require('pg');
+const { buildMissingDatabaseUrlMessage, getDatabaseConnectionString } = require('../lib/database-config');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const DATA_ROOT = process.env.ATTENDANCE_DATA_DIR
@@ -14,7 +15,7 @@ const TENANTS_DIR = path.join(DATA_DIR, 'tenants');
 const MASTER_DB_PATH = path.join(DATA_DIR, 'master.db');
 const LEGACY_USERS_DB_PATH = path.join(DATA_ROOT, 'head_admin', 'data', 'users.db');
 const LEGACY_ATTENDANCE_DB_PATH = path.join(DATA_ROOT, 'employee', 'data', 'attendance.db');
-const DATABASE_URL = String(process.env.DATABASE_URL || '').trim();
+const DATABASE_URL = getDatabaseConnectionString({ preferNonPooling: true });
 const DATABASE_SSL_MODE = String(process.env.DATABASE_SSL_MODE || '').trim().toLowerCase();
 const TARGET_SCHEMA = normalizeIdentifier(process.env.POSTGRES_IMPORT_SCHEMA || 'sqlite_import', 'sqlite_import');
 const DEFAULT_BATCH_SIZE = Math.max(1, Number(process.env.POSTGRES_IMPORT_BATCH_SIZE || 250));
@@ -42,7 +43,7 @@ function quoteSqliteIdentifier(value) {
 
 function buildPgConfig() {
     if (!DATABASE_URL) {
-        throw new Error('DATABASE_URL is required.');
+        throw new Error(buildMissingDatabaseUrlMessage('import'));
     }
 
     const config = {
