@@ -4,7 +4,11 @@ const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
 const { Pool } = require('pg');
-const { buildMissingDatabaseUrlMessage, getDatabaseConnectionString } = require('../lib/database-config');
+const {
+    buildMissingDatabaseUrlMessage,
+    getDatabaseConnectionString,
+    sanitizeConnectionString
+} = require('../lib/database-config');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const DATA_ROOT = process.env.ATTENDANCE_DATA_DIR
@@ -45,9 +49,10 @@ function buildPgConfig() {
     if (!DATABASE_URL) {
         throw new Error(buildMissingDatabaseUrlMessage('import'));
     }
+    const sanitizedConnectionString = sanitizeConnectionString(DATABASE_URL);
 
     const config = {
-        connectionString: DATABASE_URL,
+        connectionString: sanitizedConnectionString,
         max: 1
     };
 
