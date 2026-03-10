@@ -22,6 +22,8 @@ const reportStatus = document.getElementById('reportStatus');
 const activeDateLabel = document.getElementById('activeDateLabel');
 
 const totalSalesValue = document.getElementById('totalSalesValue');
+const totalCostValue = document.getElementById('totalCostValue');
+const grossProfitValue = document.getElementById('grossProfitValue');
 const totalExpensesValue = document.getElementById('totalExpensesValue');
 const totalCashIncomeValue = document.getElementById('totalCashIncomeValue');
 const cashNetValue = document.getElementById('cashNetValue');
@@ -490,10 +492,12 @@ async function loadSalesReport() {
 
 function renderSummary(summary) {
     totalSalesValue.textContent = summary.totalSalesDisplay || formatMoney(0);
+    totalCostValue.textContent = summary.totalCostDisplay || formatMoney(0);
+    grossProfitValue.textContent = summary.grossProfitDisplay || formatMoney(0);
     totalExpensesValue.textContent = summary.expenseSummary?.totalAmountDisplay || formatMoney(0);
     totalCashIncomeValue.textContent = summary.cashIncomeSummary?.totalAmountDisplay || formatMoney(0);
     cashNetValue.textContent = summary.cashNetAmountDisplay || formatMoney(0);
-    netValue.textContent = summary.netAmountDisplay || formatMoney(0);
+    netValue.textContent = summary.netProfitAmountDisplay || summary.netAmountDisplay || formatMoney(0);
     totalOrdersValue.textContent = String(summary.totalOrders || 0);
     totalPaymentsValue.textContent = summary.totalPaymentsDisplay || formatMoney(0);
     totalCollectionsValue.textContent = summary.totalCollectionsDisplay || formatMoney(0);
@@ -517,7 +521,7 @@ function renderBranchChart(rows) {
     branchChartBody.innerHTML = rows.map((row) => `
         <article class="branch-group">
             <h3>${appClient.escapeHtml(row.label)}</h3>
-            <div class="branch-total">Cash Net: ${appClient.escapeHtml(row.cashNetDisplay || formatMoney(0))} | Net: ${appClient.escapeHtml(row.netDisplay || formatMoney(0))}</div>
+            <div class="branch-total">Cost: ${appClient.escapeHtml(row.costDisplay || formatMoney(0))} | Gross Profit: ${appClient.escapeHtml(row.grossProfitDisplay || formatMoney(0))} | Cash Net: ${appClient.escapeHtml(row.cashNetDisplay || formatMoney(0))} | Net Profit: ${appClient.escapeHtml(row.netDisplay || formatMoney(0))}</div>
             <div class="bar-list">
                 ${renderBarRow('Sales', row.sales, row.salesDisplay, '#2f7d5a', maxValue)}
                 ${renderBarRow('Expenses', row.expenses, row.expensesDisplay, '#d06b6b', maxValue)}
@@ -599,15 +603,15 @@ function renderBranchFinanceList(rows) {
 
     branchFinanceList.innerHTML = rows.map((row) => `
         <div class="simple-row">
-            <span>${appClient.escapeHtml(row.label)} | Expense: ${appClient.escapeHtml(row.expensesDisplay)} | Cash Income: ${appClient.escapeHtml(row.cashIncomeDisplay)} | Net: ${appClient.escapeHtml(row.netDisplay)}</span>
-            <strong>${appClient.escapeHtml(row.cashNetDisplay || formatMoney(0))}</strong>
+            <span>${appClient.escapeHtml(row.label)} | Cost: ${appClient.escapeHtml(row.costDisplay || formatMoney(0))} | Gross Profit: ${appClient.escapeHtml(row.grossProfitDisplay || formatMoney(0))} | Expense: ${appClient.escapeHtml(row.expensesDisplay)} | Cash Income: ${appClient.escapeHtml(row.cashIncomeDisplay)} | Net Profit: ${appClient.escapeHtml(row.netDisplay)}</span>
+            <strong>${appClient.escapeHtml(row.netDisplay || formatMoney(0))}</strong>
         </div>
     `).join('');
 }
 
 function renderSalesTable(rows) {
     if (!rows.length) {
-        salesTableBody.innerHTML = '<tr><td colspan="17" class="empty">No sales records found for the selected filters.</td></tr>';
+        salesTableBody.innerHTML = '<tr><td colspan="19" class="empty">No sales records found for the selected filters.</td></tr>';
         scheduleSalesTableScrollHelperSync();
         return;
     }
@@ -621,6 +625,8 @@ function renderSalesTable(rows) {
             <td>${appClient.escapeHtml(row.branch || '-')}</td>
             <td>${appClient.escapeHtml(row.cash_branch || row.branch || '-')}</td>
             <td>${appClient.escapeHtml(formatMoney(row.order_total || row.line_subtotal || 0))}</td>
+            <td>${appClient.escapeHtml(formatMoney(row.line_cost_total || 0))}</td>
+            <td>${appClient.escapeHtml(formatMoney(row.line_profit || 0))}</td>
             <td>${appClient.escapeHtml(row.report_payment_label || row.payment_method || row.payment_option || '-')}</td>
             <td>${appClient.escapeHtml(formatMoney(row.payment_amount || 0))}</td>
             <td>${appClient.escapeHtml(formatMoney(row.collection_amount || 0))}</td>

@@ -807,6 +807,16 @@
           <strong id="totalSalesValue">PHP 0.00</strong>
           <small>Gross sales from filtered sales entries.</small>
         </article>
+        <article class="metric-card">
+          <span>Total Cost</span>
+          <strong id="totalCostValue">PHP 0.00</strong>
+          <small>Cost price total from sold line items.</small>
+        </article>
+        <article class="metric-card net">
+          <span>Gross Profit</span>
+          <strong id="grossProfitValue">PHP 0.00</strong>
+          <small>`Sales - Cost`</small>
+        </article>
         <article class="metric-card expense">
           <span>Total Expenses</span>
           <strong id="totalExpensesValue">PHP 0.00</strong>
@@ -823,9 +833,9 @@
           <small>`Cash Income - Expenses` para sa actual branch cash.</small>
         </article>
         <article class="metric-card net">
-          <span>Net Balance</span>
+          <span>Net Profit</span>
           <strong id="netValue">PHP 0.00</strong>
-          <small>`Sales + Cash Income - Expenses`</small>
+          <small>`Gross Profit + Cash Income - Expenses`</small>
         </article>
       </section>
 
@@ -941,7 +951,7 @@
       <div>
         <p class="eyebrow">Sales Rows</p>
         <h2>Detailed Transactions</h2>
-        <p class="section-copy">Filtered transaction rows with totals, payment data, courier, at notes.</p>
+              <p class="section-copy">Filtered transaction rows with totals, cost, profit, payment data, courier, at notes.</p>
       </div>
 
       <div id="salesTableScrollHelper" class="table-scroll-helper" hidden>
@@ -962,6 +972,8 @@
               <th>Invoice Branch</th>
               <th>Cash Branch</th>
               <th>Total</th>
+              <th>Cost</th>
+              <th>Profit</th>
               <th>Payment</th>
               <th>Amount</th>
               <th>Collection</th>
@@ -975,7 +987,7 @@
             </tr>
           </thead>
           <tbody id="salesTableBody">
-            <tr><td colspan="17" class="empty">Loading sales records...</td></tr>
+            <tr><td colspan="19" class="empty">Loading sales records...</td></tr>
           </tbody>
         </table>
       </div>
