@@ -17,7 +17,7 @@ const STAGE_LABELS = {
     for_correction: 'Needs Correction',
     rejected: 'Rejected',
     staff_receipt_pending: 'Waiting For Staff Receipt',
-    prep_pending: 'Waiting For Prep',
+    prep_pending: 'Prep By Receipt',
     delivery_queue: 'Ready For Delivery',
     shipping_queue: 'Ready For Shipping'
 };
@@ -245,7 +245,7 @@ function applyRoleView() {
         elements.heroCopy.textContent = isEmployee
             ? 'Send a complete order with payment receipt, then monitor whether it is under review, returned for correction, already in prep, or moved to delivery or shipping.'
             : (isStaff
-                ? 'Staff handles the middle of the workflow: wait for confirmed orders, send the final receipt, upload prep photo, deduct inventory, then move the order to delivery or shipping.'
+                ? 'Staff handles the middle of the workflow: wait for confirmed orders, send the final receipt, prepare by that receipt, optionally attach a prep photo, then deduct inventory before dispatch.'
                 : 'Head Admin verifies payment and totals first, then oversees staff receipt, prep progress, and the separated Cubao and Pampanga dispatch lanes.');
     }
     if (elements.roleChip) {
@@ -449,8 +449,19 @@ function renderPrepCard(entry) {
             renderSummaryGrid(entry),
             renderItemsBlock(entry),
             renderAttachmentBlock('Staff Receipt', entry.staffReceipt, 'Staff receipt has not been attached.'),
-            entry.staffReceiptNote ? renderNotesBlock(`Staff note: ${entry.staffReceiptNote}`) : '',
-            renderInlineAttachmentForm(entry.id, 'prep_complete', 'Complete Prep And Deduct Inventory', 'Prep Photo', 'Attach the prep photo here.', 'Prep note')
+            renderNotesBlock([
+                'Prepare this order using the attached staff receipt.',
+                entry.staffReceiptNote ? `Staff note: ${entry.staffReceiptNote}` : ''
+            ].filter(Boolean).join('\n')),
+            renderInlineAttachmentForm(
+                entry.id,
+                'prep_complete',
+                'Complete Receipt-Based Prep',
+                'Prep Photo (Optional)',
+                'Optional: attach a prep photo before moving this receipt to delivery or shipping.',
+                'Prep note',
+                { attachmentRequired: false }
+            )
         ].join('')
     });
 }
@@ -461,7 +472,7 @@ function renderDispatchCard(entry) {
             renderSummaryGrid(entry),
             renderItemsBlock(entry),
             renderAttachmentBlock('Staff Receipt', entry.staffReceipt, 'No staff receipt attachment.'),
-            renderAttachmentBlock('Prep Photo', entry.prepPhoto, 'Prep photo is missing.'),
+            renderAttachmentBlock('Prep Photo', entry.prepPhoto, 'No prep photo uploaded.'),
             renderNotesBlock(renderTrailText(entry))
         ].join('')
     });
@@ -575,13 +586,15 @@ function renderAttachmentPreview(attachment, emptyText) {
     return escapeHtml(attachment.name || emptyText);
 }
 
-function renderInlineAttachmentForm(entryId, action, buttonLabel, fieldLabel, helperText, noteLabel) {
+function renderInlineAttachmentForm(entryId, action, buttonLabel, fieldLabel, helperText, noteLabel, {
+    attachmentRequired = true
+} = {}) {
     return `
         <form class="inline-form" data-inline-action="${escapeHtml(action)}" data-entry-id="${escapeHtml(entryId)}">
           <div class="inline-form-grid">
             <label class="field field-span-2">
               <span>${escapeHtml(fieldLabel)}</span>
-              <input type="file" name="attachment" accept="image/*,.pdf" required>
+              <input type="file" name="attachment" accept="image/*,.pdf" ${attachmentRequired ? 'required' : ''}>
               <small data-file-name>${escapeHtml(helperText)}</small>
             </label>
             <label class="field field-span-2">
@@ -857,14 +870,14 @@ async function handleInlineFormSubmit(event) {
     const noteInput = form.querySelector('textarea[name="note"]');
     const file = fileInput?.files?.[0] || null;
 
-    if (!file) {
+    if (!file && action === 'staff_receipt') {
         setBoardStatus('Attachment is required for this step.', true);
         return;
     }
 
     try {
-        const attachment = await buildFilePayload(file);
-        if (!attachment) {
+        const attachment = file ? await buildFilePayload(file) : null;
+        if (file && !attachment) {
             throw new Error('Unable to read the selected file.');
         }
         const payload = action === 'staff_receipt'
@@ -876,7 +889,7 @@ async function handleInlineFormSubmit(event) {
             payload,
             action === 'staff_receipt'
                 ? 'Staff receipt attached.'
-                : 'Prep complete. Inventory deducted and order moved to final panel.'
+                : 'Prep complete by receipt. Inventory deducted and order moved to final panel.'
         );
     } catch (error) {
         console.error('Workflow inline form failed:', error);
