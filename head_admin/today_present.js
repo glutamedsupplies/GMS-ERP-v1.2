@@ -125,11 +125,7 @@ async function initialize() {
 
     function updateClock() {
         const now = new Date();
-        clock.textContent = now.toLocaleTimeString('en-GB', buildTimeZoneOptions({
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        }));
+        clock.textContent = now.toLocaleTimeString('en-GB', buildTimeZoneOptions({ hour12: false }));
     }
 
     function updateDateLabel() {
@@ -186,7 +182,7 @@ async function initialize() {
 }
 
 function formatTime(value) {
-    return value || '--:--';
+    return appClient.formatDisplayTime(value);
 }
 
 function sortTodayRows(rows) {

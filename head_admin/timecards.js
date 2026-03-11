@@ -120,7 +120,7 @@ function isHeadAdminRole(role) {
 
 async function renderTimecard(employee) {
     employeeNameTitle.innerText = `${employee.name}'s Weekly Time Card`;
-    timecardTableBody.innerHTML = '<tr><td colspan="5" class="empty-row">Loading logs...</td></tr>';
+    timecardTableBody.innerHTML = '';
 
     try {
         const selectedDate = parseInputDate(weekDateInput.value);
@@ -142,8 +142,8 @@ async function renderTimecard(employee) {
             tr.innerHTML = `
                 <td data-label="Date">${appClient.escapeHtml(row.displayDate)}</td>
                 <td data-label="Day">${appClient.escapeHtml(row.dayLabel)}</td>
-                <td data-label="Time In">${appClient.escapeHtml(row.timeIn || '--:--')}</td>
-                <td data-label="Time Out">${appClient.escapeHtml(row.timeOut || '--:--')}</td>
+                <td data-label="Time In">${appClient.escapeHtml(appClient.formatDisplayTime(row.timeIn))}</td>
+                <td data-label="Time Out">${appClient.escapeHtml(appClient.formatDisplayTime(row.timeOut))}</td>
                 <td data-label="Status" class="${statusClass(row.status)}">${appClient.escapeHtml(row.status)}</td>
             `;
             timecardTableBody.appendChild(tr);

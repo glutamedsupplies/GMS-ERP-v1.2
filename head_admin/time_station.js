@@ -53,9 +53,9 @@ async function handleAction(type) {
             : await appClient.recordTimeOut(employeeId);
 
         if (type === 'in') {
-            showMessage(`${result.user.name} timed in at ${result.time}.`, false);
+            showMessage(`${result.user.name} timed in at ${appClient.formatDisplayTime(result.time)}.`, false);
         } else {
-            showMessage(`${result.user.name} timed out at ${result.time}. Total hours: ${result.workedHours}.`, false);
+            showMessage(`${result.user.name} timed out at ${appClient.formatDisplayTime(result.time)}. Total hours: ${result.workedHours}.`, false);
         }
 
         empIdInput.value = '';
@@ -70,11 +70,7 @@ async function handleAction(type) {
 
 function updateClock() {
     const now = new Date();
-    clock.innerText = now.toLocaleTimeString('en-GB', buildTimeZoneOptions({
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-    }));
+    clock.innerText = now.toLocaleTimeString('en-GB', buildTimeZoneOptions({ hour12: false }));
     dateLabel.innerText = now
         .toLocaleDateString('en-US', buildTimeZoneOptions({
             weekday: 'short',

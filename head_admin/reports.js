@@ -108,8 +108,8 @@ async function renderReport() {
             row.innerHTML = `
                 <td data-label="Date">${appClient.escapeHtml(record.displayDate || record.dateKey || '-')}</td>
                 <td data-label="Account">${appClient.escapeHtml(record.name)}</td>
-                <td data-label="Time In">${appClient.escapeHtml(record.timeIn || '-')}</td>
-                <td data-label="Time Out">${appClient.escapeHtml(record.timeOut || '-')}</td>
+                <td data-label="Time In">${appClient.escapeHtml(appClient.formatDisplayTime(record.timeIn, '-'))}</td>
+                <td data-label="Time Out">${appClient.escapeHtml(appClient.formatDisplayTime(record.timeOut, '-'))}</td>
                 <td data-label="Minutes Late">${appClient.escapeHtml(String(record.lateMinutes || 0))}</td>
                 <td data-label="Status" class="${statusClass(record.status)}">${appClient.escapeHtml(record.status)}</td>
             `;

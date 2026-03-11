@@ -120,9 +120,10 @@
     }
 
     .search-input,
-    .modal-content input {
+    .modal-content input[type="text"],
+    .modal-content input[type="password"] {
       width: 100%;
-      min-height: 48px;
+      min-height: 44px;
       padding: 0 16px;
       border-radius: 16px;
       border: 1px solid var(--line);
@@ -132,7 +133,8 @@
     }
 
     .search-input:focus,
-    .modal-content input:focus,
+    .modal-content input[type="text"]:focus,
+    .modal-content input[type="password"]:focus,
     .time-field:focus {
       outline: none;
       border-color: var(--line-strong);
@@ -165,12 +167,14 @@
     .table-shell {
       border: 1px solid rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.1);
       border-radius: 24px;
-      overflow: hidden;
+      overflow-x: auto;
+      overflow-y: hidden;
       background: rgba(255, 255, 255, 0.9);
     }
 
     table {
       width: 100%;
+      min-width: 1080px;
       border-collapse: collapse;
       background: transparent;
     }
@@ -222,6 +226,31 @@
       color: var(--dark);
     }
 
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 104px;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .status-pill.active {
+      color: var(--success);
+      background: rgba(15, 118, 110, 0.12);
+    }
+
+    .status-pill.suspended {
+      color: #475569;
+      background: rgba(100, 116, 139, 0.14);
+    }
+
     .action-btn {
       width: 40px;
       height: 40px;
@@ -237,6 +266,43 @@
       box-shadow: 0 12px 22px rgba(220, 38, 38, 0.14);
     }
 
+    .state-btn {
+      min-height: 38px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .state-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .state-btn.suspend {
+      color: #9a3412;
+      background: rgba(251, 146, 60, 0.12);
+      border-color: rgba(251, 146, 60, 0.2);
+    }
+
+    .state-btn.reactivate {
+      color: var(--success);
+      background: rgba(15, 118, 110, 0.1);
+      border-color: rgba(15, 118, 110, 0.18);
+    }
+
+    .state-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
     .modal {
       display: none;
       position: fixed;
@@ -250,22 +316,22 @@
     }
 
     .modal-content {
-      width: min(620px, 100%);
+      width: min(540px, 100%);
       max-height: calc(100vh - 36px);
       overflow-y: auto;
-      padding: 26px;
+      padding: 22px;
     }
 
     .modal-content h2 {
       margin: 0 0 14px;
       font-family: "Sora", "Segoe UI", sans-serif;
-      font-size: 28px;
+      font-size: 24px;
       color: var(--dark);
     }
 
     .modal-content label {
       display: block;
-      margin: 12px 0 6px;
+      margin: 10px 0 6px;
       color: var(--text);
       font-size: 11px;
       font-weight: 800;
@@ -274,18 +340,18 @@
     }
 
     .schedule-section {
-      margin-top: 16px;
+      margin-top: 14px;
       border: 1px solid var(--line);
-      border-radius: 20px;
-      padding: 16px;
+      border-radius: 18px;
+      padding: 14px;
       background: rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.05);
     }
 
     .schedule-title {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 800;
       color: var(--dark);
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
@@ -293,18 +359,18 @@
     .schedule-grid {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
 
     .schedule-row {
       display: grid;
-      grid-template-columns: 100px 92px 1fr 1fr;
-      gap: 8px;
+      grid-template-columns: 92px 96px minmax(0, 1fr) minmax(0, 1fr);
+      gap: 10px;
       align-items: center;
     }
 
     .schedule-day {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 700;
       color: var(--dark);
     }
@@ -315,10 +381,35 @@
       gap: 6px;
       font-size: 12px;
       color: var(--text);
+      font-weight: 700;
+      white-space: nowrap;
     }
 
     .schedule-row input {
       margin: 0;
+    }
+
+    .schedule-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      min-height: 18px;
+      padding: 0;
+      border-radius: 5px;
+      accent-color: var(--primary);
+      cursor: pointer;
+      flex: 0 0 18px;
+    }
+
+    .schedule-row input[type="time"] {
+      width: 100%;
+      min-width: 0;
+      min-height: 40px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.94);
+      color: var(--dark);
+      font: inherit;
     }
 
     .schedule-row input[type="time"]:disabled {
@@ -338,14 +429,14 @@
     .modal-actions {
       display: grid;
       gap: 10px;
-      margin-top: 18px;
+      margin-top: 16px;
     }
 
     #closeModal {
       border: 1px solid var(--line);
       background: rgba(255, 255, 255, 0.8);
       color: var(--text);
-      min-height: 46px;
+      min-height: 42px;
       border-radius: 16px;
       cursor: pointer;
       font-weight: 700;
@@ -375,6 +466,11 @@
 
       .schedule-row {
         grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .schedule-off {
+        white-space: normal;
       }
     }
   </style>
@@ -388,7 +484,7 @@
     </div>
     <div class="clock-card">
       <span>Live Clock</span>
-      <strong id="liveClock">--:--</strong>
+      <strong id="liveClock">--:--:--</strong>
     </div>
   </div>
 
@@ -405,9 +501,10 @@
             <th>ID</th>
             <th>Full Name</th>
             <th>Role</th>
-            <th>Security</th>
+            <th>Status</th>
             <th>Time In</th>
             <th>Time Out</th>
+            <th style="text-align:center">Suspend</th>
             <th style="text-align:center">Delete</th>
             <th style="text-align:center">Edit</th>
           </tr>

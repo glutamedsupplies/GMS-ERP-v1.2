@@ -45,10 +45,10 @@ async function handleAction(type) {
     try {
         if (type === 'in') {
             const result = await appClient.recordTimeIn(session.userId);
-            setStatusMessage(`${result.status} - timed in at ${result.time}`, false);
+            setStatusMessage(`${result.status} - timed in at ${appClient.formatDisplayTime(result.time)}`, false);
         } else {
             const result = await appClient.recordTimeOut(session.userId);
-            setStatusMessage(`Timed out at ${result.time}. Total hours: ${result.workedHours}`, false);
+            setStatusMessage(`Timed out at ${appClient.formatDisplayTime(result.time)}. Total hours: ${result.workedHours}`, false);
         }
 
         await refreshState();
@@ -62,11 +62,7 @@ async function handleAction(type) {
 
 function updateClock() {
     const now = new Date();
-    clockEl.innerText = now.toLocaleTimeString('en-GB', buildTimeZoneOptions({
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-    }));
+    clockEl.innerText = now.toLocaleTimeString('en-GB', buildTimeZoneOptions({ hour12: false }));
     dateEl.innerText = now
         .toLocaleDateString('en-US', buildTimeZoneOptions({
             weekday: 'short',
@@ -91,7 +87,7 @@ async function refreshState() {
         if (record.timeIn && !record.timeOut) {
             timeInBtn.disabled = true;
             timeOutBtn.disabled = false;
-            setStatusMessage(`${record.status} - logged in at ${record.timeIn}`, false);
+            setStatusMessage(`${record.status} - logged in at ${appClient.formatDisplayTime(record.timeIn)}`, false);
             return;
         }
 

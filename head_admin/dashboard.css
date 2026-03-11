@@ -36,6 +36,15 @@ body {
   overflow: auto;
 }
 
+body.dashboard-loading .workspace-overview,
+body.dashboard-loading .sidebar-nav-label,
+body.dashboard-loading #groupNav,
+body.dashboard-loading #panelNav,
+body.dashboard-loading #topPanelBar,
+body.dashboard-loading .sidebar-footer {
+  visibility: hidden;
+}
+
 body::before,
 body::after {
   content: "";
@@ -477,6 +486,48 @@ body::after {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
+  position: relative;
+  display: flex;
+  isolation: isolate;
+}
+
+.frame-loading-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 82% 12%, rgba(var(--tenant-primary-rgb), 0.14) 0%, transparent 26%),
+    radial-gradient(circle at 14% 84%, rgba(var(--tenant-primary-rgb), 0.1) 0%, transparent 28%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.98), var(--tenant-panel-strong));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}
+
+.frame-loading-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid rgba(var(--tenant-primary-rgb), 0.18);
+  border-top-color: var(--tenant-primary);
+  box-shadow: 0 0 0 7px rgba(var(--tenant-primary-rgb), 0.08);
+  animation: dashboard-spinner 720ms linear infinite;
+}
+
+.frame-loading-label {
+  color: var(--tenant-primary-strong);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.frame-shell.is-loading .frame-loading-cover {
+  opacity: 1;
 }
 
 .main-panel iframe {
@@ -485,6 +536,18 @@ body::after {
   height: 100%;
   border: none;
   background: transparent;
+  opacity: 1;
+  transition: opacity 140ms ease;
+}
+
+.frame-shell.is-loading iframe {
+  opacity: 0;
+}
+
+@keyframes dashboard-spinner {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 1180px) {

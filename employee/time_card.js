@@ -58,8 +58,8 @@ async function renderRecords() {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td data-label="Date">${appClient.escapeHtml(`${record.dayLabel}, ${record.displayDate}`)}</td>
-                <td data-label="Time In">${appClient.escapeHtml(record.timeIn || '-')}</td>
-                <td data-label="Time Out">${appClient.escapeHtml(record.timeOut || '-')}</td>
+                <td data-label="Time In">${appClient.escapeHtml(appClient.formatDisplayTime(record.timeIn, '-'))}</td>
+                <td data-label="Time Out">${appClient.escapeHtml(appClient.formatDisplayTime(record.timeOut, '-'))}</td>
                 <td data-label="Total Hours">${appClient.escapeHtml(record.workedHours || '0.00')}</td>
                 <td data-label="Status" class="${statusClass(record.status)}">${appClient.escapeHtml(record.status)}</td>
             `;

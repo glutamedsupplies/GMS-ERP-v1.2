@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL,
   is_active INTEGER NOT NULL DEFAULT 1,
+  suspended_on TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   display_name TEXT NOT NULL DEFAULT '',
   profile_picture TEXT NOT NULL DEFAULT '',

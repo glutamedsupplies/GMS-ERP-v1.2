@@ -28,7 +28,8 @@ const DEFAULT_TIME_OUT = '17:00';
 
 const state = {
     employees: [],
-    editingId: null
+    editingId: null,
+    currentUserId: ''
 };
 
 initialize();
@@ -38,6 +39,7 @@ async function initialize() {
     if (!session) {
         return;
     }
+    state.currentUserId = String(session.userId || '');
 
     try {
         const bootstrap = await appClient.getBootstrap();
@@ -230,11 +232,19 @@ function collectWeeklySchedule() {
 async function loadEmployees(filter = '') {
     try {
         const rows = await appClient.listUsers({ role: '', filter });
+        rows.sort((left, right) => {
+            const leftRank = left.is_active === false ? 1 : 0;
+            const rightRank = right.is_active === false ? 1 : 0;
+            if (leftRank !== rightRank) {
+                return leftRank - rightRank;
+            }
+            return String(left.name || '').localeCompare(String(right.name || ''));
+        });
         state.employees = rows;
         renderEmployees(rows);
     } catch (error) {
         console.error('Failed to load employees:', error);
-        tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:red;">${appClient.escapeHtml(error.message)}</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:red;">${appClient.escapeHtml(error.message)}</td></tr>`;
     }
 }
 
@@ -259,7 +269,7 @@ function renderEmployees(rows) {
     tableBody.innerHTML = '';
 
     if (!rows.length) {
-        tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#999;">No accounts found</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#999;">No accounts found</td></tr>';
         return;
     }
 
@@ -269,15 +279,22 @@ function renderEmployees(rows) {
         const safeRole = appClient.escapeHtml(formatRoleLabel(emp.role));
         const safeTimeIn = appClient.escapeHtml(normalizeTime(emp.time_in, DEFAULT_TIME_IN));
         const safeTimeOut = appClient.escapeHtml(normalizeTime(emp.time_out, DEFAULT_TIME_OUT));
+        const isActive = Boolean(emp.is_active);
+        const isCurrentUser = String(emp.id || '') === state.currentUserId;
+        const statusLabel = isActive ? 'Active' : 'Suspended';
+        const toggleLabel = isCurrentUser ? 'Current User' : (isActive ? 'Suspend' : 'Reactivate');
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><span class="id-label">${safeId}</span></td>
             <td><strong>${safeName}</strong></td>
             <td>${safeRole}</td>
-            <td><span style="color:#1cc88a; font-weight:600;">Stored securely</span></td>
+            <td><span class="status-pill ${isActive ? 'active' : 'suspended'}">${statusLabel}</span></td>
             <td><span class="time-field">${safeTimeIn}</span></td>
             <td><span class="time-field">${safeTimeOut}</span></td>
+            <td style="text-align:center">
+                <button class="state-btn ${isActive ? 'suspend' : 'reactivate'}" type="button" onclick="toggleEmployeeStatus('${safeId}')"${isCurrentUser ? ' disabled' : ''}>${toggleLabel}</button>
+            </td>
             <td style="text-align:center">
                 <button class="action-btn" onclick="deleteEmployee('${safeId}')"><i class="fas fa-trash-alt"></i></button>
             </td>
@@ -310,6 +327,34 @@ window.editEmployee = function editEmployee(id) {
     }
 
     openEmployeeModal(employee);
+};
+
+window.toggleEmployeeStatus = async function toggleEmployeeStatus(id) {
+    const employee = state.employees.find((item) => String(item.id) === String(id));
+    if (!employee) {
+        return;
+    }
+    if (String(employee.id || '') === state.currentUserId) {
+        alert('You cannot suspend the account you are currently using.');
+        return;
+    }
+
+    const nextActive = !Boolean(employee.is_active);
+    const verb = nextActive ? 'reactivate' : 'suspend';
+    const confirmed = window.confirm(`${verb.charAt(0).toUpperCase() + verb.slice(1)} account "${employee.name || employee.id}"?`);
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        await appClient.updateUser(employee.id, {
+            is_active: nextActive
+        });
+        await loadEmployees(searchInput.value.trim());
+    } catch (error) {
+        console.error('Failed to update employee status:', error);
+        alert(error.message);
+    }
 };
 
 function openEmployeeModal(employee = null) {
@@ -425,10 +470,6 @@ async function saveEmployee() {
 
 function updateClock() {
     if (liveClock) {
-        liveClock.innerText = new Date().toLocaleTimeString('en-GB', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        });
+        liveClock.innerText = new Date().toLocaleTimeString('en-GB', { hour12: false });
     }
 }

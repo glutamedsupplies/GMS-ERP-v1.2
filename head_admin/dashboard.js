@@ -13,7 +13,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     const topPanelItems = document.getElementById('topPanelItems');
     const navItems = Array.from(panelNav?.querySelectorAll('li[data-panel]') || []);
     const navItemByPanel = new Map(navItems.map((item) => [item.dataset.panel, item]));
+    const frameShell = document.getElementById('frameShell');
     const panelFrame = document.getElementById('panelFrame');
+    const frameLoadingLabel = document.getElementById('frameLoadingLabel');
     const workspaceName = document.getElementById('workspaceName');
     const workspaceCopy = document.getElementById('workspaceCopy');
     const workspaceUser = document.getElementById('workspaceUser');
@@ -28,8 +30,44 @@ window.addEventListener('DOMContentLoaded', async () => {
     let bootstrap = null;
     let useGroupedNavigation = false;
     let activeGroupId = null;
+    let dashboardReady = false;
     const panelLabels = new Map();
     const panelIcons = new Map();
+
+    function markDashboardReady() {
+        if (dashboardReady) {
+            return;
+        }
+        dashboardReady = true;
+        document.body?.classList.remove('dashboard-loading');
+    }
+
+    function setFrameLoading(isLoading, panel = '') {
+        if (!frameShell) {
+            return;
+        }
+
+        const panelLabel = panel
+            ? (panelLabels.get(panel) || panel || 'panel')
+            : (panelLabels.get(getCurrentActivePanel()) || 'panel');
+        const loadingMessage = `Loading ${panelLabel}...`;
+
+        frameShell.classList.toggle('is-loading', isLoading);
+        frameShell.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+
+        if (frameLoadingLabel) {
+            frameLoadingLabel.textContent = isLoading ? loadingMessage : '';
+        }
+
+        if (sidebarStatusText) {
+            sidebarStatusText.textContent = isLoading ? loadingMessage : `${panelLabel} ready`;
+        }
+    }
+
+    panelFrame?.addEventListener('load', () => {
+        setFrameLoading(false);
+        markDashboardReady();
+    });
 
     const panelMap = {
         employees: 'employees.html',
@@ -195,7 +233,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     if (initialPanel) {
         loadPanel(initialPanel);
+    } else {
+        markDashboardReady();
     }
+
+    window.setTimeout(markDashboardReady, 1500);
 
     window.addEventListener('message', async (event) => {
         if (event.origin !== window.location.origin) {
@@ -226,6 +268,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         currentPanelSrc = targetSrc;
         setActivePanel(panel);
+        setFrameLoading(true, panel);
         panelFrame.src = targetSrc;
     }
 

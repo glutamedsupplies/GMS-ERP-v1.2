@@ -363,12 +363,23 @@ function run() {
             role: 'employee'
         });
 
+        const todayKey = store.getDateKey();
+        const previousDate = new Date(`${todayKey}T00:00:00`);
+        previousDate.setDate(previousDate.getDate() - 1);
+        const previousDateKey = `${previousDate.getFullYear()}-${String(previousDate.getMonth() + 1).padStart(2, '0')}-${String(previousDate.getDate()).padStart(2, '0')}`;
+
+        store.setDailyAttendanceStatus('b_suspended_user', 'Absent', previousDateKey);
         store.updateUser('b_suspended_user', {
             is_active: false
         });
 
-        const todayKey = store.getDateKey();
         const weeklyRows = store.getUserWeeklyTimeCard('b_suspended_user', todayKey);
+        const previousRow = weeklyRows.find((row) => row.dateKey === previousDateKey);
+        const todayRow = weeklyRows.find((row) => row.dateKey === todayKey);
+        assert(previousRow, 'weekly time card should include the day before suspension');
+        assert(todayRow, 'weekly time card should include the suspension day');
+        assert.strictEqual(previousRow.status, 'Absent', 'dates before suspension should keep their prior absent status');
+        assert.strictEqual(todayRow.status, 'Suspended', 'suspension day should show Suspended');
         assert(
             weeklyRows.some((row) => row.status === 'Suspended'),
             'weekly time card should surface Suspended for inactive users without attendance rows'

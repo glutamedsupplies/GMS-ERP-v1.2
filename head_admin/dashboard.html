@@ -9,9 +9,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="../shared/theme-preload.js"></script>
 <link rel="stylesheet" href="./dashboard.css">
 </head>
-<body>
+<body class="dashboard-loading">
 <div class="dashboard-wrapper">
   <aside class="sidebar">
     <div class="sidebar-shell">
@@ -28,7 +29,7 @@
         <div class="workspace-meta">
           <div class="workspace-pill">
             <span>User</span>
-            <strong id="workspaceUser">Loading...</strong>
+            <strong id="workspaceUser"></strong>
           </div>
           <div class="workspace-pill">
             <span>Role</span>
@@ -39,7 +40,7 @@
 
       <div class="sidebar-nav-label">Navigation</div>
       <ul id="groupNav" hidden></ul>
-      <ul id="panelNav">
+      <ul id="panelNav" hidden>
         <li data-panel="employees" class="active"><i class="fa-solid fa-users"></i> Employee Accounts</li>
         <li data-panel="client_database"><i class="fa-solid fa-database"></i> Client Data Base</li>
         <li class="nav-section-label"><i class="fa-solid fa-box-open"></i> Products</li>
@@ -78,7 +79,11 @@
       <div id="topPanelItems" class="top-panel-items"></div>
     </div>
 
-    <div class="frame-shell">
+    <div class="frame-shell is-loading" id="frameShell" aria-busy="true">
+      <div class="frame-loading-cover" id="frameLoadingCover" aria-hidden="true">
+        <span class="frame-loading-spinner"></span>
+        <span class="frame-loading-label" id="frameLoadingLabel">Loading panel...</span>
+      </div>
       <iframe id="panelFrame" title="Head Admin Panel"></iframe>
     </div>
   </main>

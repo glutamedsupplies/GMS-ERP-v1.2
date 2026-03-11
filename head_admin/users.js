@@ -172,11 +172,11 @@ function renderRows() {
               <td>${appClient.escapeHtml(user.role || '')}</td>
               <td>${appClient.escapeHtml(user.branch_name || '')}</td>
               <td>${renderFeaturePills(user.feature_access)}</td>
-              <td><span class="pill ${isActive ? 'active' : 'inactive'}">${isActive ? 'Active' : 'Inactive'}</span></td>
+              <td><span class="pill ${isActive ? 'active' : 'inactive'}">${isActive ? 'Active' : 'Suspended'}</span></td>
               <td>
                 <div class="actions">
                   <button class="edit" type="button" data-action="edit" data-id="${safeId}">Edit</button>
-                  <button class="toggle" type="button" data-action="toggle" data-id="${safeId}">${isActive ? 'Deactivate' : 'Activate'}</button>
+                  <button class="toggle" type="button" data-action="toggle" data-id="${safeId}">${isActive ? 'Suspend' : 'Reactivate'}</button>
                   <button class="delete" type="button" data-action="delete" data-id="${safeId}">Delete</button>
                 </div>
               </td>
@@ -350,13 +350,13 @@ async function saveEditUser() {
 
 async function toggleUser(user) {
     const nextActive = !Boolean(user.is_active);
-    setStatus(nextActive ? 'Activating user...' : 'Deactivating user...');
+    setStatus(nextActive ? 'Reactivating user...' : 'Suspending user...');
     try {
         await appClient.updateUser(user.id, {
             is_active: nextActive
         });
         await refreshData();
-        setStatus(nextActive ? 'User activated.' : 'User deactivated.');
+        setStatus(nextActive ? 'User reactivated.' : 'User suspended.');
     } catch (error) {
         console.error('Failed to toggle user:', error);
         if (error.code === 'LIMIT_USERS_REACHED') {
