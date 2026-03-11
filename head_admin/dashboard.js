@@ -234,6 +234,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (initialPanel) {
         loadPanel(initialPanel);
     } else {
+        setFrameLoading(false);
         markDashboardReady();
     }
 

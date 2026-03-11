@@ -9,6 +9,7 @@ const totalLate = document.getElementById('totalLate');
 const totalAbsent = document.getElementById('totalAbsent');
 const totalSuspended = document.getElementById('totalSuspended');
 const reportStatus = document.getElementById('reportStatus');
+let serverDateKey = new Date().toISOString().slice(0, 10);
 
 initialize();
 
@@ -27,9 +28,11 @@ async function initialize() {
 
     try {
         const serverInfo = await appClient.getServerInfo();
-        dateFilter.value = String(serverInfo?.dateKey || '').trim() || new Date().toISOString().slice(0, 10);
+        serverDateKey = String(serverInfo?.dateKey || '').trim() || new Date().toISOString().slice(0, 10);
+        dateFilter.value = serverDateKey;
     } catch (_error) {
-        dateFilter.value = new Date().toISOString().slice(0, 10);
+        serverDateKey = new Date().toISOString().slice(0, 10);
+        dateFilter.value = serverDateKey;
     }
 
     filterBtn.addEventListener('click', renderReport);
@@ -71,16 +74,20 @@ function isHeadAdminRole(role) {
 
 async function renderReport() {
     try {
-        const records = await appClient.getAttendanceReport({
-            employeeId: employeeFilter.value,
-            range: rangeFilter.value,
-            dateKey: dateFilter.value
-        });
+        const [records, attendanceUsers] = await Promise.all([
+            appClient.getAttendanceReport({
+                employeeId: employeeFilter.value,
+                range: rangeFilter.value,
+                dateKey: dateFilter.value
+            }),
+            listAttendanceUsers()
+        ]);
+        const normalizedRecords = applySuspensionOverrides(records, attendanceUsers, dateFilter.value || serverDateKey);
 
         reportBody.innerHTML = '';
         setReportStatus('', false);
 
-        if (!records.length) {
+        if (!normalizedRecords.length) {
             reportBody.innerHTML = '<tr><td colspan="6" class="empty-row">No attendance records found for the selected filter.</td></tr>';
             recordCount.innerText = '0';
             totalLate.innerText = '0';
@@ -92,9 +99,9 @@ async function renderReport() {
         let lateTotal = 0;
         let absentTotal = 0;
         let suspendedTotal = 0;
-        recordCount.innerText = String(records.length);
+        recordCount.innerText = String(normalizedRecords.length);
 
-        records.forEach((record) => {
+        normalizedRecords.forEach((record) => {
             lateTotal += Number(record.lateMinutes || 0);
             const normalizedStatus = String(record.status).toLowerCase();
             if (normalizedStatus === 'absent') {
@@ -144,6 +151,44 @@ function statusClass(status) {
         default:
             return 'status-excused';
     }
+}
+
+function normalizeDateKey(value, fallback = '') {
+    const text = String(value || '').trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : fallback;
+}
+
+function resolveSuspendedOn(user, fallbackDateKey) {
+    return normalizeDateKey(user?.suspended_on, fallbackDateKey);
+}
+
+function shouldOverrideAsSuspended(record, user, fallbackDateKey) {
+    if (!record || !user || user.is_active !== false) {
+        return false;
+    }
+
+    const targetDateKey = normalizeDateKey(record.dateKey, fallbackDateKey);
+    const suspendedOn = resolveSuspendedOn(user, fallbackDateKey);
+    const hasClockActivity = Boolean(record.timeIn || record.timeOut);
+    return Boolean(targetDateKey && suspendedOn && targetDateKey >= suspendedOn && !hasClockActivity);
+}
+
+function applySuspensionOverrides(records, users, fallbackDateKey) {
+    const userMap = new Map((users || []).map((user) => [String(user.id || ''), user]));
+    return (records || []).map((record) => {
+        const matchedUser = userMap.get(String(record.id || ''));
+        if (!shouldOverrideAsSuspended(record, matchedUser, fallbackDateKey)) {
+            return record;
+        }
+
+        return {
+            ...record,
+            timeIn: '',
+            timeOut: '',
+            lateMinutes: 0,
+            status: 'Suspended'
+        };
+    });
 }
 
 function setReportStatus(message, isError) {

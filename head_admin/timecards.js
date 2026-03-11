@@ -6,6 +6,7 @@ const weekDateInput = document.getElementById('weekDate');
 const weekRangeLabel = document.getElementById('weekRangeLabel');
 
 let selectedEmployee = null;
+let serverDateKey = formatDateKey(new Date());
 
 initialize();
 
@@ -22,8 +23,8 @@ async function initialize() {
         console.error('Failed to load head admin branding for time cards:', error);
     }
 
-    const dateKey = await resolveServerDateKey();
-    initSelectors(dateKey);
+    serverDateKey = await resolveServerDateKey();
+    initSelectors(serverDateKey);
     await loadEmployees();
 }
 
@@ -129,15 +130,16 @@ async function renderTimecard(employee) {
         const rows = await appClient.getUserWeeklyTimeCard(employee.id, {
             dateKey: formatDateKey(selectedDate)
         });
+        const normalizedRows = applySuspensionOverrides(rows, employee);
 
         timecardTableBody.innerHTML = '';
 
-        if (!rows.length) {
+        if (!normalizedRows.length) {
             timecardTableBody.innerHTML = '<tr><td colspan="5" class="empty-row">No logs found for this week.</td></tr>';
             return;
         }
 
-        rows.forEach((row) => {
+        normalizedRows.forEach((row) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td data-label="Date">${appClient.escapeHtml(row.displayDate)}</td>
@@ -180,6 +182,44 @@ function updateWeekRangeLabel(value) {
 function formatDateKey(value) {
     const date = new Date(value);
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function normalizeDateKey(value, fallback = '') {
+    const text = String(value || '').trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : fallback;
+}
+
+function resolveSuspendedOn(employee, fallbackDateKey = serverDateKey) {
+    return normalizeDateKey(employee?.suspended_on, fallbackDateKey);
+}
+
+function shouldOverrideAsSuspended(row, employee) {
+    if (!row || !employee || employee.is_active !== false) {
+        return false;
+    }
+
+    const fallbackDateKey = normalizeDateKey(serverDateKey, formatDateKey(new Date()));
+    const targetDateKey = normalizeDateKey(row.dateKey, fallbackDateKey);
+    const suspendedOn = resolveSuspendedOn(employee, fallbackDateKey);
+    const hasClockActivity = Boolean(row.timeIn || row.timeOut);
+    return Boolean(targetDateKey && suspendedOn && targetDateKey >= suspendedOn && !hasClockActivity);
+}
+
+function applySuspensionOverrides(rows, employee) {
+    return (rows || []).map((row) => {
+        if (!shouldOverrideAsSuspended(row, employee)) {
+            return row;
+        }
+
+        return {
+            ...row,
+            timeIn: '',
+            timeOut: '',
+            lateMinutes: 0,
+            workedHours: '0.00',
+            status: 'Suspended'
+        };
+    });
 }
 
 function formatShortDate(value) {

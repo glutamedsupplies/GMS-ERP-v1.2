@@ -42,7 +42,12 @@ async function initialize() {
 
     async function refreshTodayAttendance() {
         try {
-            const rows = sortTodayRows(await appClient.getDailyAttendanceSnapshot());
+            const [snapshotRows, attendanceUsers] = await Promise.all([
+                appClient.getDailyAttendanceSnapshot(),
+                listAttendanceUsers()
+            ]);
+            const dateKey = String(snapshotRows[0]?.dateKey || '').trim() || formatDateKey(new Date());
+            const rows = sortTodayRows(applySuspensionOverrides(snapshotRows, attendanceUsers, dateKey));
             tbody.innerHTML = '';
             updateSummary(rows);
 
@@ -183,6 +188,65 @@ async function initialize() {
 
 function formatTime(value) {
     return appClient.formatDisplayTime(value);
+}
+
+async function listAttendanceUsers() {
+    const users = await appClient.listUsers();
+    return users.filter((user) => !isHeadAdminRole(user.role));
+}
+
+function isHeadAdminRole(role) {
+    const normalizedRole = String(role || '').trim().toLowerCase();
+    return normalizedRole === 'head_admin' || normalizedRole === 'company_admin';
+}
+
+function formatDateKey(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return '';
+    }
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function normalizeDateKey(value, fallback = '') {
+    const text = String(value || '').trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : fallback;
+}
+
+function resolveSuspendedOn(user, fallbackDateKey) {
+    return normalizeDateKey(user?.suspended_on, fallbackDateKey);
+}
+
+function shouldOverrideAsSuspended(row, user, fallbackDateKey) {
+    if (!row || !user || user.is_active !== false) {
+        return false;
+    }
+
+    const targetDateKey = normalizeDateKey(row.dateKey, fallbackDateKey);
+    const suspendedOn = resolveSuspendedOn(user, fallbackDateKey);
+    const hasClockActivity = Boolean(row.timeIn || row.timeOut);
+    return Boolean(targetDateKey && suspendedOn && targetDateKey >= suspendedOn && !hasClockActivity);
+}
+
+function applySuspensionOverrides(rows, users, fallbackDateKey) {
+    const userMap = new Map((users || []).map((user) => [String(user.id || ''), user]));
+    return (rows || []).map((row) => {
+        const matchedUser = userMap.get(String(row.id || ''));
+        if (!shouldOverrideAsSuspended(row, matchedUser, fallbackDateKey)) {
+            return row;
+        }
+
+        return {
+            ...row,
+            scheduledTimeIn: '',
+            scheduledTimeOut: '',
+            lateMinutes: 0,
+            status: 'Suspended',
+            statusGroup: 'suspended',
+            displayRemarks: 'Account suspended',
+            canEditStatus: false
+        };
+    });
 }
 
 function sortTodayRows(rows) {

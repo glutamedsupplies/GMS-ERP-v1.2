@@ -39,7 +39,10 @@ const MODULES = {
     }
 };
 
+const FINANCE_BRANCH_STORAGE_PREFIX = 'gms:last-finance-branch';
+
 const state = {
+    session: null,
     references: null,
     modules: {},
     workspaceConfig: {},
@@ -57,6 +60,7 @@ async function initialize() {
         return;
     }
     appClient.attachEmployeeBackButton(session);
+    state.session = session;
     await applyWorkspaceConfig();
 
     Object.values(MODULES).forEach((module) => {
@@ -64,6 +68,7 @@ async function initialize() {
             editingId: null,
             syncingPeriod: false,
             items: [],
+            preferredBranch: '',
             refs: getModuleRefs(module.prefix)
         };
     });
@@ -158,6 +163,7 @@ function bindEvents() {
         refs.resetFiltersBtn.addEventListener('click', () => resetFilters(module.key));
         refs.periodFilter.addEventListener('change', () => applyPeriodPreset(module.key, refs.periodFilter.value || 'this_month'));
         refs.tableBody.addEventListener('click', (event) => handleTableAction(module.key, event));
+        refs.branchInput.addEventListener('change', () => rememberBranchPreference(module.key, refs.branchInput.value));
 
         [refs.dateFromFilter, refs.dateToFilter].forEach((input) => {
             input.addEventListener('change', () => {
@@ -216,6 +222,77 @@ function populateSelect(select, values, includeBlank = false, blankLabel = 'Sele
     });
 }
 
+function getPreferredBranch(moduleKey) {
+    const branches = getAvailableBranches();
+    if (!branches.length) {
+        return '';
+    }
+
+    return findMatchingBranch(state.modules[moduleKey]?.preferredBranch)
+        || findMatchingBranch(getStoredBranchPreference(moduleKey))
+        || branches[0];
+}
+
+function rememberBranchPreference(moduleKey, branch) {
+    const storageKey = getBranchPreferenceStorageKey(moduleKey);
+    const matchedBranch = findMatchingBranch(branch);
+    if (!storageKey || !matchedBranch) {
+        return;
+    }
+
+    if (state.modules[moduleKey]) {
+        state.modules[moduleKey].preferredBranch = matchedBranch;
+    }
+
+    try {
+        window.localStorage?.setItem(storageKey, matchedBranch);
+    } catch (_error) {
+        // Ignore local storage errors and continue with the current page state.
+    }
+}
+
+function getStoredBranchPreference(moduleKey) {
+    const storageKey = getBranchPreferenceStorageKey(moduleKey);
+    if (!storageKey) {
+        return '';
+    }
+
+    try {
+        return String(window.localStorage?.getItem(storageKey) || '').trim();
+    } catch (_error) {
+        return '';
+    }
+}
+
+function getBranchPreferenceStorageKey(moduleKey) {
+    const moduleScope = String(moduleKey || '').trim();
+    if (!moduleScope) {
+        return '';
+    }
+
+    const session = state.session || appClient.getSession?.() || {};
+    const companyScope = String(session.companyId || session.companyCode || 'global').trim() || 'global';
+    const userScope = String(session.userId || 'anon').trim() || 'anon';
+    return `${FINANCE_BRANCH_STORAGE_PREFIX}:${companyScope}:${userScope}:${moduleScope}`;
+}
+
+function getAvailableBranches() {
+    return Array.isArray(state.references?.branches)
+        ? state.references.branches
+            .map((value) => String(value || '').trim())
+            .filter(Boolean)
+        : [];
+}
+
+function findMatchingBranch(branch) {
+    const normalizedBranch = String(branch || '').trim().toLowerCase();
+    if (!normalizedBranch) {
+        return '';
+    }
+
+    return getAvailableBranches().find((value) => value.toLowerCase() === normalizedBranch) || '';
+}
+
 function resetForm(moduleKey) {
     const module = MODULES[moduleKey];
     const moduleState = state.modules[moduleKey];
@@ -223,7 +300,7 @@ function resetForm(moduleKey) {
 
     moduleState.editingId = null;
     refs.dateInput.value = toDateInputValue(new Date());
-    refs.branchInput.value = state.references?.branches?.[0] || '';
+    refs.branchInput.value = getPreferredBranch(moduleKey);
     refs.aboutInput.value = '';
     refs.amountInput.value = '';
     refs.noteInput.value = '';
@@ -278,10 +355,12 @@ async function saveEntry(moduleKey) {
     try {
         if (moduleState.editingId) {
             await module.update(moduleState.editingId, payload);
+            rememberBranchPreference(moduleKey, payload.branch);
             resetForm(moduleKey);
             setFormStatus(moduleKey, `${module.label} updated successfully.`, false);
         } else {
             await module.add(payload);
+            rememberBranchPreference(moduleKey, payload.branch);
             resetForm(moduleKey);
             setFormStatus(moduleKey, `${module.label} saved successfully.`, false);
         }
