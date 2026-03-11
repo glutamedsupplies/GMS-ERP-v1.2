@@ -61,7 +61,7 @@ async function renderRecords() {
                 <td data-label="Time In">${appClient.escapeHtml(record.timeIn || '-')}</td>
                 <td data-label="Time Out">${appClient.escapeHtml(record.timeOut || '-')}</td>
                 <td data-label="Total Hours">${appClient.escapeHtml(record.workedHours || '0.00')}</td>
-                <td data-label="Status">${appClient.escapeHtml(record.status)}</td>
+                <td data-label="Status" class="${statusClass(record.status)}">${appClient.escapeHtml(record.status)}</td>
             `;
             tableBody.appendChild(row);
         });
@@ -91,4 +91,24 @@ function formatShortDate(value) {
         day: 'numeric',
         year: 'numeric'
     });
+}
+
+function statusClass(status) {
+    switch (String(status).toLowerCase()) {
+        case 'present':
+        case 'on time':
+            return 'status-on-time';
+        case 'late':
+            return 'status-late';
+        case 'absent':
+            return 'status-absent';
+        case 'excuse':
+            return 'status-excuse';
+        case 'day off':
+            return 'status-day-off';
+        case 'suspended':
+            return 'status-suspended';
+        default:
+            return '';
+    }
 }

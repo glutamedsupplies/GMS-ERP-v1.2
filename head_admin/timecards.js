@@ -63,8 +63,18 @@ async function loadEmployees() {
 
         employees.forEach((employee, index) => {
             const div = document.createElement('div');
-            div.className = 'employee-item';
-            div.innerHTML = `<img src="${appClient.escapeHtml(employee.profile_picture || appClient.buildAvatarUrl(employee.name))}" alt="${appClient.escapeHtml(employee.name)}"><span>${appClient.escapeHtml(employee.name)}</span>`;
+            const isSuspended = employee.is_active === false;
+            div.className = `employee-item${isSuspended ? ' is-suspended' : ''}`;
+            div.innerHTML = `
+                <div class="employee-main">
+                    <img src="${appClient.escapeHtml(employee.profile_picture || appClient.buildAvatarUrl(employee.name))}" alt="${appClient.escapeHtml(employee.name)}">
+                    <div class="employee-copy">
+                        <strong>${appClient.escapeHtml(employee.name)}</strong>
+                        <small>${appClient.escapeHtml(employee.id || '')}</small>
+                    </div>
+                </div>
+                <span class="account-pill ${isSuspended ? 'suspended' : 'active'}">${isSuspended ? 'Suspended' : 'Active'}</span>
+            `;
             div.addEventListener('click', () => {
                 document.querySelectorAll('.employee-item').forEach((item) => item.classList.remove('active'));
                 div.classList.add('active');
@@ -91,7 +101,16 @@ async function loadEmployees() {
 
 async function listAttendanceUsers() {
     const users = await appClient.listUsers();
-    return users.filter((user) => !isHeadAdminRole(user.role));
+    return users
+        .filter((user) => !isHeadAdminRole(user.role))
+        .sort((left, right) => {
+            const leftRank = left.is_active === false ? 1 : 0;
+            const rightRank = right.is_active === false ? 1 : 0;
+            if (leftRank !== rightRank) {
+                return leftRank - rightRank;
+            }
+            return String(left.name || '').localeCompare(String(right.name || ''));
+        });
 }
 
 function isHeadAdminRole(role) {
@@ -121,11 +140,11 @@ async function renderTimecard(employee) {
         rows.forEach((row) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${appClient.escapeHtml(row.displayDate)}</td>
-                <td>${appClient.escapeHtml(row.dayLabel)}</td>
-                <td>${appClient.escapeHtml(row.timeIn || '--:--')}</td>
-                <td>${appClient.escapeHtml(row.timeOut || '--:--')}</td>
-                <td class="${statusClass(row.status)}">${appClient.escapeHtml(row.status)}</td>
+                <td data-label="Date">${appClient.escapeHtml(row.displayDate)}</td>
+                <td data-label="Day">${appClient.escapeHtml(row.dayLabel)}</td>
+                <td data-label="Time In">${appClient.escapeHtml(row.timeIn || '--:--')}</td>
+                <td data-label="Time Out">${appClient.escapeHtml(row.timeOut || '--:--')}</td>
+                <td data-label="Status" class="${statusClass(row.status)}">${appClient.escapeHtml(row.status)}</td>
             `;
             timecardTableBody.appendChild(tr);
         });
@@ -184,6 +203,8 @@ function statusClass(status) {
             return 'status-excuse';
         case 'day off':
             return 'status-day-off';
+        case 'suspended':
+            return 'status-suspended';
         default:
             return '';
     }

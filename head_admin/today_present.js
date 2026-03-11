@@ -26,6 +26,7 @@ async function initialize() {
     const onTimeCount = document.getElementById('onTimeCount');
     const lateCount = document.getElementById('lateCount');
     const absentCount = document.getElementById('absentCount');
+    const suspendedCount = document.getElementById('suspendedCount');
     const excuseCount = document.getElementById('excuseCount');
     const statusNote = document.getElementById('statusNote');
 
@@ -46,24 +47,24 @@ async function initialize() {
             updateSummary(rows);
 
             if (!rows.length) {
-                tbody.innerHTML = '<tr><td colspan="11" class="no-data">No employee accounts found. Add employees first so today\'s list can show Absent, Late, On Time, or Excuse status for the current date.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" class="no-data">No employee accounts found. Add employees first so today\'s list can show Suspended, Absent, Late, On Time, or Excuse status for the current date.</td></tr>';
                 return;
             }
 
             rows.forEach((row) => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${appClient.escapeHtml(row.id)}</td>
-                    <td>${appClient.escapeHtml(row.name)}</td>
-                    <td><img src="${appClient.escapeHtml(row.avatarUrl)}" class="employee-img" alt="${appClient.escapeHtml(row.name)}"></td>
-                    <td>${formatTime(row.scheduledTimeIn)}</td>
-                    <td>${formatTime(row.timeIn)}</td>
-                    <td>${formatTime(row.scheduledTimeOut)}</td>
-                    <td>${formatTime(row.timeOut)}</td>
-                    <td>${row.statusGroup === 'late' ? row.lateMinutes : 0}</td>
-                    <td><span class="status-pill ${statusClass(row.statusGroup)}">${appClient.escapeHtml(row.status)}</span></td>
-                    <td>${appClient.escapeHtml(row.displayRemarks || '-')}</td>
-                    <td>${buildActionCell(row)}</td>
+                    <td data-label="Employee ID">${appClient.escapeHtml(row.id)}</td>
+                    <td data-label="Name">${appClient.escapeHtml(row.name)}</td>
+                    <td data-label="Photo"><img src="${appClient.escapeHtml(row.avatarUrl)}" class="employee-img" alt="${appClient.escapeHtml(row.name)}"></td>
+                    <td data-label="Scheduled In">${formatTime(row.scheduledTimeIn)}</td>
+                    <td data-label="Time In">${formatTime(row.timeIn)}</td>
+                    <td data-label="Scheduled Out">${formatTime(row.scheduledTimeOut)}</td>
+                    <td data-label="Actual Out">${formatTime(row.timeOut)}</td>
+                    <td data-label="Late Minutes">${row.statusGroup === 'late' ? row.lateMinutes : 0}</td>
+                    <td data-label="Status"><span class="status-pill ${statusClass(row.statusGroup)}">${appClient.escapeHtml(row.status)}</span></td>
+                    <td data-label="Remarks">${appClient.escapeHtml(row.displayRemarks || '-')}</td>
+                    <td data-label="Action">${buildActionCell(row)}</td>
                 `;
 
                 const select = tr.querySelector('.status-editor');
@@ -104,6 +105,7 @@ async function initialize() {
             on_time: 0,
             late: 0,
             absent: 0,
+            suspended: 0,
             excuse: 0
         };
 
@@ -117,12 +119,17 @@ async function initialize() {
         onTimeCount.textContent = String(counts.on_time);
         lateCount.textContent = String(counts.late);
         absentCount.textContent = String(counts.absent);
+        suspendedCount.textContent = String(counts.suspended);
         excuseCount.textContent = String(counts.excuse);
     }
 
     function updateClock() {
         const now = new Date();
-        clock.textContent = now.toLocaleTimeString('en-GB', buildTimeZoneOptions({ hour12: false }));
+        clock.textContent = now.toLocaleTimeString('en-GB', buildTimeZoneOptions({
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }));
     }
 
     function updateDateLabel() {
@@ -179,15 +186,17 @@ async function initialize() {
 }
 
 function formatTime(value) {
-    return value || '--:--:--';
+    return value || '--:--';
 }
 
 function sortTodayRows(rows) {
     const priority = {
-        late: 0,
-        absent: 1,
-        excuse: 2,
-        on_time: 3
+        suspended: 0,
+        late: 1,
+        absent: 2,
+        excuse: 3,
+        on_time: 4,
+        day_off: 5
     };
 
     return [...rows].sort((left, right) => {
@@ -214,8 +223,12 @@ function statusClass(statusGroup) {
             return 'status-late';
         case 'absent':
             return 'status-absent';
+        case 'suspended':
+            return 'status-suspended';
         case 'excuse':
             return 'status-excuse';
+        case 'day_off':
+            return 'status-day-off';
         default:
             return '';
     }

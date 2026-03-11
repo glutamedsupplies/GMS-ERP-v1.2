@@ -7,6 +7,7 @@ const reportBody = document.getElementById('reportBody');
 const recordCount = document.getElementById('recordCount');
 const totalLate = document.getElementById('totalLate');
 const totalAbsent = document.getElementById('totalAbsent');
+const totalSuspended = document.getElementById('totalSuspended');
 const reportStatus = document.getElementById('reportStatus');
 
 initialize();
@@ -84,39 +85,47 @@ async function renderReport() {
             recordCount.innerText = '0';
             totalLate.innerText = '0';
             totalAbsent.innerText = '0';
+            totalSuspended.innerText = '0';
             return;
         }
 
         let lateTotal = 0;
         let absentTotal = 0;
+        let suspendedTotal = 0;
         recordCount.innerText = String(records.length);
 
         records.forEach((record) => {
             lateTotal += Number(record.lateMinutes || 0);
-            if (String(record.status).toLowerCase() === 'absent') {
+            const normalizedStatus = String(record.status).toLowerCase();
+            if (normalizedStatus === 'absent') {
                 absentTotal += 1;
+            }
+            if (normalizedStatus === 'suspended') {
+                suspendedTotal += 1;
             }
 
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${appClient.escapeHtml(record.displayDate || record.dateKey || '-')}</td>
-                <td>${appClient.escapeHtml(record.name)}</td>
-                <td>${appClient.escapeHtml(record.timeIn || '-')}</td>
-                <td>${appClient.escapeHtml(record.timeOut || '-')}</td>
-                <td>${appClient.escapeHtml(String(record.lateMinutes || 0))}</td>
-                <td class="${statusClass(record.status)}">${appClient.escapeHtml(record.status)}</td>
+                <td data-label="Date">${appClient.escapeHtml(record.displayDate || record.dateKey || '-')}</td>
+                <td data-label="Account">${appClient.escapeHtml(record.name)}</td>
+                <td data-label="Time In">${appClient.escapeHtml(record.timeIn || '-')}</td>
+                <td data-label="Time Out">${appClient.escapeHtml(record.timeOut || '-')}</td>
+                <td data-label="Minutes Late">${appClient.escapeHtml(String(record.lateMinutes || 0))}</td>
+                <td data-label="Status" class="${statusClass(record.status)}">${appClient.escapeHtml(record.status)}</td>
             `;
             reportBody.appendChild(row);
         });
 
         totalLate.innerText = String(lateTotal);
         totalAbsent.innerText = String(absentTotal);
+        totalSuspended.innerText = String(suspendedTotal);
     } catch (error) {
         console.error('Failed to render attendance report:', error);
         reportBody.innerHTML = `<tr><td colspan="6" class="empty-row is-error">${appClient.escapeHtml(error.message)}</td></tr>`;
         recordCount.innerText = '0';
         totalLate.innerText = '0';
         totalAbsent.innerText = '0';
+        totalSuspended.innerText = '0';
         setReportStatus(error.message, true);
     }
 }
@@ -130,6 +139,8 @@ function statusClass(status) {
             return 'status-late';
         case 'absent':
             return 'status-absent';
+        case 'suspended':
+            return 'status-suspended';
         default:
             return 'status-excused';
     }

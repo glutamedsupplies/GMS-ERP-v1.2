@@ -353,6 +353,47 @@ function run() {
         );
     });
 
+    // Suspended attendance accounts should stay visible in attendance views and reject attendance actions.
+    store.runWithTenantContextByCompany(companyBId, () => {
+        store.addUser({
+            id: 'b_suspended_user',
+            username: 'b_suspended_user',
+            name: 'B Suspended User',
+            password: 'Password123!',
+            role: 'employee'
+        });
+
+        store.updateUser('b_suspended_user', {
+            is_active: false
+        });
+
+        const todayKey = store.getDateKey();
+        const weeklyRows = store.getUserWeeklyTimeCard('b_suspended_user', todayKey);
+        assert(
+            weeklyRows.some((row) => row.status === 'Suspended'),
+            'weekly time card should surface Suspended for inactive users without attendance rows'
+        );
+
+        const snapshotRow = store.getDailyAttendanceSnapshot(todayKey)
+            .find((row) => row.id === 'b_suspended_user');
+        assert(snapshotRow, 'daily attendance snapshot should include suspended accounts');
+        assert.strictEqual(snapshotRow.status, 'Suspended', 'suspended account should show Suspended status');
+        assert.strictEqual(snapshotRow.displayRemarks, 'Account suspended', 'suspended account should explain the inactive state');
+        assert.strictEqual(snapshotRow.canEditStatus, false, 'suspended account should not allow daily status editing');
+
+        expectThrows(
+            () => store.recordTimeIn('b_suspended_user'),
+            /suspended/i,
+            'time in suspended account'
+        );
+
+        expectThrows(
+            () => store.setDailyAttendanceStatus('b_suspended_user', 'Absent'),
+            /suspended/i,
+            'manual attendance edit suspended account'
+        );
+    });
+
     // Custom domain must be ignored if add-on inactive.
     const unresolved = store.getCompanyByCodeOrHost('', 'erp.company-a.example');
     assert(

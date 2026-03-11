@@ -425,6 +425,10 @@ async function saveEmployee() {
 
 function updateClock() {
     if (liveClock) {
-        liveClock.innerText = new Date().toLocaleTimeString('en-GB', { hour12: false });
+        liveClock.innerText = new Date().toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
     }
 }

@@ -529,7 +529,7 @@ html[data-app-mobile="true"] body {
   html[data-app-section="head_admin"] .table-wrap,
   html[data-app-section="head_admin"] .table-container,
   html[data-app-section="head_admin"] .table-scroll-proxy {
-    overflow-x: visible !important;
+    overflow-x: auto !important;
     -webkit-overflow-scrolling: auto;
   }
 

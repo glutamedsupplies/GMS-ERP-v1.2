@@ -62,7 +62,11 @@ async function handleAction(type) {
 
 function updateClock() {
     const now = new Date();
-    clockEl.innerText = now.toLocaleTimeString('en-GB', buildTimeZoneOptions({ hour12: false }));
+    clockEl.innerText = now.toLocaleTimeString('en-GB', buildTimeZoneOptions({
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }));
     dateEl.innerText = now
         .toLocaleDateString('en-US', buildTimeZoneOptions({
             weekday: 'short',

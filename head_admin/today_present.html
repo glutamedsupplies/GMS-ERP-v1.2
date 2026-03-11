@@ -151,7 +151,7 @@
 
   .summary-grid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 14px;
   }
 
@@ -175,6 +175,7 @@
   .summary-card.on-time::before { background: rgba(15, 118, 110, 0.5); }
   .summary-card.late::before { background: rgba(217, 119, 6, 0.48); }
   .summary-card.absent::before { background: rgba(220, 38, 38, 0.48); }
+  .summary-card.suspended::before { background: rgba(100, 116, 139, 0.48); }
   .summary-card.excuse::before { background: rgba(var(--primary-rgb), 0.34); }
 
   .summary-label {
@@ -198,6 +199,7 @@
   .summary-card.on-time .summary-value { color: var(--success); }
   .summary-card.late .summary-value { color: var(--warning); }
   .summary-card.absent .summary-value { color: var(--danger); }
+  .summary-card.suspended .summary-value { color: #475569; }
   .summary-card.excuse .summary-value { color: var(--primary); }
 
   .table-card {
@@ -287,7 +289,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 90px;
+    min-width: 110px;
     padding: 8px 14px;
     border-radius: 999px;
     font-size: 12px;
@@ -299,7 +301,9 @@
   .status-on-time { color: var(--success); background: rgba(15, 118, 110, 0.12); }
   .status-late { color: var(--warning); background: rgba(217, 119, 6, 0.14); }
   .status-absent { color: var(--danger); background: rgba(220, 38, 38, 0.12); }
+  .status-suspended { color: #475569; background: rgba(100, 116, 139, 0.16); }
   .status-excuse { color: var(--primary-strong); background: rgba(var(--primary-rgb), 0.12); }
+  .status-day-off { color: var(--muted); background: rgba(148, 163, 184, 0.14); }
 
   .no-data { color: var(--muted); font-style: italic; }
 
@@ -325,7 +329,7 @@
   .status-editor:disabled { opacity: 0.66; cursor: wait; }
 
   @media (max-width: 1180px) {
-    .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
 
   @media (max-width: 860px) {
@@ -334,6 +338,7 @@
     .hero-head, .table-head { flex-direction: column; align-items: stretch; }
     .hero-meta { width: 100%; justify-items: stretch; }
     .meta-card { min-width: 0; text-align: left; }
+    .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 
   @media (max-width: 640px) {
@@ -350,7 +355,7 @@
       <div class="hero-copy">
         <span class="hero-kicker"><i class="fa-regular fa-calendar-check"></i> Attendance Overview</span>
         <h1>Today Attendance Snapshot</h1>
-        <p>Current-date view of all employees with On Time, Late, Absent, and Excuse status in a tenant-aware layout that stays balanced across company colors.</p>
+        <p>Current-date view of all employees with On Time, Late, Absent, Excuse, and Suspended status in a tenant-aware layout that stays balanced across company colors.</p>
       </div>
       <div class="hero-meta">
         <div class="meta-card">
@@ -382,6 +387,10 @@
       <span class="summary-label">Absent</span>
       <strong class="summary-value" id="absentCount">0</strong>
     </article>
+    <article class="summary-card suspended">
+      <span class="summary-label">Suspended</span>
+      <strong class="summary-value" id="suspendedCount">0</strong>
+    </article>
     <article class="summary-card excuse">
       <span class="summary-label">Excuse</span>
       <strong class="summary-value" id="excuseCount">0</strong>
@@ -392,12 +401,12 @@
     <div class="table-head">
       <div>
         <h2>Employee Attendance For Today</h2>
-        <p>Absent employees are inferred from the employee list when no current-date record exists in the attendance log.</p>
+        <p>Absent employees are inferred from the employee list when no current-date record exists in the attendance log, while inactive accounts stay tagged as Suspended.</p>
       </div>
       <div class="status-note" id="statusNote"></div>
     </div>
     <div class="table-wrap">
-      <table>
+      <table data-mobile-card-ready="true">
         <thead>
           <tr>
             <th>Employee ID</th>

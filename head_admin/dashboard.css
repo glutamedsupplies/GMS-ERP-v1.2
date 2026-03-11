@@ -33,7 +33,7 @@ body {
   font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
   color: var(--tenant-text-strong);
   background: var(--tenant-page-gradient);
-  overflow: hidden;
+  overflow: auto;
 }
 
 body::before,
@@ -430,11 +430,12 @@ body::after {
 .top-panel-items {
   display: flex;
   align-items: center;
+  align-content: flex-start;
+  flex-wrap: wrap;
   gap: 8px;
   width: 100%;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-width: thin;
+  overflow: visible;
+  padding-bottom: 0;
 }
 
 .top-panel-button {
