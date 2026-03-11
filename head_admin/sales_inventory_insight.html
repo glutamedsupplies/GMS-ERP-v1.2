@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales and Inventory Insight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #edf1ec;
+    --panel: rgba(255, 255, 255, 0.9);
+    --ink: #10261f;
+    --muted: #5f746a;
+    --line: #d5dfd8;
+    --green: #2f7d5a;
+    --green-soft: #e9f5ef;
+    --amber-soft: #fff5da;
+    --red-soft: #fdecec;
+    --slate: #5f6f81;
+    --slate-soft: #eef3f8;
+    --shadow: 0 26px 60px rgba(16, 38, 31, 0.1);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Manrope", sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at top left, rgba(47, 125, 90, 0.14), transparent 24%),
+      radial-gradient(circle at right bottom, rgba(209, 143, 28, 0.12), transparent 26%),
+      linear-gradient(180deg, #fafcf8 0%, var(--bg) 100%);
+  }
+  .page {
+    max-width: 1560px;
+    margin: 0 auto;
+    padding: 28px 22px 42px;
+  }
+  .hero,
+  .panel,
+  .metric-card {
+    background: var(--panel);
+    border: 1px solid rgba(255, 255, 255, 0.78);
+    border-radius: 28px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+  }
+  .hero {
+    padding: 28px;
+    margin-bottom: 18px;
+  }
+  .hero-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .eyebrow {
+    margin: 0 0 8px;
+    color: var(--green);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  h1,
+  h2 {
+    margin: 0;
+    font-family: "Fraunces", serif;
+  }
+  h1 {
+    font-size: clamp(34px, 4vw, 52px);
+    line-height: 1.04;
+  }
+  h2 {
+    font-size: clamp(22px, 2.2vw, 30px);
+  }
+  .hero-copy,
+  .section-copy {
+    margin: 12px 0 0;
+    color: var(--muted);
+    line-height: 1.7;
+    max-width: 860px;
+  }
+  .scope-card {
+    min-width: 320px;
+    padding: 18px 20px;
+    border-radius: 24px;
+    border: 1px solid #dbe9e0;
+    background: linear-gradient(180deg, #f7fbf9 0%, #edf4f0 100%);
+  }
+  .scope-card span,
+  .scope-card strong,
+  .scope-card small {
+    display: block;
+  }
+  .scope-card span {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .scope-card strong {
+    margin-top: 8px;
+    font-size: 26px;
+    line-height: 1.2;
+  }
+  .scope-card small {
+    margin-top: 10px;
+    color: var(--muted);
+    font-weight: 700;
+    line-height: 1.5;
+  }
+  .filter-panel {
+    margin-top: 18px;
+    padding: 18px;
+    border-radius: 24px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.78);
+  }
+  .filter-grid {
+    display: grid;
+    grid-template-columns: 1.05fr repeat(3, minmax(0, 1fr)) 1.1fr 1.3fr;
+    gap: 12px;
+    align-items: end;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .field label {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  input,
+  select,
+  button {
+    font: inherit;
+  }
+  input,
+  select {
+    width: 100%;
+    min-height: 50px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 12px 14px;
+    background: #fffefc;
+    color: var(--ink);
+  }
+  input:focus,
+  select:focus {
+    outline: none;
+    border-color: rgba(47, 125, 90, 0.42);
+    box-shadow: 0 0 0 4px rgba(47, 125, 90, 0.1);
+  }
+  .filter-actions {
+    display: flex;
+    gap: 10px;
+  }
+  button {
+    min-height: 48px;
+    border: none;
+    border-radius: 16px;
+    padding: 0 18px;
+    cursor: pointer;
+    font-weight: 800;
+  }
+  .primary-btn {
+    background: linear-gradient(135deg, #2f7d5a 0%, #46a275 100%);
+    color: #fff;
+  }
+  .secondary-btn {
+    background: #edf4ef;
+    color: var(--green);
+  }
+  .status {
+    min-height: 22px;
+    margin-top: 14px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .status.error {
+    color: #b42318;
+  }
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .metric-card {
+    padding: 20px;
+  }
+  .metric-card.sales {
+    background: linear-gradient(180deg, #fbfffc 0%, #eef8f1 100%);
+  }
+  .metric-card.stock {
+    background: linear-gradient(180deg, #fcfffd 0%, #eef6f2 100%);
+  }
+  .metric-card.slow {
+    background: linear-gradient(180deg, #fffdf8 0%, #fff3df 100%);
+  }
+  .metric-card.expired {
+    background: linear-gradient(180deg, #fffafa 0%, #fdeaea 100%);
+  }
+  .metric-card.near {
+    background: linear-gradient(180deg, #fbfbff 0%, #eef3f8 100%);
+  }
+  .metric-card.best {
+    background: linear-gradient(180deg, #f7fffb 0%, #e7f6ec 100%);
+  }
+  .metric-card span,
+  .metric-card strong,
+  .metric-card small {
+    display: block;
+  }
+  .metric-card span {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .metric-card strong {
+    margin-top: 10px;
+    font-size: clamp(26px, 3vw, 38px);
+    line-height: 1.05;
+  }
+  .metric-card small {
+    margin-top: 10px;
+    color: var(--muted);
+    font-weight: 700;
+    line-height: 1.5;
+  }
+  .content-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .panel {
+    padding: 20px;
+  }
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .panel-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border-radius: 999px;
+    background: #f1f6f3;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .table-shell {
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.86);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 620px;
+  }
+  th,
+  td {
+    padding: 13px 14px;
+    text-align: left;
+    border-bottom: 1px solid #edf2ee;
+    font-size: 13px;
+    vertical-align: top;
+  }
+  th {
+    background: #f7fbf8;
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  tr:last-child td {
+    border-bottom: none;
+  }
+  .item-cell strong,
+  .item-cell small {
+    display: block;
+  }
+  .item-cell strong {
+    font-size: 14px;
+  }
+  .item-cell small {
+    margin-top: 4px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+  }
+  .pill.good {
+    background: var(--green-soft);
+    color: #1e6c49;
+    border-color: #cce7d8;
+  }
+  .pill.warn {
+    background: var(--amber-soft);
+    color: #8d5a00;
+    border-color: #f2d89a;
+  }
+  .pill.danger {
+    background: var(--red-soft);
+    color: #ab3131;
+    border-color: #f3c3c3;
+  }
+  .pill.muted {
+    background: var(--slate-soft);
+    color: var(--slate);
+    border-color: #d6e1ea;
+  }
+  .qty {
+    font-weight: 800;
+    font-size: 15px;
+  }
+  .money {
+    font-weight: 800;
+  }
+  .empty {
+    padding: 22px;
+    color: var(--muted);
+    text-align: center;
+    font-weight: 700;
+  }
+  @media (max-width: 1200px) {
+    .filter-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .filter-actions {
+      grid-column: span 3;
+    }
+  }
+  @media (max-width: 980px) {
+    .content-grid {
+      grid-template-columns: 1fr;
+    }
+    .scope-card {
+      width: 100%;
+      min-width: 0;
+    }
+    .filter-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .filter-actions {
+      grid-column: span 2;
+    }
+  }
+  @media (max-width: 640px) {
+    .page {
+      padding: 18px 14px 28px;
+    }
+    .hero,
+    .panel,
+    .metric-card {
+      border-radius: 22px;
+    }
+    .hero,
+    .panel {
+      padding: 18px;
+    }
+    .filter-grid {
+      grid-template-columns: 1fr;
+    }
+    .filter-actions {
+      grid-column: auto;
+      flex-direction: column;
+    }
+    table {
+      min-width: 560px;
+    }
+  }
+</style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="hero-head">
+        <div>
+          <p class="eyebrow">Sales & Inventory Insight</p>
+          <h1>Movement and Expiry Dashboard</h1>
+          <p class="hero-copy">Isang panel para makita agad ang mabenta, hindi mabenta, expired, at malapit ma-expired na stock base sa current inventory at sales activity ng piniling period.</p>
+        </div>
+        <div class="scope-card">
+          <span>Current Scope</span>
+          <strong id="activeScopeLabel">Loading...</strong>
+          <small id="activeSummaryLabel">Preparing branch and date filters.</small>
+        </div>
+      </div>
+
+      <div class="filter-panel">
+        <div class="filter-grid">
+          <div class="field">
+            <label for="rangePreset">Report View</label>
+            <select id="rangePreset">
+              <option value="this_month">This Month</option>
+              <option value="last_30_days">Last 30 Days</option>
+              <option value="this_quarter">This Quarter</option>
+              <option value="custom">Custom Range</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="dateFrom">Date From</label>
+            <input id="dateFrom" type="date">
+          </div>
+          <div class="field">
+            <label for="dateTo">Date To</label>
+            <input id="dateTo" type="date">
+          </div>
+          <div class="field">
+            <label for="branchFilter">Branch</label>
+            <select id="branchFilter">
+              <option value="">All Branches</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="itemSearch">Item Search</label>
+            <input id="itemSearch" type="search" placeholder="Product, code, branch, or unit">
+          </div>
+          <div class="filter-actions">
+            <button class="primary-btn" id="applyFiltersBtn" type="button">Apply</button>
+            <button class="secondary-btn" id="resetFiltersBtn" type="button">Reset</button>
+          </div>
+        </div>
+        <div class="status" id="panelStatus"></div>
+      </div>
+    </section>
+
+    <section class="metric-grid">
+      <article class="metric-card sales">
+        <span>Total Sold Qty</span>
+        <strong id="totalSoldQtyValue">0</strong>
+        <small>Total quantity sold in the selected period.</small>
+      </article>
+      <article class="metric-card stock">
+        <span>Stock Lines</span>
+        <strong id="stockLinesValue">0</strong>
+        <small>Inventory rows with quantity still on hand.</small>
+      </article>
+      <article class="metric-card slow">
+        <span>Slow Movers</span>
+        <strong id="slowMoverValue">0</strong>
+        <small>Items with no sales or weak movement versus current stock.</small>
+      </article>
+      <article class="metric-card expired">
+        <span>Expired</span>
+        <strong id="expiredValue">0</strong>
+        <small>Current stock that is already beyond its expiration date.</small>
+      </article>
+      <article class="metric-card near">
+        <span>Near Expiry</span>
+        <strong id="nearExpiryValue">0</strong>
+        <small>Stock expiring within the next 7 days.</small>
+      </article>
+      <article class="metric-card best">
+        <span>Best Seller</span>
+        <strong id="bestSellerValue">-</strong>
+        <small id="bestSellerMeta">Top moving product in the selected period.</small>
+      </article>
+    </section>
+
+    <section class="content-grid">
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Mabenta</h2>
+            <p class="section-copy">Top items ranked by sold quantity and line sales for the selected period.</p>
+          </div>
+          <div class="panel-meta"><i class="fa-solid fa-arrow-trend-up"></i> Top Sellers</div>
+        </div>
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Item</th>
+                <th>Qty Sold</th>
+                <th>Line Sales</th>
+                <th>Branches</th>
+                <th>Last Sold</th>
+              </tr>
+            </thead>
+            <tbody id="topSellerBody"></tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Hindi Mabenta</h2>
+            <p class="section-copy">Items with stock on hand but weak or zero movement versus the selected sales period.</p>
+          </div>
+          <div class="panel-meta"><i class="fa-solid fa-box-open"></i> Slow Movers</div>
+        </div>
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Branch</th>
+                <th>On Hand</th>
+                <th>Qty Sold</th>
+                <th>Signal</th>
+              </tr>
+            </thead>
+            <tbody id="slowMoverBody"></tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Expired</h2>
+            <p class="section-copy">Stock rows with quantity still on hand even though the expiration date has passed.</p>
+          </div>
+          <div class="panel-meta"><i class="fa-solid fa-ban"></i> Action Needed</div>
+        </div>
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Branch</th>
+                <th>Qty</th>
+                <th>Expired On</th>
+                <th>Days Over</th>
+              </tr>
+            </thead>
+            <tbody id="expiredBody"></tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Malapit Ma-Expired</h2>
+            <p class="section-copy">Stock expiring within 7 days para maagapan bago masayang.</p>
+          </div>
+          <div class="panel-meta"><i class="fa-regular fa-clock"></i> Next 7 Days</div>
+        </div>
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Branch</th>
+                <th>Qty</th>
+                <th>Expires On</th>
+                <th>In</th>
+              </tr>
+            </thead>
+            <tbody id="nearExpiryBody"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script src="../shared/app-client.js"></script>
+  <script src="sales_inventory_insight.js"></script>
+</body>
+</html>

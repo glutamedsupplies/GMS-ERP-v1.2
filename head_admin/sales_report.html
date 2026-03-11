@@ -195,6 +195,7 @@
     border-radius: 26px;
     border: 1px solid var(--line);
     background: linear-gradient(180deg, #fbfffc 0%, #f1f8f4 100%);
+    min-width: 0;
   }
   .metric-card.expense {
     background: linear-gradient(180deg, #fffdf9 0%, #fff4e8 100%);
@@ -223,6 +224,11 @@
   .metric-card strong {
     margin-top: 10px;
     font-size: clamp(26px, 3vw, 38px);
+    line-height: 1.08;
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
   .metric-card small {
     margin-top: 10px;
@@ -240,6 +246,7 @@
     border-radius: 24px;
     border: 1px solid var(--line);
     background: rgba(255, 255, 255, 0.82);
+    min-width: 0;
   }
   .mini-card span,
   .mini-card strong {
@@ -255,6 +262,11 @@
   .mini-card strong {
     margin-top: 8px;
     font-size: clamp(24px, 3vw, 32px);
+    line-height: 1.08;
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
   .content-grid {
     display: grid;
