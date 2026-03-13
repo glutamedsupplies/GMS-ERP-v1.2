@@ -63,6 +63,10 @@ let RECEIPT_APPROVER_COMPANY = 'Company Management';
 let RECEIPT_BUSINESS_NAME = '';
 let RECEIPT_BUSINESS_ADDRESS = '';
 let RECEIPT_BUSINESS_CONTACT = '';
+const PDF_LIB_URLS = Object.freeze({
+    html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+    jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+});
 const DEFAULT_RECEIPT_TEMPLATE = Object.freeze({
     title: 'Sales Receipt',
     subtitle: 'Official transaction summary',
@@ -1075,6 +1079,157 @@ function buildReceiptPdfFileName(receipt) {
     return `${sanitized || 'receipt'}.pdf`;
 }
 
+function createHiddenPrintFrame(html) {
+    const frame = document.createElement('iframe');
+    frame.style.position = 'fixed';
+    frame.style.left = '-10000px';
+    frame.style.top = '0';
+    frame.style.width = '1200px';
+    frame.style.height = '1600px';
+    frame.style.border = '0';
+    frame.style.visibility = 'hidden';
+    document.body.appendChild(frame);
+
+    const doc = frame.contentDocument;
+    if (doc) {
+        doc.open();
+        doc.write(html);
+        doc.close();
+    }
+
+    return frame;
+}
+
+function waitForFrameReady(frame) {
+    return new Promise((resolve) => {
+        if (!frame) {
+            resolve();
+            return;
+        }
+
+        const doc = frame.contentDocument;
+        if (doc?.readyState === 'complete') {
+            resolve();
+            return;
+        }
+
+        frame.addEventListener('load', () => resolve(), { once: true });
+    });
+}
+
+function waitForImages(doc) {
+    if (!doc) {
+        return Promise.resolve();
+    }
+
+    const images = Array.from(doc.images || []);
+    if (!images.length) {
+        return Promise.resolve();
+    }
+
+    return Promise.all(images.map((img) => new Promise((resolve) => {
+        if (img.complete && img.naturalWidth > 0) {
+            resolve();
+            return;
+        }
+        const finalize = () => resolve();
+        img.addEventListener('load', finalize, { once: true });
+        img.addEventListener('error', finalize, { once: true });
+    }))).then(() => undefined);
+}
+
+async function renderReceiptPrintCanvas(receipt) {
+    const printHtml = buildReceiptPrintHtml(receipt);
+    const frame = createHiddenPrintFrame(printHtml);
+
+    try {
+        await waitForFrameReady(frame);
+        const doc = frame.contentDocument;
+        await waitForImages(doc);
+
+        const sheet = doc?.querySelector('.sheet') || doc?.body;
+        if (!sheet) {
+            return null;
+        }
+
+        return await html2canvas(sheet, {
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            scale: 2
+        });
+    } finally {
+        if (frame?.parentNode) {
+            frame.parentNode.removeChild(frame);
+        }
+    }
+}
+
+const pdfLibScriptCache = new Map();
+let pdfLibLoadPromise = null;
+
+function loadExternalScript(src) {
+    if (pdfLibScriptCache.has(src)) {
+        return pdfLibScriptCache.get(src);
+    }
+
+    const loadPromise = new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[src="${src}"]`);
+        if (existing && existing.dataset.loaded === 'true') {
+            resolve();
+            return;
+        }
+
+        if (existing) {
+            existing.addEventListener('load', () => {
+                existing.dataset.loaded = 'true';
+                resolve();
+            }, { once: true });
+            existing.addEventListener('error', () => {
+                reject(new Error(`Failed to load ${src}`));
+            }, { once: true });
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.dataset.loaded = 'false';
+        script.addEventListener('load', () => {
+            script.dataset.loaded = 'true';
+            resolve();
+        }, { once: true });
+        script.addEventListener('error', () => {
+            reject(new Error(`Failed to load ${src}`));
+        }, { once: true });
+        document.head.appendChild(script);
+    });
+
+    pdfLibScriptCache.set(src, loadPromise);
+    return loadPromise;
+}
+
+async function ensurePdfLibraries() {
+    if (typeof html2canvas !== 'undefined' && typeof jspdf !== 'undefined') {
+        return true;
+    }
+
+    if (!pdfLibLoadPromise) {
+        pdfLibLoadPromise = Promise.all([
+            loadExternalScript(PDF_LIB_URLS.html2canvas),
+            loadExternalScript(PDF_LIB_URLS.jspdf)
+        ]).catch((error) => {
+            console.error('Failed to load PDF libraries:', error);
+        }).finally(() => {
+            if (typeof html2canvas === 'undefined' || typeof jspdf === 'undefined') {
+                pdfLibLoadPromise = null;
+            }
+        });
+    }
+
+    await pdfLibLoadPromise;
+    return typeof html2canvas !== 'undefined' && typeof jspdf !== 'undefined';
+}
+
 function printReceipt() {
     if (!state.lastReceipt) {
         return;
@@ -1091,12 +1246,6 @@ async function saveReceiptAsPdf() {
         return;
     }
 
-    const receiptDialog = document.querySelector('.receipt-dialog');
-    if (!receiptDialog) {
-        setReportStatus('Receipt element not found.', true);
-        return;
-    }
-
     const fallbackToPrint = () => {
         setReportStatus('Opening print dialog for PDF...', false);
         openReceiptPrintPopup(state.lastReceipt, {
@@ -1106,24 +1255,53 @@ async function saveReceiptAsPdf() {
     };
 
     if (typeof html2canvas === 'undefined' || typeof jspdf === 'undefined') {
+        setReportStatus('Loading PDF tools...', false);
+        const librariesReady = await ensurePdfLibraries();
+        if (!librariesReady) {
+            fallbackToPrint();
+            return;
+        }
+    }
+
+    if (typeof html2canvas === 'undefined' || typeof jspdf === 'undefined') {
         fallbackToPrint();
         return;
     }
 
     try {
         setReportStatus('Preparing PDF...', false);
-        const canvas = await html2canvas(receiptDialog, {
-            useCORS: true,
-            backgroundColor: '#ffffff'
-        });
+        const canvas = await renderReceiptPrintCanvas(state.lastReceipt);
+        if (!canvas) {
+            setReportStatus('Receipt layout not found. Opening print dialog instead.', true);
+            fallbackToPrint();
+            return;
+        }
         const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({
             orientation: 'p',
-            unit: 'px',
-            format: [canvas.width, canvas.height]
+            unit: 'pt',
+            format: 'a4'
         });
-        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 18;
+        const usableWidth = pageWidth - margin * 2;
+        const usableHeight = pageHeight - margin * 2;
+        const imgWidth = usableWidth;
+        const imgHeight = canvas.height * (imgWidth / canvas.width);
+        let heightLeft = imgHeight;
+        let position = margin;
+
+        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+        heightLeft -= usableHeight;
+
+        while (heightLeft > 0) {
+            pdf.addPage();
+            position = margin - (imgHeight - heightLeft);
+            pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+            heightLeft -= usableHeight;
+        }
         pdf.save(buildReceiptPdfFileName(state.lastReceipt));
         setReportStatus('PDF saved.', false);
     } catch (error) {
