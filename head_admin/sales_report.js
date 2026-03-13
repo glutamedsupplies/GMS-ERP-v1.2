@@ -50,6 +50,7 @@ const receiptModalItems = document.getElementById('receiptModalItems');
 const receiptModalTotals = document.getElementById('receiptModalTotals');
 const receiptModalApproval = document.getElementById('receiptModalApproval');
 const printReceiptBtn = document.getElementById('printReceiptBtn');
+const saveReceiptPdfBtn = document.getElementById('saveReceiptPdfBtn');
 const dismissReceiptBtn = document.getElementById('dismissReceiptBtn');
 const closeReceiptBtn = document.getElementById('closeReceiptBtn');
 let RECEIPT_LOGO_SRC = new URL('../logo.png', window.location.href).href;
@@ -289,6 +290,7 @@ function bindEvents() {
         }
     });
     printReceiptBtn?.addEventListener('click', printReceipt);
+    saveReceiptPdfBtn?.addEventListener('click', saveReceiptAsPdf);
     dismissReceiptBtn?.addEventListener('click', closeReceiptModal);
     closeReceiptBtn?.addEventListener('click', closeReceiptModal);
     salesTableShell?.addEventListener('scroll', () => syncSalesTableScroll(salesTableShell, salesTableScrollProxy));
@@ -1049,6 +1051,54 @@ function printReceipt() {
     popup.document.write(buildReceiptPrintHtml(state.lastReceipt));
     popup.document.close();
     popup.focus();
+}
+
+async function saveReceiptAsPdf() {
+    console.log('saveReceiptAsPdf called');
+    if (typeof html2canvas === 'undefined' || typeof jspdf === 'undefined') {
+        alert('PDF generation library not loaded.');
+        return;
+    }
+
+    console.log('PDF libraries loaded.');
+
+    if (!state.lastReceipt) {
+        console.log('No last receipt');
+        return;
+    }
+    console.log('lastReceipt:', state.lastReceipt);
+
+    const { jsPDF } = window.jspdf;
+    const receiptDialog = document.querySelector('.receipt-dialog');
+    console.log('receiptDialog:', receiptDialog);
+
+    if (!receiptDialog) {
+        setReportStatus('Receipt element not found.', true);
+        return;
+    }
+
+    try {
+        console.log('Calling html2canvas');
+        const canvas = await html2canvas(receiptDialog);
+        console.log('html2canvas finished');
+
+        const imgData = canvas.toDataURL('image/png');
+        console.log('imgData created');
+        const pdf = new jsPDF({
+            orientation: 'p',
+            unit: 'px',
+            format: [canvas.width, canvas.height]
+        });
+        console.log('jsPDF instance created');
+
+        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+        console.log('image added to pdf');
+        pdf.save(`${state.lastReceipt.receiptNumber}.pdf`);
+        console.log('pdf saved');
+    } catch (error) {
+        console.error('Failed to generate PDF:', error);
+        setReportStatus('Failed to generate PDF.', true);
+    }
 }
 
 function buildReceiptPrintHtml(receipt) {
