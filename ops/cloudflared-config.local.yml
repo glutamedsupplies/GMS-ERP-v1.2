@@ -1,0 +1,9 @@
+tunnel: f605fc54-907b-4ace-87ff-c0d144378cbb
+credentials-file: "C:\\Users\\pc\\.cloudflared\\f605fc54-907b-4ace-87ff-c0d144378cbb.json"
+
+ingress:
+  - hostname: gmserp.com
+    service: http://127.0.0.1:3000
+  - hostname: www.gmserp.com
+    service: http://127.0.0.1:3000
+  - service: http_status:404
