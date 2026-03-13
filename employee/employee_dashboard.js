@@ -236,7 +236,7 @@ function bindLogoutListener() {
     window.addEventListener('message', async (event) => {
         if (event.data === 'logout') {
             await appClient.clearSession();
-            window.location.replace('/index.html');
+            appClient.redirectToLogin?.();
         }
     });
 }

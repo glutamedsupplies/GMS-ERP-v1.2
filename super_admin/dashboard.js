@@ -46,6 +46,12 @@ const companySummary = document.getElementById('companySummary');
 const companiesList = document.getElementById('companiesList');
 const plansList = document.getElementById('plansList');
 const auditList = document.getElementById('auditList');
+const accessFilter = document.getElementById('accessFilter');
+const accessSummary = document.getElementById('accessSummary');
+const accessList = document.getElementById('accessList');
+const blockedFilter = document.getElementById('blockedFilter');
+const blockedSummary = document.getElementById('blockedSummary');
+const blockedList = document.getElementById('blockedList');
 const planEditModal = document.getElementById('planEditModal');
 const planEditCloseBtn = document.getElementById('planEditCloseBtn');
 const planEditCancelBtn = document.getElementById('planEditCancelBtn');
@@ -75,6 +81,8 @@ const state = {
     companies: [],
     plans: [],
     logs: [],
+    accessLogs: [],
+    blockedDevices: [],
     editingPlanOriginalId: ''
 };
 let pendingCompanyLogoPath = '';
@@ -95,7 +103,7 @@ async function initialize() {
     }
     logoutBtn.addEventListener('click', async () => {
         await appClient.clearSession();
-        window.location.replace('/index.html');
+        appClient.redirectToLogin?.();
     });
     createCompanyBtn.addEventListener('click', createCompany);
     createPlanBtn.addEventListener('click', createPlan);
@@ -125,6 +133,18 @@ async function initialize() {
     if (companyFilter) {
         companyFilter.addEventListener('input', renderCompanies);
     }
+    if (accessFilter) {
+        accessFilter.addEventListener('input', renderAccessLogs);
+    }
+    if (blockedFilter) {
+        blockedFilter.addEventListener('input', renderBlockedDevices);
+    }
+    if (accessList) {
+        accessList.addEventListener('click', handleAccessAction);
+    }
+    if (blockedList) {
+        blockedList.addEventListener('click', handleBlockedAction);
+    }
 
     resetCreateCompanyBrandingInputs();
     await loadData();
@@ -133,22 +153,28 @@ async function initialize() {
 async function loadData() {
     setStatus('Loading...');
     try {
-        const [bootstrap, companies, plans, logs] = await Promise.all([
+        const [bootstrap, companies, plans, logs, accessLogs, blockedDevices] = await Promise.all([
             appClient.getSuperBootstrap(),
             appClient.listSuperCompanies(),
             appClient.listSuperPlans(),
-            appClient.listSuperAuditLogs({ limit: 200 })
+            appClient.listSuperAuditLogs({ limit: 200 }),
+            appClient.listSuperAccessLogs({ limit: 200 }),
+            appClient.listSuperBlockedDevices({ limit: 200 })
         ]);
 
         state.bootstrap = bootstrap || {};
         state.companies = companies || [];
         state.plans = plans || [];
         state.logs = logs || [];
+        state.accessLogs = accessLogs || [];
+        state.blockedDevices = blockedDevices || [];
 
         renderOverviewStats();
         renderPlans();
         renderCompanies();
         renderLogs();
+        renderAccessLogs();
+        renderBlockedDevices();
         populatePlanSelect();
 
         const stats = state.bootstrap?.stats || {};

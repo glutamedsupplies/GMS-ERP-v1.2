@@ -105,7 +105,7 @@ async function saveSettings() {
 
 async function logout() {
     await appClient.clearSession();
-    window.location.replace('/index.html');
+    appClient.redirectToLogin?.();
 }
 
 async function loadProfile() {

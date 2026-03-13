@@ -741,13 +741,48 @@
             ? window.top
             : window;
 
+        if (/^https?:\/\//i.test(path)) {
+            targetWindow.location.replace(path);
+            return;
+        }
+
         if (targetWindow.location.pathname !== path) {
             targetWindow.location.replace(path);
         }
     }
 
+    function normalizeHost(value = '') {
+        return String(value || '')
+            .trim()
+            .toLowerCase()
+            .split(':')[0];
+    }
+
+    function getBaseDomain(hostname = '') {
+        const normalized = normalizeHost(hostname);
+        if (!normalized || ['localhost', '127.0.0.1', '::1'].includes(normalized)) {
+            return '';
+        }
+        if (/^\d+\.\d+\.\d+\.\d+$/.test(normalized)) {
+            return '';
+        }
+        const parts = normalized.split('.').filter(Boolean);
+        if (parts.length < 2) {
+            return '';
+        }
+        return parts.slice(-2).join('.');
+    }
+
+    function getLoginUrl() {
+        const baseDomain = getBaseDomain(window.location.hostname);
+        if (baseDomain) {
+            return `${window.location.protocol}//${baseDomain}/index.html`;
+        }
+        return '/index.html';
+    }
+
     function redirectToLogin() {
-        navigateTo('/index.html');
+        navigateTo(getLoginUrl());
     }
 
     function normalizeRole(role) {
@@ -970,6 +1005,8 @@
         request,
         buildAvatarUrl,
         clearSession,
+        getLoginUrl,
+        redirectToLogin,
         escapeHtml,
         formatDisplayTime,
         getSession,
@@ -1325,6 +1362,19 @@
         }),
         getSuperCompanyUsage: (companyId, month = '') => request(`/api/super/companies/${encodeURIComponent(companyId)}/usage?month=${encodeURIComponent(month)}`),
         listSuperAuditLogs: ({ companyId = '', limit = 200, offset = 0 } = {}) => request(`/api/super/audit-logs?companyId=${encodeURIComponent(companyId)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`),
+        listSuperAccessLogs: ({ filter = '', limit = 200, offset = 0 } = {}) => request(
+            `/api/super/access-logs?filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`
+        ),
+        listSuperBlockedDevices: ({ filter = '', limit = 200, offset = 0 } = {}) => request(
+            `/api/super/blocked-devices?filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`
+        ),
+        blockSuperDevice: (payload = {}) => request('/api/super/blocked-devices', {
+            method: 'POST',
+            body: payload
+        }),
+        unblockSuperDevice: (blockId) => request(`/api/super/blocked-devices/${encodeURIComponent(blockId)}`, {
+            method: 'DELETE'
+        }),
         getUser: (userId) => request(`/api/users/${encodeURIComponent(userId)}`),
         saveUserProfile: (payload) => request(`/api/users/${encodeURIComponent(payload.id)}/profile`, {
             method: 'PUT',

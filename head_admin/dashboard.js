@@ -251,7 +251,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         if (event.data === 'logout') {
             await appClient.clearSession();
-            window.location.replace('/index.html');
+            appClient.redirectToLogin?.();
             return;
         }
 

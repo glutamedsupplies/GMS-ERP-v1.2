@@ -143,6 +143,30 @@
       </div>
       <div id="auditList" class="list"></div>
     </section>
+
+    <section class="card" style="margin-top:14px;">
+      <div class="card-head">
+        <h2>Access Logs</h2>
+        <p class="section-hint">Recent website opens by device and host</p>
+      </div>
+      <div class="toolbar">
+        <input id="accessFilter" type="search" placeholder="Search device, IP, host, path, user agent">
+        <span id="accessSummary" class="muted"></span>
+      </div>
+      <div id="accessList" class="list"></div>
+    </section>
+
+    <section class="card" style="margin-top:14px;">
+      <div class="card-head">
+        <h2>Blocked Devices</h2>
+        <p class="section-hint">Active blocks across device IDs and IPs</p>
+      </div>
+      <div class="toolbar">
+        <input id="blockedFilter" type="search" placeholder="Search device, IP, host, reason">
+        <span id="blockedSummary" class="muted"></span>
+      </div>
+      <div id="blockedList" class="list"></div>
+    </section>
   </div>
 
   <div id="planEditModal" class="modal" aria-hidden="true">

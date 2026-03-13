@@ -125,7 +125,7 @@ async function logout() {
         return;
     }
 
-    window.location.replace('/index.html');
+    appClient.redirectToLogin?.();
 }
 
 function setupPasswordToggle(toggleId, inputId) {

@@ -9,3 +9,6 @@ ingress:
   - hostname: www.gmserp.com
     service: http://127.0.0.1:3000
   - service: http_status:404
+  - hostname: gmserp.com
+    service: http://127.0.0.1:3000
+  - service: http_status:404
