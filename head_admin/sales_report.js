@@ -1037,67 +1037,99 @@ function closeReceiptModal() {
     }
 }
 
+function openReceiptPrintPopup(receipt, { autoPrint = false, blockedMessage = '' } = {}) {
+    const popup = window.open('', '_blank', 'width=900,height=900');
+    if (!popup) {
+        if (blockedMessage) {
+            setReportStatus(blockedMessage, true);
+        }
+        return null;
+    }
+
+    popup.document.write(buildReceiptPrintHtml(receipt));
+    popup.document.close();
+    popup.focus();
+
+    if (autoPrint) {
+        const triggerPrint = () => {
+            try {
+                popup.focus();
+                popup.print();
+            } catch (_error) {
+                // Ignore print errors in popup.
+            }
+        };
+        popup.addEventListener('load', triggerPrint, { once: true });
+        setTimeout(triggerPrint, 300);
+    }
+
+    return popup;
+}
+
+function buildReceiptPdfFileName(receipt) {
+    const raw = String(receipt?.receiptNumber || receipt?.orderNumber || 'receipt');
+    const sanitized = raw
+        .replace(/[\\/:*?"<>|]+/g, '-')
+        .replace(/\s+/g, ' ')
+        .trim();
+    return `${sanitized || 'receipt'}.pdf`;
+}
+
 function printReceipt() {
     if (!state.lastReceipt) {
         return;
     }
 
-    const popup = window.open('', '_blank', 'width=900,height=900');
-    if (!popup) {
-        setReportStatus('Allow pop-ups to print the receipt.', true);
-        return;
-    }
-
-    popup.document.write(buildReceiptPrintHtml(state.lastReceipt));
-    popup.document.close();
-    popup.focus();
+    openReceiptPrintPopup(state.lastReceipt, {
+        blockedMessage: 'Allow pop-ups to print the receipt.'
+    });
 }
 
 async function saveReceiptAsPdf() {
-    console.log('saveReceiptAsPdf called');
-    if (typeof html2canvas === 'undefined' || typeof jspdf === 'undefined') {
-        alert('PDF generation library not loaded.');
-        return;
-    }
-
-    console.log('PDF libraries loaded.');
-
     if (!state.lastReceipt) {
-        console.log('No last receipt');
+        setReportStatus('Open a receipt first.', true);
         return;
     }
-    console.log('lastReceipt:', state.lastReceipt);
 
-    const { jsPDF } = window.jspdf;
     const receiptDialog = document.querySelector('.receipt-dialog');
-    console.log('receiptDialog:', receiptDialog);
-
     if (!receiptDialog) {
         setReportStatus('Receipt element not found.', true);
         return;
     }
 
-    try {
-        console.log('Calling html2canvas');
-        const canvas = await html2canvas(receiptDialog);
-        console.log('html2canvas finished');
+    const fallbackToPrint = () => {
+        setReportStatus('Opening print dialog for PDF...', false);
+        openReceiptPrintPopup(state.lastReceipt, {
+            autoPrint: true,
+            blockedMessage: 'Allow pop-ups to save the receipt as PDF.'
+        });
+    };
 
+    if (typeof html2canvas === 'undefined' || typeof jspdf === 'undefined') {
+        fallbackToPrint();
+        return;
+    }
+
+    try {
+        setReportStatus('Preparing PDF...', false);
+        const canvas = await html2canvas(receiptDialog, {
+            useCORS: true,
+            backgroundColor: '#ffffff'
+        });
         const imgData = canvas.toDataURL('image/png');
-        console.log('imgData created');
+        const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({
             orientation: 'p',
             unit: 'px',
             format: [canvas.width, canvas.height]
         });
-        console.log('jsPDF instance created');
-
         pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-        console.log('image added to pdf');
-        pdf.save(`${state.lastReceipt.receiptNumber}.pdf`);
-        console.log('pdf saved');
+        pdf.save(buildReceiptPdfFileName(state.lastReceipt));
+        setReportStatus('PDF saved.', false);
     } catch (error) {
         console.error('Failed to generate PDF:', error);
-        setReportStatus('Failed to generate PDF.', true);
+        setReportStatus('Failed to generate PDF. Opening print dialog instead.', true);
+        fallbackToPrint();
     }
 }
 
