@@ -389,6 +389,163 @@ function renderLogs() {
     `).join('');
 }
 
+function renderAccessLogs() {
+    if (!accessList) {
+        return;
+    }
+
+    const total = state.accessLogs.length;
+    if (!total) {
+        accessList.innerHTML = '<div class="row">No access logs yet.</div>';
+        if (accessSummary) {
+            accessSummary.textContent = '0 / 0';
+        }
+        return;
+    }
+
+    const query = normalizeSearchText(accessFilter?.value || '');
+    const filteredLogs = query
+        ? state.accessLogs.filter((log) => {
+            const haystack = [
+                log.device_id,
+                log.ip_address,
+                log.host,
+                log.path,
+                log.user_agent,
+                log.company_name
+            ].map((value) => normalizeSearchText(value)).join(' ');
+            return haystack.includes(query);
+        })
+        : state.accessLogs.slice();
+
+    if (accessSummary) {
+        accessSummary.textContent = `${filteredLogs.length} / ${total}`;
+    }
+
+    if (!filteredLogs.length) {
+        accessList.innerHTML = '<div class="row">No access logs matched your search.</div>';
+        return;
+    }
+
+    accessList.innerHTML = filteredLogs.map((log) => {
+        const deviceId = String(log.device_id || '').trim();
+        const ipAddress = String(log.ip_address || '').trim();
+        const host = String(log.host || '').trim() || 'unknown host';
+        const path = String(log.path || '').trim() || '/';
+        const createdAt = String(log.created_at || '').trim();
+        const companyName = String(log.company_name || '').trim();
+        const userAgent = truncateText(String(log.user_agent || '').trim(), 160);
+        const blocked = isAccessBlocked(log);
+
+        return `
+            <div class="row" data-access-id="${escape(log.id)}">
+                <div class="row-head">
+                    <div class="plan-meta">
+                        <div class="plan-title">
+                            <strong>${escape(host)}</strong>
+                            <span class="inline-chip">${escape(path)}</span>
+                            ${companyName ? `<span class="inline-chip">${escape(companyName)}</span>` : ''}
+                        </div>
+                        <span class="muted">Device: ${escape(deviceId || '-')} | IP: ${escape(ipAddress || '-')}</span>
+                        <span class="muted">${escape(createdAt || '')}</span>
+                    </div>
+                    <div class="plan-actions">
+                        <button type="button" data-action="block-device" class="${blocked ? 'btn-soft' : 'btn-danger'}" ${blocked ? 'disabled' : ''}>
+                            ${blocked ? 'Blocked' : 'Block'}
+                        </button>
+                    </div>
+                </div>
+                <span class="muted">${escape(userAgent || '')}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderBlockedDevices() {
+    if (!blockedList) {
+        return;
+    }
+
+    const activeBlocks = state.blockedDevices.filter((block) => Number(block.is_active || 0) === 1);
+    const total = activeBlocks.length;
+    if (!total) {
+        blockedList.innerHTML = '<div class="row">No blocked devices yet.</div>';
+        if (blockedSummary) {
+            blockedSummary.textContent = '0 / 0';
+        }
+        return;
+    }
+
+    const query = normalizeSearchText(blockedFilter?.value || '');
+    const filteredBlocks = query
+        ? activeBlocks.filter((block) => {
+            const haystack = [
+                block.device_id,
+                block.ip_address,
+                block.host,
+                block.user_agent,
+                block.reason
+            ].map((value) => normalizeSearchText(value)).join(' ');
+            return haystack.includes(query);
+        })
+        : activeBlocks.slice();
+
+    if (blockedSummary) {
+        blockedSummary.textContent = `${filteredBlocks.length} / ${total}`;
+    }
+
+    if (!filteredBlocks.length) {
+        blockedList.innerHTML = '<div class="row">No blocked devices matched your search.</div>';
+        return;
+    }
+
+    blockedList.innerHTML = filteredBlocks.map((block) => {
+        const deviceId = String(block.device_id || '').trim();
+        const ipAddress = String(block.ip_address || '').trim();
+        const host = String(block.host || '').trim() || 'unknown host';
+        const createdAt = String(block.created_at || '').trim();
+        const reason = String(block.reason || '').trim() || 'No reason provided.';
+        const userAgent = truncateText(String(block.user_agent || '').trim(), 160);
+
+        return `
+            <div class="row" data-block-id="${escape(block.id)}">
+                <div class="row-head">
+                    <div class="plan-meta">
+                        <div class="plan-title">
+                            <strong>${escape(deviceId || ipAddress || 'Unknown Device')}</strong>
+                            <span class="inline-chip">${escape(host)}</span>
+                        </div>
+                        <span class="muted">Device: ${escape(deviceId || '-')} | IP: ${escape(ipAddress || '-')}</span>
+                        <span class="muted">Reason: ${escape(reason)}</span>
+                        <span class="muted">${escape(createdAt || '')}</span>
+                    </div>
+                    <div class="plan-actions">
+                        <button type="button" data-action="unblock-device" class="btn-soft">Unblock</button>
+                    </div>
+                </div>
+                <span class="muted">${escape(userAgent || '')}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+function isAccessBlocked(log) {
+    const deviceId = String(log.device_id || '').trim();
+    const ipAddress = String(log.ip_address || '').trim();
+    return state.blockedDevices.some((block) => {
+        if (Number(block.is_active || 0) !== 1) {
+            return false;
+        }
+        if (deviceId && String(block.device_id || '').trim() === deviceId) {
+            return true;
+        }
+        if (ipAddress && String(block.ip_address || '').trim() === ipAddress) {
+            return true;
+        }
+        return false;
+    });
+}
+
 function buildPlanModuleChips(plan) {
     const modules = plan?.modules || {};
     const enabledModules = Object.entries(modules)
@@ -856,6 +1013,102 @@ async function handlePlanAction(event) {
     }
 }
 
+async function handleAccessAction(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+        return;
+    }
+
+    const action = target.dataset.action || '';
+    if (action !== 'block-device') {
+        return;
+    }
+
+    const row = target.closest('[data-access-id]');
+    if (!(row instanceof HTMLElement)) {
+        return;
+    }
+
+    const accessId = row.getAttribute('data-access-id') || '';
+    if (!accessId) {
+        return;
+    }
+
+    const log = state.accessLogs.find((item) => String(item.id) === String(accessId));
+    if (!log) {
+        return;
+    }
+
+    const confirmed = window.confirm(`Block device ${log.device_id || log.ip_address || 'unknown'}?`);
+    if (!confirmed) {
+        return;
+    }
+
+    const reason = window.prompt('Reason for blocking this device:', '');
+    if (reason === null) {
+        return;
+    }
+
+    target.setAttribute('disabled', 'true');
+    setStatus('Blocking device...');
+    try {
+        await appClient.blockSuperDevice({
+            device_id: log.device_id,
+            ip_address: log.ip_address,
+            user_agent: log.user_agent,
+            host: log.host,
+            reason
+        });
+        await loadData();
+        setStatus('Device blocked.');
+    } catch (error) {
+        console.error('Failed to block device:', error);
+        setStatus(error.message || 'Failed to block device.', true);
+    } finally {
+        target.removeAttribute('disabled');
+    }
+}
+
+async function handleBlockedAction(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+        return;
+    }
+
+    const action = target.dataset.action || '';
+    if (action !== 'unblock-device') {
+        return;
+    }
+
+    const row = target.closest('[data-block-id]');
+    if (!(row instanceof HTMLElement)) {
+        return;
+    }
+
+    const blockId = row.getAttribute('data-block-id') || '';
+    if (!blockId) {
+        return;
+    }
+
+    const confirmed = window.confirm('Unblock this device?');
+    if (!confirmed) {
+        return;
+    }
+
+    target.setAttribute('disabled', 'true');
+    setStatus('Unblocking device...');
+    try {
+        await appClient.unblockSuperDevice(blockId);
+        await loadData();
+        setStatus('Device unblocked.');
+    } catch (error) {
+        console.error('Failed to unblock device:', error);
+        setStatus(error.message || 'Failed to unblock device.', true);
+    } finally {
+        target.removeAttribute('disabled');
+    }
+}
+
 async function handleCompanyAction(event) {
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
@@ -1229,6 +1482,14 @@ function formatBytes(value) {
         return `${(bytes / 1024).toFixed(1)} KB`;
     }
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function truncateText(value, maxLength = 140) {
+    const text = String(value || '');
+    if (text.length <= maxLength) {
+        return text;
+    }
+    return `${text.slice(0, Math.max(0, maxLength - 3)).trim()}...`;
 }
 
 function setStatus(message, isError = false) {

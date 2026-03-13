@@ -66,6 +66,52 @@ function Get-CloudflaredCommand {
     throw 'cloudflared.exe was not found. Install Cloudflare Tunnel first or update local-runtime.config.json.'
 }
 
+function Resolve-CloudflaredConfigPath {
+    param(
+        [string]$RepoRoot,
+        [string]$ConfiguredPath
+    )
+
+    $normalized = [string]$ConfiguredPath
+    if ([string]::IsNullOrWhiteSpace($normalized)) {
+        return $null
+    }
+
+    if (-not [System.IO.Path]::IsPathRooted($normalized)) {
+        $normalized = Join-Path $RepoRoot $normalized
+    }
+
+    if (-not (Test-Path $normalized)) {
+        throw "Cloudflared config file not found: $normalized"
+    }
+
+    return (Resolve-Path $normalized).Path
+}
+
+function Start-CloudflaredTunnel {
+    param(
+        [string]$Cloudflared,
+        [pscustomobject]$Config,
+        [string]$RepoRoot
+    )
+
+    $tunnelName = [string]$Config.cloudflaredTunnelName
+    $configPath = Resolve-CloudflaredConfigPath -RepoRoot $RepoRoot -ConfiguredPath ([string]$Config.cloudflaredConfigPath)
+
+    if (-not [string]::IsNullOrWhiteSpace($tunnelName)) {
+        if ($configPath) {
+            Write-Host "Using Cloudflared config: $configPath" -ForegroundColor DarkGray
+            & $Cloudflared --config $configPath tunnel run $tunnelName
+            return
+        }
+
+        & $Cloudflared tunnel run $tunnelName
+        return
+    }
+
+    & $Cloudflared tunnel --url "http://127.0.0.1:$($config.port)" --protocol ([string]$config.cloudflaredProtocol)
+}
+
 function Wait-ForLocalServer {
     param(
         [string]$Url,
@@ -150,7 +196,7 @@ try {
     Write-Host "Keep this window open while using the public tunnel." -ForegroundColor Yellow
     Write-Host ""
 
-    & $cloudflared tunnel --url "http://127.0.0.1:$($config.port)" --protocol ([string]$config.cloudflaredProtocol)
+    Start-CloudflaredTunnel -Cloudflared $cloudflared -Config $config -RepoRoot $repoRoot
 } finally {
     Stop-ManagedServer -PidFile $paths.PidFile -Process $serverProcess | Out-Null
 }

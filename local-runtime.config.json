@@ -1,12 +1,14 @@
 {
-  "dataDir": "C:\\Users\\pc\\AttendanceApp",
+  "dataDir": "C:\\Users\\pc\\Documents\\GitHub\\GMS\\.runtime-data",
   "bindHost": "127.0.0.1",
   "port": 3000,
   "timeZone": "Asia/Manila",
   "trustProxy": true,
   "secureCookies": true,
   "stopLegacyElectron": true,
-  "publicUrl": "",
+  "publicUrl": "https://gmserp.com",
   "cloudflaredPath": "cloudflared.exe",
+  "cloudflaredTunnelName": "gmserp",
+  "cloudflaredConfigPath": "ops/cloudflared-config.windows.yml",
   "cloudflaredProtocol": "http2"
 }
