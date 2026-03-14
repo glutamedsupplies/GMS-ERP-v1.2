@@ -12,6 +12,8 @@ const statusText = document.getElementById('statusText');
 const compositeTableBody = document.getElementById('compositeTableBody');
 const rowCount = document.getElementById('rowCount');
 const compositeModal = document.getElementById('compositeModal');
+const compositeModalTitle = document.getElementById('compositeModalTitle');
+const compositeModalCopy = document.getElementById('compositeModalCopy');
 const productNameInput = document.getElementById('productNameInput');
 const itemCodeInput = document.getElementById('itemCodeInput');
 const itemSetInput = document.getElementById('itemSetInput');
@@ -22,7 +24,8 @@ const state = {
     rows: [],
     componentRows: [],
     nextComponentRowId: 1,
-    componentCatalog: []
+    componentCatalog: [],
+    editingKey: ''
 };
 
 initialize();
@@ -240,6 +243,9 @@ function renderRows() {
             <td>${appClient.escapeHtml(row.detail_text || '-')}</td>
             <td>${appClient.escapeHtml(formatSource(row.source))}</td>
             <td>
+                <button type="button" class="action-btn edit-btn" data-action="edit" data-key="${appClient.escapeHtml(row.composite_key || '')}">
+                    Edit
+                </button>
                 <button type="button" class="action-btn delete-btn" data-action="delete" data-key="${appClient.escapeHtml(row.composite_key || '')}">
                     Delete
                 </button>
@@ -248,14 +254,43 @@ function renderRows() {
     `).join('');
 }
 
-function openModal() {
+function openModal(options = {}) {
+    const row = options.row || null;
+    const isEdit = Boolean(row);
+    state.editingKey = row?.composite_key || '';
     productNameInput.value = '';
     itemCodeInput.value = '';
     itemSetInput.value = '';
     state.componentRows = [];
     state.nextComponentRowId = 1;
-    addComponentRow();
+    if (isEdit) {
+        productNameInput.value = row.product_name || '';
+        itemCodeInput.value = row.item_code || '';
+        itemSetInput.value = row.item_set || '';
+        const components = Array.isArray(row.components) ? row.components : [];
+        components.forEach((component) => {
+            const qtyValue = component.quantity ?? component.component_quantity;
+            state.componentRows.push({
+                id: state.nextComponentRowId++,
+                name: String(component.name || component.component_name || ''),
+                quantity: qtyValue == null ? '1' : String(qtyValue),
+                unit: String(component.unit || component.component_unit || '')
+            });
+        });
+    }
+    if (!state.componentRows.length) {
+        addComponentRow();
+    }
     renderComponentRows();
+    if (compositeModalTitle) {
+        compositeModalTitle.textContent = isEdit ? 'Edit Composite Setup' : 'Add Composite Setup';
+    }
+    if (compositeModalCopy) {
+        compositeModalCopy.textContent = isEdit
+            ? 'I-update ang components ng composite item. Mag-save para ma-apply sa inventory deduction.'
+            : 'Ilagay ang product variant at mga component na ibabawas kapag na-order ang composite item.';
+    }
+    saveCompositeBtn.textContent = isEdit ? 'Update Composite' : 'Save Composite';
     compositeModal.classList.add('is-open');
     compositeModal.setAttribute('aria-hidden', 'false');
     productNameInput.focus();
@@ -264,6 +299,7 @@ function openModal() {
 function closeModal() {
     compositeModal.classList.remove('is-open');
     compositeModal.setAttribute('aria-hidden', 'true');
+    state.editingKey = '';
 }
 
 function addComponentRow() {
@@ -359,6 +395,14 @@ async function saveComposite() {
     setStatus('Saving composite setup...', false);
 
     try {
+        const currentKey = [productName, itemCode, itemSet].join('||');
+        if (state.editingKey && state.editingKey !== currentKey) {
+            try {
+                await appClient.deleteCompositeItem(state.editingKey);
+            } catch (error) {
+                console.warn('Unable to delete previous composite setup before saving:', error);
+            }
+        }
         await appClient.upsertCompositeItem({
             product_name: productName,
             item_code: itemCode,
@@ -377,8 +421,24 @@ async function saveComposite() {
 }
 
 async function handleTableClick(event) {
-    const button = event.target.closest('button[data-action="delete"]');
+    const button = event.target.closest('button[data-action]');
     if (!button) {
+        return;
+    }
+
+    const action = String(button.dataset.action || '').trim();
+    if (action === 'edit') {
+        const compositeKey = String(button.dataset.key || '').trim();
+        const row = state.rows.find((entry) => String(entry.composite_key || '') === compositeKey);
+        if (!row) {
+            setStatus('Composite item not found for editing.', true);
+            return;
+        }
+        openModal({ row });
+        return;
+    }
+
+    if (action !== 'delete') {
         return;
     }
 

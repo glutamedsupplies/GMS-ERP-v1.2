@@ -37,6 +37,7 @@
   th { background: #f8fbff; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; }
   .empty { text-align: center; color: var(--muted); padding: 24px 12px; }
   .action-btn { padding: 8px 10px; border-radius: 10px; font-size: 12px; }
+  .edit-btn { background: #2563eb; color: #fff; margin-right: 6px; }
   .delete-btn { background: #b91c1c; color: #fff; }
   .secondary-btn { background: #ede9fe; color: #6d28d9; }
   .modal {
@@ -150,8 +151,8 @@
 
   <div id="compositeModal" class="modal" aria-hidden="true">
     <div class="modal-card">
-      <h2 style="margin:0 0 6px;">Add Composite Setup</h2>
-      <p style="margin:0 0 12px; color:var(--muted);">Ilagay ang product variant at mga component na ibabawas kapag na-order ang composite item.</p>
+      <h2 id="compositeModalTitle" style="margin:0 0 6px;">Add Composite Setup</h2>
+      <p id="compositeModalCopy" style="margin:0 0 12px; color:var(--muted);">Ilagay ang product variant at mga component na ibabawas kapag na-order ang composite item.</p>
 
       <div class="modal-grid">
         <div class="field">

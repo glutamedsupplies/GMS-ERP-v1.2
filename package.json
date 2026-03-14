@@ -17,6 +17,7 @@
     "migrate:postgres-verify": "node migrations/verify-postgres-import.js",
     "migrate:postgres-live-verify": "node migrations/verify-postgres-import.js",
     "backup:postgres:sqlite": "node scripts/backup-postgres-to-sqlite.js",
+    "export:excel:monthly": "node scripts/export-monthly-excel.js",
     "test:multi-tenant": "node tests/multi-tenant-integration.js",
     "desktop": "electron .",
     "dist:server": "electron-builder --win nsis --config.productName=\"Attendance Server\" --config.directories.output=dist/server",
@@ -98,6 +99,7 @@
   "dependencies": {
     "better-sqlite3": "^12.6.2",
     "body-parser": "^2.2.2",
+    "exceljs": "^4.4.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "openai": "^6.25.0",
