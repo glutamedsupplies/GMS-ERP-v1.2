@@ -178,6 +178,12 @@
   }
 
   .filter-btn:hover { transform: translateY(-1px); filter: brightness(1.02); }
+  .filter-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    box-shadow: none;
+    transform: none;
+  }
 
   .stats-grid {
     display: grid;
@@ -226,6 +232,92 @@
   .metric-late .stats-value { color: var(--warning); }
   .metric-absent .stats-value { color: var(--danger); }
   .metric-suspended .stats-value { color: #475569; }
+
+  .settings-card {
+    padding: 22px 24px;
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.76);
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.96), var(--tenant-panel, rgba(255, 255, 255, 0.82)));
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(16px);
+  }
+
+  .settings-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: flex-start;
+  }
+
+  .settings-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(var(--primary-rgb), 0.16);
+    background: rgba(var(--primary-rgb), 0.08);
+    color: var(--primary-strong);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .settings-copy h2 {
+    margin: 0;
+    font-family: "Sora", "Segoe UI", sans-serif;
+    font-size: 22px;
+  }
+
+  .settings-copy p {
+    margin: 10px 0 0;
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .settings-actions {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(180px, 1fr) auto;
+    align-items: end;
+  }
+
+  .settings-actions .filter-btn {
+    min-width: 150px;
+  }
+
+  .settings-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    margin-top: 16px;
+  }
+
+  .settings-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .settings-pill {
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(var(--primary-rgb), 0.16);
+    background: rgba(var(--primary-rgb), 0.1);
+    color: var(--primary-strong);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .settings-note {
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 12px;
+  }
 
   .table-card {
     overflow: hidden;
@@ -309,16 +401,18 @@
   .status-excused { color: var(--primary-strong); font-weight: 800; }
 
   @media (max-width: 1080px) {
-    .hero-head, .table-head { flex-direction: column; align-items: stretch; }
+    .hero-head, .table-head, .settings-head { flex-direction: column; align-items: stretch; }
     .filter-card { min-width: 0; width: 100%; }
     .stats-grid { grid-template-columns: 1fr; }
+    .settings-actions { grid-template-columns: 1fr; }
+    .settings-footer { flex-direction: column; align-items: flex-start; }
   }
 
   @media (max-width: 720px) {
     body { padding: 12px; }
     .page { min-height: calc(100vh - 24px); }
-    .hero, .table-card, .stats-grid article { border-radius: 24px; }
-    .hero, .table-head, .filter-card { padding: 20px 18px; }
+    .hero, .table-card, .stats-grid article, .settings-card { border-radius: 24px; }
+    .hero, .table-head, .filter-card, .settings-card { padding: 20px 18px; }
     .filter-grid { grid-template-columns: 1fr; }
   }
 </style>
@@ -378,6 +472,36 @@
       <span class="stats-label">Suspended Rows</span>
       <strong class="stats-value" id="totalSuspended">0</strong>
     </article>
+  </section>
+
+  <section class="settings-card">
+    <div class="settings-head">
+      <div class="settings-copy">
+        <span class="settings-kicker"><i class="fa-solid fa-file-excel"></i> Report Settings</span>
+        <h2>Monthly Excel Export</h2>
+        <p>Download a single Excel file that includes Attendance, Sales, Inventory, Expenses, Cash Income, Inventory Variants, and LBC Tracking (if enabled) for the month you select.</p>
+        <div class="settings-note">One file per month (no per-record exports).</div>
+      </div>
+      <div class="settings-actions">
+        <div class="field">
+          <label for="exportMonth">Month</label>
+          <input type="month" id="exportMonth">
+        </div>
+        <button id="exportExcelBtn" class="filter-btn" type="button">Save Excel</button>
+      </div>
+    </div>
+    <div class="settings-footer">
+      <div class="settings-list" aria-label="Included modules">
+        <span class="settings-pill">Attendance</span>
+        <span class="settings-pill">Sales</span>
+        <span class="settings-pill">Inventory</span>
+        <span class="settings-pill">Expenses</span>
+        <span class="settings-pill">Cash Income</span>
+        <span class="settings-pill">Inventory Variants</span>
+        <span class="settings-pill">LBC Tracking (if enabled)</span>
+      </div>
+      <div class="report-status" id="exportStatus"></div>
+    </div>
   </section>
 
   <section class="table-card">

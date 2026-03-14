@@ -9,6 +9,9 @@ const totalLate = document.getElementById('totalLate');
 const totalAbsent = document.getElementById('totalAbsent');
 const totalSuspended = document.getElementById('totalSuspended');
 const reportStatus = document.getElementById('reportStatus');
+const exportMonthInput = document.getElementById('exportMonth');
+const exportExcelBtn = document.getElementById('exportExcelBtn');
+const exportStatus = document.getElementById('exportStatus');
 let serverDateKey = new Date().toISOString().slice(0, 10);
 
 initialize();
@@ -30,15 +33,20 @@ async function initialize() {
         const serverInfo = await appClient.getServerInfo();
         serverDateKey = String(serverInfo?.dateKey || '').trim() || new Date().toISOString().slice(0, 10);
         dateFilter.value = serverDateKey;
+        setExportMonth(serverDateKey);
     } catch (_error) {
         serverDateKey = new Date().toISOString().slice(0, 10);
         dateFilter.value = serverDateKey;
+        setExportMonth(serverDateKey);
     }
 
     filterBtn.addEventListener('click', renderReport);
     employeeFilter.addEventListener('change', renderReport);
     rangeFilter.addEventListener('change', renderReport);
     dateFilter.addEventListener('change', renderReport);
+    if (exportExcelBtn) {
+        exportExcelBtn.addEventListener('click', handleExportExcel);
+    }
 
     await populateEmployees();
     await renderReport();
@@ -198,4 +206,124 @@ function setReportStatus(message, isError) {
 
     reportStatus.textContent = message || '';
     reportStatus.className = `report-status${isError ? ' is-error' : ''}`;
+}
+
+function setExportMonth(dateKey) {
+    if (!exportMonthInput) {
+        return;
+    }
+
+    const monthKey = normalizeMonthKey(dateKey);
+    if (monthKey) {
+        exportMonthInput.value = monthKey;
+    }
+}
+
+function normalizeMonthKey(value, fallback = '') {
+    const text = String(value || '').trim();
+    const match = text.match(/^(\d{4})-(\d{2})(?:-\d{2})?$/);
+    if (match) {
+        const year = match[1];
+        const month = match[2];
+        const monthNumber = Number(month);
+        if (monthNumber >= 1 && monthNumber <= 12) {
+            return `${year}-${month}`;
+        }
+    }
+
+    if (fallback) {
+        return normalizeMonthKey(fallback, '');
+    }
+
+    return '';
+}
+
+function setExportStatus(message, isError) {
+    if (!exportStatus) {
+        return;
+    }
+
+    exportStatus.textContent = message || '';
+    exportStatus.className = `report-status${isError ? ' is-error' : ''}`;
+}
+
+async function handleExportExcel() {
+    if (!exportExcelBtn || !exportMonthInput) {
+        return;
+    }
+
+    const monthKey = normalizeMonthKey(exportMonthInput.value, serverDateKey);
+    if (!monthKey) {
+        setExportStatus('Please choose a valid month (YYYY-MM).', true);
+        return;
+    }
+
+    exportExcelBtn.disabled = true;
+    setExportStatus('Preparing Excel export. Please wait...', false);
+
+    try {
+        const { blob, filename } = await fetchMonthlyExcel(monthKey);
+        const finalName = filename || `GMS_Reports_${monthKey}.xlsx`;
+        triggerExcelDownload(blob, finalName);
+        setExportStatus(`Excel export ready for ${monthKey}. Check your downloads.`, false);
+    } catch (error) {
+        console.error('Failed to export monthly Excel:', error);
+        setExportStatus(error.message || 'Failed to export Excel.', true);
+    } finally {
+        exportExcelBtn.disabled = false;
+    }
+}
+
+async function fetchMonthlyExcel(monthKey) {
+    const response = await fetch(`/api/reports/export-excel?month=${encodeURIComponent(monthKey)}`, {
+        credentials: 'same-origin'
+    });
+    const contentType = response.headers.get('content-type') || '';
+
+    if (!response.ok) {
+        if (contentType.includes('application/json')) {
+            const payload = await response.json();
+            throw new Error(payload.error || `Export failed (${response.status}).`);
+        }
+        const text = await response.text();
+        throw new Error(text || `Export failed (${response.status}).`);
+    }
+
+    if (contentType.includes('application/json')) {
+        const payload = await response.json();
+        if (payload?.success === false) {
+            throw new Error(payload.error || 'Export failed.');
+        }
+        throw new Error('Unexpected response when downloading the Excel file.');
+    }
+
+    const blob = await response.blob();
+    const filename = parseFilenameFromHeader(response.headers.get('content-disposition'));
+    return { blob, filename };
+}
+
+function parseFilenameFromHeader(headerValue) {
+    const header = String(headerValue || '');
+    const encodedMatch = header.match(/filename\*=UTF-8''([^;]+)/i);
+    if (encodedMatch) {
+        try {
+            return decodeURIComponent(encodedMatch[1]);
+        } catch (_error) {
+            return encodedMatch[1];
+        }
+    }
+
+    const match = header.match(/filename=\"?([^\";]+)\"?/i);
+    return match ? match[1] : '';
+}
+
+function triggerExcelDownload(blob, filename) {
+    const blobUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = blobUrl;
+    anchor.download = filename || 'monthly-report.xlsx';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 }
