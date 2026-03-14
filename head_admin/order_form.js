@@ -2311,9 +2311,16 @@ function isTirzepatide30mgProduct(value = '') {
 
 function isTirzepatideCompleteSetDescriptor(value = '') {
     const normalizedValue = normalizeLooseLookup(value);
-    return normalizedTextIncludes(normalizedValue, 'tirzepatide 30mg')
-        && normalizedTextIncludes(normalizedValue, 'complete set')
-        && normalizedTextIncludes(normalizedValue, 'sakura kiyoshi drip');
+    if (!normalizedValue) {
+        return false;
+    }
+
+    const hasTirzepatide = normalizedTextIncludes(normalizedValue, 'tirzepatide 30mg');
+    if (!hasTirzepatide) {
+        return false;
+    }
+
+    return hasSakuraKiyoshiSignal(normalizedValue);
 }
 
 function findLeadingQuantityFromLine(value = '') {
