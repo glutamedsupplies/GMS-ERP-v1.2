@@ -770,6 +770,10 @@
             () => request(`/api/inventory-variants/resolve?productName=${encodeURIComponent(productName)}&setName=${encodeURIComponent(setName)}`)
         ),
         listInventory: ({ branch = '', filter = '' } = {}) => request(`/api/inventory?branch=${encodeURIComponent(branch)}&filter=${encodeURIComponent(filter)}`),
+        updateInventoryItem: (inventoryId, payload) => request(`/api/inventory-items/${encodeURIComponent(inventoryId)}`, {
+            method: 'PATCH',
+            body: payload
+        }),
         updateInventoryQuantity: (helper, payload) => request(`/api/inventory/${encodeURIComponent(helper)}`, {
             method: 'PATCH',
             body: payload
