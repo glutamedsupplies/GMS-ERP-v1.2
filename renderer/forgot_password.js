@@ -63,7 +63,7 @@ async function handleSubmit(event) {
         resultBox.style.display = 'block';
         setStatus('Reset email sent. Please check your inbox.', false, true);
     } catch (error) {
-        setStatus(error?.message || 'Unable to send reset email.', true);
+        setStatus(resolveAuthErrorMessage(error), true);
     } finally {
         setBusy(false);
     }
@@ -94,6 +94,28 @@ function setStatus(message, isError = false, isOk = false) {
     statusEl.textContent = String(message || '');
     statusEl.classList.toggle('error', Boolean(isError));
     statusEl.classList.toggle('ok', Boolean(isOk));
+}
+
+function resolveAuthErrorMessage(error) {
+    const code = String(error?.code || '').trim();
+    if (!code.startsWith('auth/')) {
+        return error?.message || 'Unable to send reset email.';
+    }
+
+    switch (code) {
+        case 'auth/invalid-email':
+            return 'Invalid email address.';
+        case 'auth/user-not-found':
+            return 'No account found for that email.';
+        case 'auth/too-many-requests':
+            return 'Too many requests. Please try again later.';
+        case 'auth/network-request-failed':
+            return 'Network error. Please check your connection.';
+        case 'auth/internal-error':
+            return 'Firebase error. Please check your Email/Password provider and authorized domains.';
+        default:
+            return error?.message || 'Unable to send reset email.';
+    }
 }
 
 async function refreshBranding() {

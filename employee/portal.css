@@ -681,6 +681,126 @@ tbody tr:hover {
   gap: 14px;
 }
 
+.connect-section {
+  margin-top: 22px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(var(--tenant-primary-rgb), 0.16);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.94), rgba(236, 245, 255, 0.78));
+  box-shadow: var(--tenant-shadow-soft);
+}
+
+.connect-header {
+  text-align: left;
+  margin-bottom: 14px;
+}
+
+.connect-header h3 {
+  margin: 4px 0 6px;
+  font-family: "Sora", "Segoe UI", sans-serif;
+  font-size: 20px;
+}
+
+.connect-header p {
+  margin: 0;
+  color: var(--tenant-muted);
+  font-size: 13px;
+}
+
+.connect-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px;
+}
+
+.connect-card {
+  border-radius: 16px;
+  padding: 14px;
+  border: 1px solid rgba(var(--tenant-primary-rgb), 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  display: grid;
+  gap: 10px;
+  min-height: 220px;
+}
+
+.connect-title {
+  font-weight: 800;
+  color: var(--tenant-text-strong);
+  letter-spacing: 0.02em;
+}
+
+.connect-copy {
+  margin: 0;
+  color: var(--tenant-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.connect-status {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--tenant-muted);
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  align-self: flex-start;
+}
+
+.connect-status.is-success {
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.18);
+}
+
+.connect-status.is-warning {
+  color: #b45309;
+  background: rgba(251, 191, 36, 0.2);
+}
+
+.connect-row {
+  display: grid;
+  gap: 8px;
+}
+
+.connect-row input {
+  min-height: 46px;
+}
+
+.google-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 14px;
+  background: #111827;
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+}
+
+.google-button:hover {
+  transform: translateY(-2px);
+}
+
+.google-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+  color: #111827;
+  font-weight: 900;
+}
+
+.connect-footnote {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--tenant-muted);
+}
+
 .field {
   display: grid;
   gap: 6px;

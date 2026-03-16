@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://www.googleapis.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Account Settings</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -63,6 +63,41 @@
         </div>
       </div>
 
+      <div class="connect-section">
+        <div class="connect-header">
+          <p class="hero-kicker">Login Connections</p>
+          <h3>Connect Gmail or Email</h3>
+          <p>Link an email address so you can sign in using Gmail or email login with a verification code.</p>
+        </div>
+
+        <div class="connect-grid">
+          <div class="connect-card">
+            <div class="connect-title">Connect Email</div>
+            <p class="connect-copy">We will send a 6-digit code to confirm your email address.</p>
+            <div class="connect-status" id="emailConnectStatus">Not connected</div>
+            <div class="connect-row">
+              <input type="email" id="loginEmailInput" placeholder="you@email.com" autocomplete="email">
+              <button class="secondary-button" id="sendEmailCodeBtn" type="button">Send Code</button>
+            </div>
+            <div class="connect-row">
+              <input type="text" id="loginEmailCodeInput" placeholder="Verification code" inputmode="numeric" autocomplete="one-time-code">
+              <button class="primary-button" id="verifyEmailCodeBtn" type="button">Verify</button>
+            </div>
+          </div>
+
+          <div class="connect-card">
+            <div class="connect-title">Connect Gmail</div>
+            <p class="connect-copy">Sign in with Google to link your Gmail for one-tap login.</p>
+            <div class="connect-status" id="googleConnectStatus">Not connected</div>
+            <button class="google-button" id="connectGoogleBtn" type="button">
+              <span class="google-badge" aria-hidden="true">G</span>
+              Connect Google
+            </button>
+          </div>
+        </div>
+        <p class="connect-footnote">You can still log in using your Employee ID and password anytime.</p>
+      </div>
+
       <div class="settings-actions">
         <button class="primary-button" id="saveBtn" type="button">Save Changes</button>
         <div class="status-banner" id="statusText"></div>
@@ -71,6 +106,7 @@
     </section>
   </main>
 
+  <script type="module" src="../shared/firebase.js"></script>
   <script src="../shared/app-client.js"></script>
   <script src="settings.js"></script>
 </body>

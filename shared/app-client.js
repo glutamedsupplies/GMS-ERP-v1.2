@@ -1271,6 +1271,25 @@
             setSessionUser(user);
             return user;
         },
+        requestEmailConnectionCode: async ({ email = '' } = {}) => request('/api/account/connect/email/request', {
+            method: 'POST',
+            body: {
+                email: String(email || '').trim()
+            }
+        }),
+        verifyEmailConnectionCode: async ({ email = '', code = '' } = {}) => request('/api/account/connect/email/verify', {
+            method: 'POST',
+            body: {
+                email: String(email || '').trim(),
+                code: String(code || '').trim()
+            }
+        }),
+        connectGoogleAccount: async ({ idToken = '' } = {}) => request('/api/account/connect/google', {
+            method: 'POST',
+            body: {
+                idToken: String(idToken || '').trim()
+            }
+        }),
         getCompanySettings: () => request('/api/company/settings'),
         updateCompanySettings: (payload) => request('/api/company/settings', {
             method: 'PUT',

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://www.googleapis.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Head Admin Settings</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -126,6 +126,125 @@
 
         .section {
             margin-bottom: 16px;
+        }
+
+        .connect-section {
+            margin: 16px 0 20px;
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(15, 23, 42, 0.7);
+        }
+
+        .connect-header h3 {
+            margin: 0 0 6px;
+            font-size: 18px;
+        }
+
+        .connect-header p {
+            margin: 0 0 12px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .connect-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .connect-card {
+            padding: 12px;
+            border-radius: 14px;
+            background: rgba(8, 15, 30, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: grid;
+            gap: 10px;
+        }
+
+        .connect-title {
+            font-weight: 700;
+        }
+
+        .connect-copy {
+            margin: 0;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .connect-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--muted);
+        }
+
+        .connect-status.is-success {
+            color: var(--accent);
+            background: rgba(83, 215, 105, 0.18);
+        }
+
+        .connect-status.is-warning {
+            color: #fbbf24;
+            background: rgba(251, 191, 36, 0.18);
+        }
+
+        .connect-row {
+            display: grid;
+            gap: 8px;
+        }
+
+        .connect-row input {
+            height: 42px;
+        }
+
+        .connect-actions {
+            display: grid;
+            gap: 8px;
+        }
+
+        .secondary-btn {
+            height: 42px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text);
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .google-btn {
+            height: 44px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: #0f172a;
+            color: #fff;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .google-badge {
+            width: 26px;
+            height: 26px;
+            border-radius: 8px;
+            background: #fff;
+            color: #111827;
+            display: grid;
+            place-items: center;
+            font-weight: 800;
+        }
+
+        .connect-footnote {
+            margin: 10px 0 0;
+            font-size: 12px;
+            color: var(--muted);
         }
 
         label {
@@ -306,11 +425,44 @@
             </div>
         </div>
 
+        <div class="connect-section">
+            <div class="connect-header">
+                <h3>Connect Gmail or Email</h3>
+                <p>Link an email address to enable Gmail or email sign-in with verification code.</p>
+            </div>
+            <div class="connect-grid">
+                <div class="connect-card">
+                    <div class="connect-title">Connect Email</div>
+                    <p class="connect-copy">Receive a 6-digit code to verify your email.</p>
+                    <div class="connect-status" id="emailConnectStatus">Not connected</div>
+                    <div class="connect-row">
+                        <input type="email" id="loginEmailInput" placeholder="you@email.com" autocomplete="email">
+                        <button class="secondary-btn" id="sendEmailCodeBtn" type="button">Send Code</button>
+                    </div>
+                    <div class="connect-row">
+                        <input type="text" id="loginEmailCodeInput" placeholder="Verification code" inputmode="numeric" autocomplete="one-time-code">
+                        <button class="secondary-btn" id="verifyEmailCodeBtn" type="button">Verify</button>
+                    </div>
+                </div>
+                <div class="connect-card">
+                    <div class="connect-title">Connect Gmail</div>
+                    <p class="connect-copy">Sign in with Google to link Gmail for quick access.</p>
+                    <div class="connect-status" id="googleConnectStatus">Not connected</div>
+                    <button class="google-btn" id="connectGoogleBtn" type="button">
+                        <span class="google-badge">G</span>
+                        Connect Google
+                    </button>
+                </div>
+            </div>
+            <p class="connect-footnote">You can still log in using your Admin ID and password.</p>
+        </div>
+
         <button class="save-btn" id="saveBtn" type="button">Save Changes</button>
         <div class="status-msg" id="statusText">Ready for changes.</div>
         <button class="logout-btn" id="logoutBtn" type="button">Log Out</button>
     </div>
 
+    <script type="module" src="../shared/firebase.js"></script>
     <script src="../shared/app-client.js"></script>
     <script src="./settings.js"></script>
 </body>

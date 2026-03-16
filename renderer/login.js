@@ -41,6 +41,35 @@ let backgroundImageRequestId = 0;
 let lastBrandingSignature = '';
 let currentBranding = { ...DEFAULT_BRANDING };
 let welcomeTransitionActive = false;
+let firebaseDisabled = false;
+
+const FIREBASE_FALLBACK_CODES = new Set([
+    'auth/user-not-found',
+    'auth/invalid-email',
+    'auth/invalid-credential',
+    'auth/invalid-login-credentials',
+    'auth/wrong-password',
+    'auth/user-disabled',
+    'auth/operation-not-allowed',
+    'auth/network-request-failed',
+    'auth/internal-error',
+    'auth/unauthorized-domain',
+    'auth/invalid-api-key',
+    'auth/app-not-authorized',
+    'auth/too-many-requests'
+]);
+const FIREBASE_DISABLE_CODES = new Set([
+    'auth/operation-not-allowed',
+    'auth/internal-error',
+    'auth/unauthorized-domain',
+    'auth/invalid-api-key',
+    'auth/app-not-authorized'
+]);
+const FIREBASE_POPUP_CANCEL_CODES = new Set([
+    'auth/popup-closed-by-user',
+    'auth/cancelled-popup-request',
+    'auth/popup-blocked'
+]);
 
 applyQueryPrefill();
 redirectIfSessionExists();
@@ -132,13 +161,27 @@ async function handleLogin() {
         let user = null;
 
         if (firebase) {
-            const credential = await firebase.helpers.signInWithEmailAndPassword(
-                firebase.auth,
-                email,
-                password
-            );
-            const idToken = await firebase.helpers.getIdToken(credential.user, true);
-            user = await appClient.loginWithFirebase({ idToken, companyCode });
+            try {
+                const credential = await firebase.helpers.signInWithEmailAndPassword(
+                    firebase.auth,
+                    email,
+                    password
+                );
+                const idToken = await firebase.helpers.getIdToken(credential.user, true);
+                user = await appClient.loginWithFirebase({ idToken, companyCode });
+            } catch (firebaseError) {
+                if (!shouldFallbackToLegacy(firebaseError)) {
+                    throw firebaseError;
+                }
+                if (shouldDisableFirebase(firebaseError)) {
+                    firebaseDisabled = true;
+                }
+                user = await appClient.login({
+                    companyCode,
+                    username: email,
+                    password
+                });
+            }
         } else {
             user = await appClient.login({
                 companyCode,
@@ -156,7 +199,7 @@ async function handleLogin() {
         console.error('Login failed:', error);
         welcomeTransitionActive = false;
         resetWelcomeTransitionState();
-        setMessage(error.message, '#ff7a7a');
+        setMessage(resolveAuthErrorMessage(error), '#ff7a7a');
     } finally {
         loginBtn.disabled = false;
     }
@@ -401,12 +444,62 @@ function setMessage(message, color) {
 }
 
 function getFirebaseContext() {
+    if (firebaseDisabled) {
+        return null;
+    }
     const auth = window.firebaseAuth;
     const helpers = window.firebaseAuthHelpers;
     if (!auth || !helpers) {
         return null;
     }
     return { auth, helpers };
+}
+
+function resolveAuthErrorMessage(error) {
+    const code = String(error?.code || '').trim();
+    if (!code.startsWith('auth/')) {
+        return error?.message || 'Sign in failed.';
+    }
+
+    switch (code) {
+        case 'auth/invalid-email':
+            return 'Invalid email address.';
+        case 'auth/user-not-found':
+            return 'No account found for that email.';
+        case 'auth/wrong-password':
+            return 'Incorrect password.';
+        case 'auth/invalid-credential':
+        case 'auth/invalid-login-credentials':
+            return 'Invalid login credentials.';
+        case 'auth/operation-not-allowed':
+            return 'Email/Password sign-in is disabled in Firebase.';
+        case 'auth/too-many-requests':
+            return 'Too many attempts. Please try again later.';
+        case 'auth/network-request-failed':
+            return 'Network error. Please check your connection.';
+        case 'auth/internal-error':
+            return 'Firebase error. Please enable Email/Password login and add your domain to Authorized Domains.';
+        default:
+            return error?.message || 'Sign in failed.';
+    }
+}
+
+function shouldFallbackToLegacy(error) {
+    const code = String(error?.code || '').trim();
+    if (!code) {
+        return true;
+    }
+    return FIREBASE_FALLBACK_CODES.has(code);
+}
+
+function shouldDisableFirebase(error) {
+    const code = String(error?.code || '').trim();
+    return FIREBASE_DISABLE_CODES.has(code);
+}
+
+function isFirebasePopupCancelled(error) {
+    const code = String(error?.code || '').trim();
+    return FIREBASE_POPUP_CANCEL_CODES.has(code);
 }
 
 function getForgotPasswordUrl() {
@@ -438,6 +531,12 @@ function handleGoogleLogin() {
     const companyCode = String(companyCodeInput?.value || '').trim();
     const firebase = getFirebaseContext();
 
+    if (!companyCode) {
+        setMessage('Please enter company ID to continue with Google.', '#ffffff');
+        companyCodeInput?.focus?.();
+        return;
+    }
+
     if (firebase) {
         loginBtn.disabled = true;
         setMessage('Opening Google...', '#ffffff');
@@ -456,17 +555,32 @@ function handleGoogleLogin() {
             })
             .catch((error) => {
                 console.error('Google login failed:', error);
-                setMessage(error?.message || 'Google login failed.', '#ff7a7a');
+                if (isFirebasePopupCancelled(error)) {
+                    setMessage('Google sign-in canceled.', '#ffffff');
+                    return;
+                }
+
+                const message = String(error?.message || '');
+                if (error?.code === 'INVALID_CREDENTIALS' && /no account matched/i.test(message)) {
+                    setMessage('Your Google account is not linked yet. Please sign in with email and password first.', '#ff7a7a');
+                    return;
+                }
+
+                if (shouldDisableFirebase(error)) {
+                    firebaseDisabled = true;
+                }
+
+                if (shouldFallbackToLegacy(error)) {
+                    setMessage('Using classic Google sign-in...', '#ffffff');
+                    window.location.assign(getGoogleLoginUrl());
+                    return;
+                }
+
+                setMessage(resolveAuthErrorMessage(error), '#ff7a7a');
             })
             .finally(() => {
                 loginBtn.disabled = false;
             });
-        return;
-    }
-
-    if (!companyCode) {
-        setMessage('Please enter company ID to continue with Google.', '#ffffff');
-        companyCodeInput?.focus?.();
         return;
     }
 
@@ -662,8 +776,8 @@ function buildThemePalette(primaryColor) {
     const primary = normalizeHexColor(primaryColor, DEFAULT_PRIMARY_COLOR);
     const primaryRgb = rgbTupleToCss(hexToRgb(primary));
     const bright = mixHexColors(primary, '#ffffff', 0.28);
-    const accent = mixHexColors(primary, '#8b5cf6', 0.34);
-    const rose = mixHexColors(primary, '#ec4899', 0.42);
+    const accent = mixHexColors(primary, '#14b8a6', 0.32);
+    const sun = mixHexColors(primary, '#f59e0b', 0.34);
     const deep = mixHexColors(primary, '#020617', 0.78);
     const dusk = mixHexColors(primary, '#0f172a', 0.58);
     const lead = mixHexColors(primary, '#0f172a', 0.34);
@@ -673,10 +787,10 @@ function buildThemePalette(primaryColor) {
         primaryRgb,
         pageGradient: [
             `radial-gradient(circle at 15% 20%, ${hexToRgba(bright, 0.3)} 0%, transparent 34%)`,
-            `radial-gradient(circle at 85% 0%, ${hexToRgba(accent, 0.24)} 0%, transparent 28%)`,
+            `radial-gradient(circle at 85% 0%, ${hexToRgba(sun, 0.2)} 0%, transparent 30%)`,
             `linear-gradient(140deg, ${lead} 0%, ${dusk} 56%, ${deep} 100%)`
         ].join(', '),
-        buttonGradient: `linear-gradient(135deg, ${bright} 0%, ${accent} 56%, ${rose} 100%)`
+        buttonGradient: `linear-gradient(135deg, ${bright} 0%, ${accent} 56%, ${sun} 100%)`
     };
 }
 
