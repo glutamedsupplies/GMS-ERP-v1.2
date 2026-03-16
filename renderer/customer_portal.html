@@ -7,7 +7,7 @@
 <title>Customer Chat Portal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700&display=swap">
 <style>
   :root {
     --bg: #f4f7ff;
@@ -42,7 +42,14 @@
   }
 
   body.is-signup .page {
-    max-width: 1120px;
+    max-width: 440px;
+    padding: 24px 16px 32px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
   }
 
   .hero {
@@ -51,6 +58,10 @@
     align-items: center;
     margin-bottom: 18px;
     gap: 12px;
+  }
+
+  body.is-signup .hero {
+    display: none;
   }
 
   .hero h1 {
@@ -77,6 +88,11 @@
     gap: 16px;
   }
 
+  body.is-signup .grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
   .card {
     background: rgba(255, 255, 255, 0.94);
     border: 1px solid rgba(220, 229, 243, 0.9);
@@ -87,8 +103,11 @@
   }
 
   body.is-signup .card {
-    border-radius: 22px;
-    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.16);
+    border-radius: 26px;
+    padding: 22px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: linear-gradient(160deg, rgba(15, 23, 42, 0.82), rgba(6, 10, 20, 0.86));
+    box-shadow: 0 36px 90px rgba(2, 6, 23, 0.55);
   }
 
   h2 {
@@ -97,11 +116,19 @@
     font-family: "Sora", "Plus Jakarta Sans", sans-serif;
   }
 
+  body.is-signup h2 {
+    color: #f8fafc;
+  }
+
   .copy {
     margin: 0 0 14px;
     color: var(--muted);
     font-size: 14px;
     line-height: 1.5;
+  }
+
+  body.is-signup .copy {
+    color: rgba(226, 232, 240, 0.76);
   }
 
   .field {
@@ -125,6 +152,13 @@
     font-weight: 600;
   }
 
+  body.is-signup label {
+    color: rgba(226, 232, 240, 0.82);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
   input,
   textarea,
   select {
@@ -136,6 +170,26 @@
     color: var(--text);
     background: #fff;
     outline: none;
+  }
+
+  body.is-signup input,
+  body.is-signup textarea,
+  body.is-signup select {
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.08);
+    color: #f8fafc;
+    color-scheme: dark;
+  }
+
+  body.is-signup select option {
+    background: #0f172a;
+    color: #f8fafc;
+  }
+
+  body.is-signup input::placeholder,
+  body.is-signup textarea::placeholder {
+    color: rgba(226, 232, 240, 0.56);
   }
 
   select {
@@ -177,14 +231,27 @@
     box-shadow: 0 10px 24px var(--accent-glow);
   }
 
+  body.is-signup .primary {
+    background: linear-gradient(135deg, #2dd4bf 0%, #14b8a6 56%, #22c55e 100%);
+    box-shadow: 0 18px 34px rgba(var(--signup-primary-rgb, 14,165,164), 0.3);
+  }
+
   .secondary {
     background: var(--accent-soft);
     color: var(--accent);
   }
 
+  body.is-signup .secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+  }
+
   .signup-only { display: none; }
   body.is-signup .signup-only { display: block; }
   body.is-signup .support-only { display: none; }
+
+  body.is-signup .row.signup-only { display: grid; }
 
   .signup-banner {
     border-radius: 14px;
@@ -202,11 +269,76 @@
     font-weight: 700;
   }
 
+  body.is-signup .signup-banner {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(226, 232, 240, 0.86);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .signup-header {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+
+  body.is-signup .signup-header {
+    display: grid;
+  }
+
+  .signup-logo {
+    width: 78px;
+    height: 78px;
+    margin: 0 auto 6px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.08);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    box-shadow: 0 18px 38px rgba(2, 6, 23, 0.32);
+  }
+
+  .signup-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .signup-title {
+    margin: 0;
+    font-family: "Fraunces", serif;
+    font-size: 28px;
+    color: #f8fafc;
+  }
+
+  .signup-subtitle {
+    margin: 0;
+    color: rgba(226, 232, 240, 0.8);
+    font-size: 13px;
+  }
+
+  .signup-back {
+    color: rgba(226, 232, 240, 0.78);
+    font-size: 12px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font-weight: 600;
+  }
+
+  .signup-back:hover {
+    color: #ffffff;
+  }
+
   .status {
     margin: 12px 0 0;
     min-height: 22px;
     color: var(--muted);
     font-size: 14px;
+  }
+
+  body.is-signup .status {
+    color: rgba(226, 232, 240, 0.72);
   }
 
   .status.error {
@@ -314,6 +446,46 @@
       grid-template-columns: 1fr;
     }
   }
+
+  body.is-signup {
+    font-family: "Sora", "Plus Jakarta Sans", sans-serif;
+    background:
+      radial-gradient(circle at 12% 18%, rgba(var(--signup-primary-rgb, 14,165,164), 0.28) 0%, transparent 36%),
+      radial-gradient(circle at 88% 10%, rgba(251, 191, 36, 0.22) 0%, transparent 34%),
+      linear-gradient(140deg, #0b1220 0%, #0b1c2d 56%, #0f172a 100%);
+    color: #f8fafc;
+  }
+
+  body.is-signup::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(135deg, rgba(2,6,23,0.12) 0%, rgba(2,6,23,0.78) 100%),
+      radial-gradient(circle at top, rgba(255,255,255,0.06) 0%, transparent 36%);
+    z-index: 1;
+  }
+
+  body.is-signup::before {
+    content: "";
+    position: fixed;
+    inset: -8%;
+    pointer-events: none;
+    background-image: var(--signup-background-image, none);
+    background-position: center;
+    background-size: cover;
+    filter: blur(18px) saturate(1.12) brightness(0.66);
+    transform: scale(1.02);
+    opacity: 0;
+    transition: opacity 0.55s ease, transform 0.75s ease;
+    z-index: 0;
+  }
+
+  body.is-signup.has-background::before {
+    opacity: 0.92;
+    transform: scale(1.08);
+  }
 </style>
 </head>
 <body>
@@ -328,34 +500,42 @@
 
     <div class="grid">
       <section class="card">
-        <h2 id="primaryCardTitle">Start Chat</h2>
-        <p class="copy" id="primaryCardCopy">Mag-send ng message request para diretsong pumasok sa support chat thread.</p>
+        <div class="signup-only signup-header">
+          <div class="signup-logo">
+            <img id="signupLogo" src="/logo.png" alt="Company Logo">
+          </div>
+          <h1 class="signup-title" id="signupTitle">GMS ERP Sign Up</h1>
+          <p class="signup-subtitle" id="signupSubtitle">Submit your access request for admin approval.</p>
+          <a class="signup-back" href="/index.html">Back to Login</a>
+        </div>
+        <h2 id="primaryCardTitle" class="support-only">Start Chat</h2>
+        <p class="copy support-only" id="primaryCardCopy">Mag-send ng message request para diretsong pumasok sa support chat thread.</p>
         <div class="signup-only signup-banner">
           <span>Company admin approval required.</span>
           Para sa security, kailangang i-approve muna ng head admin bago ma-activate ang account.
         </div>
         <div class="field">
           <label for="companyCodeInput">Company ID</label>
-          <input id="companyCodeInput" type="text" placeholder="Enter company ID">
+          <input id="companyCodeInput" type="text" placeholder="Enter company ID" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
         </div>
         <div class="row">
           <div class="field">
             <label for="clientNameInput">Name</label>
-            <input id="clientNameInput" type="text" placeholder="Your name">
+            <input id="clientNameInput" type="text" placeholder="Your name" autocomplete="off" autocorrect="off" spellcheck="false">
           </div>
           <div class="field">
             <label for="contactNumberInput">Contact Number</label>
-            <input id="contactNumberInput" type="text" inputmode="numeric" placeholder="0917...">
+            <input id="contactNumberInput" type="text" inputmode="numeric" placeholder="0917..." autocomplete="off" autocorrect="off" spellcheck="false">
           </div>
         </div>
         <div class="row signup-only">
           <div class="field">
             <label for="signupEmailInput">Email</label>
-            <input id="signupEmailInput" type="email" placeholder="name@company.com" autocomplete="email">
+            <input id="signupEmailInput" type="email" placeholder="name@company.com" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
           </div>
           <div class="field">
             <label for="signupIdInput">Desired Employee ID</label>
-            <input id="signupIdInput" type="text" placeholder="e.g. EMP-1234" autocomplete="username">
+            <input id="signupIdInput" type="text" placeholder="e.g. EMP-1234" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
           </div>
         </div>
         <div class="field signup-only">
@@ -377,15 +557,15 @@
       </section>
 
       <section class="card">
-        <h2>Open Existing Request</h2>
-        <p class="copy">Ilagay ang request code at contact number para ma-open at ma-edit/chat mo ulit.</p>
+        <h2 id="secondaryCardTitle">Open Existing Request</h2>
+        <p class="copy" id="secondaryCardCopy">Ilagay ang request code at contact number para ma-open at ma-edit/chat mo ulit.</p>
         <div class="field">
           <label for="requestCodeInput">Request Code</label>
-          <input id="requestCodeInput" type="text" placeholder="REQ-....">
+          <input id="requestCodeInput" type="text" placeholder="REQ-...." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
         </div>
         <div class="field">
           <label for="lookupContactInput">Contact Number (for verification)</label>
-          <input id="lookupContactInput" type="text" inputmode="numeric" placeholder="Contact number used on request">
+          <input id="lookupContactInput" type="text" inputmode="numeric" placeholder="Contact number used on request" autocomplete="off" autocorrect="off" spellcheck="false">
         </div>
         <button id="openRequestBtn" class="secondary" type="button">Open Request</button>
       </section>

@@ -4,6 +4,11 @@ const portalTitle = document.getElementById('portalTitle');
 const portalSubtitle = document.getElementById('portalSubtitle');
 const primaryCardTitle = document.getElementById('primaryCardTitle');
 const primaryCardCopy = document.getElementById('primaryCardCopy');
+const secondaryCardTitle = document.getElementById('secondaryCardTitle');
+const secondaryCardCopy = document.getElementById('secondaryCardCopy');
+const signupTitle = document.getElementById('signupTitle');
+const signupSubtitle = document.getElementById('signupSubtitle');
+const signupLogo = document.getElementById('signupLogo');
 const companyCodeInput = document.getElementById('companyCodeInput');
 const clientNameInput = document.getElementById('clientNameInput');
 const contactNumberInput = document.getElementById('contactNumberInput');
@@ -107,6 +112,12 @@ function applyIntentDefaults() {
         if (initialMessageLabel) {
             initialMessageLabel.textContent = 'Initial Message (optional)';
         }
+        if (secondaryCardTitle) {
+            secondaryCardTitle.textContent = 'Open Existing Request';
+        }
+        if (secondaryCardCopy) {
+            secondaryCardCopy.textContent = 'Ilagay ang request code at contact number para ma-open at ma-edit/chat mo ulit.';
+        }
         return;
     }
 
@@ -133,6 +144,12 @@ function applyIntentDefaults() {
     }
     if (initialMessageInput) {
         initialMessageInput.placeholder = 'Add extra details for approval (modules, branch, schedule).';
+    }
+    if (secondaryCardTitle) {
+        secondaryCardTitle.textContent = 'Track Signup Request';
+    }
+    if (secondaryCardCopy) {
+        secondaryCardCopy.textContent = 'Gamitin ang request code at contact number para makita ang status ng sign up.';
     }
 }
 
@@ -517,14 +534,16 @@ function applyBranding(branding) {
     const appName = String(branding.appName || 'GMS ERP').trim() || 'GMS ERP';
     const companyName = String(branding.companyName || '').trim();
     const primaryColor = String(branding.primaryColor || '').trim() || '#0b7285';
+    const logoPath = String(branding.logoPath || '').trim() || '/logo.png';
+    const backgroundImagePath = String(branding.backgroundImagePath || '').trim();
     const isSignup = state.intent === 'signup';
 
     document.title = `${appName} ${isSignup ? 'Sign Up' : 'Customer Chat'}`;
     portalTitle.textContent = `${appName} ${isSignup ? 'Sign Up' : 'Customer Chat'}`;
     portalSubtitle.textContent = isSignup
         ? (companyName
-            ? `Company: ${companyName} | Submit your access request.`
-            : 'Submit your sign up request and we will get back to you.')
+            ? `Company: ${companyName} | Submit your access request for approval.`
+            : 'Submit your sign up request for admin approval.')
         : (companyName
             ? `Company: ${companyName} | Chat directly with support.`
             : 'Send your message and chat directly with support.');
@@ -535,5 +554,34 @@ function applyBranding(branding) {
         document.documentElement.style.setProperty('--accent-strong', strong);
         document.documentElement.style.setProperty('--accent-soft', soft);
         document.documentElement.style.setProperty('--accent-glow', appClient.hexToRgba(primaryColor, 0.24));
+    }
+
+    if (signupTitle) {
+        signupTitle.textContent = `${appName} Sign Up`;
+    }
+    if (signupSubtitle) {
+        signupSubtitle.textContent = companyName
+            ? `Company: ${companyName} | Submit your access request for approval.`
+            : 'Submit your sign up request for admin approval.';
+    }
+    if (signupLogo) {
+        signupLogo.src = logoPath;
+    }
+
+    if (appClient?.hexToRgb) {
+        const rgb = appClient.hexToRgb(primaryColor);
+        document.documentElement.style.setProperty('--signup-primary-rgb', rgb.join(', '));
+    }
+
+    if (isSignup) {
+        if (backgroundImagePath) {
+            document.documentElement.style.setProperty('--signup-background-image', `url('${backgroundImagePath}')`);
+            document.body.classList.add('has-background');
+        } else {
+            document.documentElement.style.setProperty('--signup-background-image', 'none');
+            document.body.classList.remove('has-background');
+        }
+    } else {
+        document.body.classList.remove('has-background');
     }
 }

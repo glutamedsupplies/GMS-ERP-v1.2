@@ -40,6 +40,10 @@ const editUserStatusInput = document.getElementById('editUserStatus');
 const editUserPasswordInput = document.getElementById('editUserPassword');
 const editFeatureAccessContainer = document.getElementById('editFeatureAccess');
 const editFeatureInputs = Array.from(document.querySelectorAll('input[data-feature-scope="edit"][data-feature-key]'));
+const pendingSignupList = document.getElementById('pendingSignupList');
+const pendingSignupEmpty = document.getElementById('pendingSignupEmpty');
+const pendingSignupCount = document.getElementById('pendingSignupCount');
+const refreshSignupRequestsBtn = document.getElementById('refreshSignupRequestsBtn');
 
 const state = {
     users: [],
@@ -61,6 +65,7 @@ async function initialize() {
     roleFilter.addEventListener('change', refreshData);
     searchInput.addEventListener('input', renderRows);
     createUserBtn.addEventListener('click', createUser);
+    refreshSignupRequestsBtn?.addEventListener('click', loadSignupRequests);
 
     closeEditUserModalBtn?.addEventListener('click', closeEditModal);
     cancelEditUserBtn?.addEventListener('click', closeEditModal);
@@ -78,6 +83,7 @@ async function initialize() {
 
     applyFeatureAccessToInputs(getFeatureDefaults(), createFeatureInputs);
     await refreshData();
+    await loadSignupRequests();
 }
 
 async function refreshData() {

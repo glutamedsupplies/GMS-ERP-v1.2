@@ -9,6 +9,8 @@ const resultBox = document.getElementById('resultBox');
 const forgotTitle = document.getElementById('forgotTitle');
 const forgotSubtitle = document.getElementById('forgotSubtitle');
 const openChatLink = document.getElementById('openChatLink');
+const brandLogo = document.getElementById('brandLogo');
+const backgroundPhoto = document.getElementById('backgroundPhoto');
 
 let brandingTimer = null;
 
@@ -131,7 +133,10 @@ async function refreshBranding() {
 function applyBranding(branding) {
     const appName = String(branding.appName || '').trim() || 'GMS ERP';
     const companyName = String(branding.companyName || '').trim();
-    const primaryColor = String(branding.primaryColor || '').trim() || '#2575fc';
+    const primaryColor = String(branding.primaryColor || '').trim() || '#0ea5a4';
+    const logoPath = String(branding.logoPath || '').trim() || '/logo.png';
+    const backgroundImagePath = String(branding.backgroundImagePath || '').trim();
+    const rgb = appClient?.hexToRgb ? appClient.hexToRgb(primaryColor) : [14, 165, 164];
 
     document.title = `${appName} Forgot Password`;
 
@@ -145,30 +150,20 @@ function applyBranding(branding) {
             : 'Enter your email and we will send a reset link.';
     }
 
-    document.documentElement.style.setProperty('--primary', primaryColor);
-    document.body.style.background = `radial-gradient(circle at top left, ${withAlpha(primaryColor, 0.2)}, transparent 28%), linear-gradient(145deg, #f8fbff, #ebf1ff)`;
-}
-
-function withAlpha(hexColor = '', alpha = 0.2) {
-    const safeAlpha = Math.min(1, Math.max(0, Number(alpha) || 0));
-    const hex = String(hexColor || '').trim().replace('#', '');
-
-    if (/^[0-9a-fA-F]{3}$/.test(hex)) {
-        const expanded = hex.split('').map((char) => char + char).join('');
-        const intValue = Number.parseInt(expanded, 16);
-        const r = (intValue >> 16) & 255;
-        const g = (intValue >> 8) & 255;
-        const b = intValue & 255;
-        return `rgba(${r}, ${g}, ${b}, ${safeAlpha})`;
+    if (brandLogo) {
+        brandLogo.src = logoPath;
     }
 
-    if (/^[0-9a-fA-F]{6}$/.test(hex)) {
-        const intValue = Number.parseInt(hex, 16);
-        const r = (intValue >> 16) & 255;
-        const g = (intValue >> 8) & 255;
-        const b = intValue & 255;
-        return `rgba(${r}, ${g}, ${b}, ${safeAlpha})`;
-    }
+    document.documentElement.style.setProperty('--brand-primary', primaryColor);
+    document.documentElement.style.setProperty('--brand-primary-rgb', rgb.join(', '));
 
-    return `rgba(37, 117, 252, ${safeAlpha})`;
+    if (backgroundPhoto) {
+        if (backgroundImagePath) {
+            backgroundPhoto.style.backgroundImage = `url('${backgroundImagePath}')`;
+            backgroundPhoto.classList.add('has-image');
+        } else {
+            backgroundPhoto.style.backgroundImage = 'none';
+            backgroundPhoto.classList.remove('has-image');
+        }
+    }
 }

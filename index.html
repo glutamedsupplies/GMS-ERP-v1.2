@@ -431,6 +431,12 @@
     box-shadow:0 6px 14px rgba(15,23,42,0.12);
   }
 
+  .google-badge img{
+    width:16px;
+    height:16px;
+    display:block;
+  }
+
   #message{
     min-height:18px;
     margin-top:10px;
@@ -807,17 +813,17 @@
 
     <div class="input-group company-code-group" id="companyCodeGroup">
       <span class="input-icon"><i class="fa-regular fa-building"></i></span>
-      <input type="text" id="companyCode" placeholder="Company ID" autocomplete="organization">
+      <input type="text" id="companyCode" placeholder="Company ID" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
     </div>
 
     <div class="input-group">
       <span class="input-icon"><i class="fa-regular fa-envelope"></i></span>
-      <input type="email" id="email" placeholder="Email" autocomplete="email">
+      <input type="email" id="email" placeholder="Email" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
     </div>
 
     <div class="input-group">
       <span class="input-icon"><i class="fa-solid fa-lock"></i></span>
-      <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+      <input type="password" id="password" placeholder="Password" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false">
       <div class="toggle-pass" id="togglePass"><i class="fa-regular fa-eye"></i></div>
     </div>
 
@@ -828,7 +834,9 @@
     </div>
     <div class="divider"><span>or</span></div>
     <button id="googleLoginBtn" class="oauth-btn" type="button">
-      <span class="google-badge" aria-hidden="true">G</span>
+      <span class="google-badge" aria-hidden="true">
+        <img src="/assets/google-g.svg" alt="">
+      </span>
       Continue with Google
     </button>
     <button id="installAppBtn" class="install-btn" type="button" hidden>Install</button>

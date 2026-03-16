@@ -45,6 +45,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow-y: auto;
         }
 
         .settings-card {
@@ -55,6 +56,8 @@
             padding: 28px;
             box-shadow: 0 24px 54px rgba(0, 0, 0, 0.32);
             backdrop-filter: blur(14px);
+            max-height: calc(100vh - 48px);
+            overflow: auto;
         }
 
         .header {
@@ -241,6 +244,12 @@
             font-weight: 800;
         }
 
+        .google-badge img {
+            width: 16px;
+            height: 16px;
+            display: block;
+        }
+
         .connect-footnote {
             margin: 10px 0 0;
             font-size: 12px;
@@ -272,6 +281,36 @@
             background: var(--input-bg);
             color: #111827;
             transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        select,
+        textarea {
+            width: 100%;
+            border: none;
+            border-radius: 10px;
+            outline: none;
+            padding: 10px 14px;
+            font: inherit;
+            background: var(--input-bg);
+            color: #111827;
+        }
+
+        textarea {
+            min-height: 70px;
+            resize: vertical;
+        }
+
+        select {
+            height: 46px;
+            appearance: none;
+            background-image:
+                linear-gradient(45deg, transparent 50%, #64748b 50%),
+                linear-gradient(135deg, #64748b 50%, transparent 50%);
+            background-position:
+                calc(100% - 18px) calc(50% - 2px),
+                calc(100% - 12px) calc(50% - 2px);
+            background-size: 6px 6px, 6px 6px;
+            background-repeat: no-repeat;
         }
 
         input:focus {
@@ -449,7 +488,9 @@
                     <p class="connect-copy">Sign in with Google to link Gmail for quick access.</p>
                     <div class="connect-status" id="googleConnectStatus">Not connected</div>
                     <button class="google-btn" id="connectGoogleBtn" type="button">
-                        <span class="google-badge">G</span>
+                        <span class="google-badge" aria-hidden="true">
+                            <img src="/assets/google-g.svg" alt="">
+                        </span>
                         Connect Google
                     </button>
                 </div>

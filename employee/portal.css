@@ -795,6 +795,12 @@ tbody tr:hover {
   font-weight: 900;
 }
 
+.google-badge img {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
 .connect-footnote {
   margin: 12px 0 0;
   font-size: 12px;
