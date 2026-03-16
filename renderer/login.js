@@ -42,6 +42,15 @@ let lastBrandingSignature = '';
 let currentBranding = { ...DEFAULT_BRANDING };
 let welcomeTransitionActive = false;
 let firebaseDisabled = false;
+let lastBackgroundSource = '';
+
+const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const WELCOME_TIMINGS = {
+    enter: prefersReducedMotion ? 0 : 140,
+    zoom: prefersReducedMotion ? 0 : 420,
+    exit: prefersReducedMotion ? 0 : 120
+};
+const BOOTSTRAP_TIMEOUT_MS = 650;
 
 const FIREBASE_FALLBACK_CODES = new Set([
     'auth/user-not-found',
@@ -250,13 +259,7 @@ function redirectByRole(role, { bootstrap = null } = {}) {
 }
 
 async function buildWelcomeContext(user, { companyCode = '', loginId = '' } = {}) {
-    let bootstrap = null;
-
-    try {
-        bootstrap = await appClient.getBootstrap();
-    } catch (error) {
-        console.error('Failed to load bootstrap for welcome intro:', error);
-    }
+    const bootstrap = await getBootstrapWithTimeout();
 
     const fallbackBranding = {
         ...currentBranding,
@@ -400,11 +403,11 @@ async function playWelcomeTransition(context = {}) {
     void welcomeOverlayEl.offsetWidth;
     welcomeOverlayEl.classList.add('is-visible');
 
-    await wait(260);
+    await wait(WELCOME_TIMINGS.enter);
     welcomeOverlayEl.classList.add('is-zooming');
-    await wait(1180);
+    await wait(WELCOME_TIMINGS.zoom);
     welcomeOverlayEl.classList.add('is-exiting');
-    await wait(380);
+    await wait(WELCOME_TIMINGS.exit);
 }
 
 function resetWelcomeTransitionState() {
@@ -433,6 +436,27 @@ function wait(durationMs) {
     return new Promise((resolve) => {
         window.setTimeout(resolve, durationMs);
     });
+}
+
+async function getBootstrapWithTimeout() {
+    let completed = false;
+    const timeout = wait(BOOTSTRAP_TIMEOUT_MS).then(() => {
+        if (completed) {
+            return null;
+        }
+        return null;
+    });
+    const fetchBootstrap = appClient.getBootstrap()
+        .then((payload) => {
+            completed = true;
+            return payload;
+        })
+        .catch((error) => {
+            console.error('Failed to load bootstrap for welcome intro:', error);
+            completed = true;
+            return null;
+        });
+    return Promise.race([fetchBootstrap, timeout]);
 }
 
 function setMessage(message, color) {
@@ -707,8 +731,14 @@ function applyBackgroundImage(source) {
     if (!nextSource) {
         backgroundPhotoEl.classList.remove('has-image');
         backgroundPhotoEl.style.backgroundImage = 'none';
+        lastBackgroundSource = '';
         return;
     }
+
+    if (nextSource === lastBackgroundSource) {
+        return;
+    }
+    lastBackgroundSource = nextSource;
 
     const probe = new Image();
     probe.onload = () => {

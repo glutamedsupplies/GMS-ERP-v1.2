@@ -269,11 +269,20 @@ function getFirebaseContext() {
 
 function resolveFirebaseError(error) {
     const code = String(error?.code || '').trim();
+    const host = (typeof window !== 'undefined' && window.location && window.location.hostname)
+        ? window.location.hostname
+        : 'your domain';
+    if (code === 'auth/unauthorized-domain') {
+        return `Domain not authorized (${host}). Add ${host} in Firebase Auth > Authorized domains.`;
+    }
     if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
         return 'Google sign-in canceled.';
     }
     if (code === 'auth/popup-blocked') {
         return 'Popup blocked. Allow popups and try again.';
+    }
+    if (code === 'auth/internal-error') {
+        return `Google sign-in is not ready for ${host}. Enable Google provider, add ${host} in Firebase Auth > Authorized domains, and add your email under OAuth consent screen > Test users if in Testing.`;
     }
     return error?.message || 'Google sign-in failed.';
 }
