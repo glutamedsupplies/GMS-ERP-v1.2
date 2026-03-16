@@ -14,6 +14,13 @@ const sendEmailCodeBtn = document.getElementById('sendEmailCodeBtn');
 const verifyEmailCodeBtn = document.getElementById('verifyEmailCodeBtn');
 const emailConnectStatus = document.getElementById('emailConnectStatus');
 const googleConnectStatus = document.getElementById('googleConnectStatus');
+const openGoogleModalBtn = document.getElementById('openGoogleModalBtn');
+const googleConnectModal = document.getElementById('googleConnectModal');
+const closeGoogleModalBtn = document.getElementById('closeGoogleModalBtn');
+const googleModalEmailInput = document.getElementById('googleModalEmailInput');
+const googleModalCodeInput = document.getElementById('googleModalCodeInput');
+const googleModalSendCodeBtn = document.getElementById('googleModalSendCodeBtn');
+const googleModalStatus = document.getElementById('googleModalStatus');
 const connectGoogleBtn = document.getElementById('connectGoogleBtn');
 
 let session = null;
@@ -49,7 +56,15 @@ async function initialize() {
     logoutBtn.addEventListener('click', logout);
     sendEmailCodeBtn?.addEventListener('click', requestEmailCode);
     verifyEmailCodeBtn?.addEventListener('click', verifyEmailCode);
-    connectGoogleBtn?.addEventListener('click', connectGoogleAccount);
+    openGoogleModalBtn?.addEventListener('click', openGoogleModal);
+    closeGoogleModalBtn?.addEventListener('click', closeGoogleModal);
+    googleConnectModal?.addEventListener('click', (event) => {
+        if (event.target === googleConnectModal) {
+            closeGoogleModal();
+        }
+    });
+    googleModalSendCodeBtn?.addEventListener('click', requestGoogleModalCode);
+    connectGoogleBtn?.addEventListener('click', confirmGoogleConnect);
     await loadProfile();
 }
 
@@ -169,6 +184,9 @@ function applyConnectionState(user = {}) {
     if (verifyEmailCodeBtn) {
         verifyEmailCodeBtn.disabled = connectionState.login_email_verified;
     }
+    if (openGoogleModalBtn) {
+        openGoogleModalBtn.disabled = connectionState.google_email_verified;
+    }
     if (connectGoogleBtn) {
         connectGoogleBtn.disabled = connectionState.google_email_verified;
     }
@@ -233,18 +251,97 @@ async function verifyEmailCode() {
     }
 }
 
-async function connectGoogleAccount() {
-    if (!connectGoogleBtn) {
+function openGoogleModal() {
+    if (!googleConnectModal) {
         return;
     }
-    const firebase = getFirebaseContext();
-    if (!firebase) {
-        setConnectStatus(googleConnectStatus, 'Firebase auth is not ready yet.', 'warning');
+    googleConnectModal.classList.add('is-open');
+    googleConnectModal.setAttribute('aria-hidden', 'false');
+    if (googleModalEmailInput) {
+        googleModalEmailInput.value = loginEmailInput?.value || connectionState.login_email || '';
+    }
+    if (googleModalCodeInput) {
+        googleModalCodeInput.value = '';
+    }
+    setGoogleModalStatus('', false);
+}
+
+function closeGoogleModal() {
+    if (!googleConnectModal) {
+        return;
+    }
+    googleConnectModal.classList.remove('is-open');
+    googleConnectModal.setAttribute('aria-hidden', 'true');
+}
+
+async function requestGoogleModalCode() {
+    const email = String(googleModalEmailInput?.value || '').trim();
+    if (!email) {
+        setGoogleModalStatus('Email is required to send the code.', true);
+        return;
+    }
+
+    googleModalSendCodeBtn.disabled = true;
+    const originalLabel = googleModalSendCodeBtn.textContent;
+    googleModalSendCodeBtn.textContent = 'Sending...';
+
+    try {
+        const payload = await appClient.requestEmailConnectionCode({ email });
+        if (loginEmailInput) {
+            loginEmailInput.value = payload?.email || email;
+        }
+        setGoogleModalStatus(`Code sent to ${payload?.email || email}.`, false);
+    } catch (error) {
+        console.error('Failed to send Google verification code:', error);
+        setGoogleModalStatus(error.message || 'Unable to send code.', true);
+    } finally {
+        googleModalSendCodeBtn.disabled = false;
+        googleModalSendCodeBtn.textContent = originalLabel || 'Send Code';
+    }
+}
+
+async function confirmGoogleConnect() {
+    const email = String(googleModalEmailInput?.value || '').trim();
+    const code = String(googleModalCodeInput?.value || '').trim();
+    if (!email) {
+        setGoogleModalStatus('Email is required.', true);
+        return;
+    }
+    if (!code && !connectionState.login_email_verified) {
+        setGoogleModalStatus('Verification code is required.', true);
         return;
     }
 
     connectGoogleBtn.disabled = true;
-    setConnectStatus(googleConnectStatus, 'Opening Google...', 'warning');
+    setGoogleModalStatus('Verifying code...', false);
+
+    try {
+        if (code) {
+            const user = await appClient.verifyEmailConnectionCode({ email, code });
+            applyConnectionState(user);
+            if (googleModalCodeInput) {
+                googleModalCodeInput.value = '';
+            }
+        }
+    } catch (error) {
+        console.error('Failed to verify email code for Google connect:', error);
+        setGoogleModalStatus(error.message || 'Unable to verify code.', true);
+        connectGoogleBtn.disabled = false;
+        return;
+    }
+
+    await connectGoogleAccountWithModal();
+}
+
+async function connectGoogleAccountWithModal() {
+    const firebase = getFirebaseContext();
+    if (!firebase) {
+        setGoogleModalStatus('Firebase auth is not ready yet.', true);
+        connectGoogleBtn.disabled = false;
+        return;
+    }
+
+    setGoogleModalStatus('Opening Google...', false);
     const provider = new firebase.helpers.GoogleAuthProvider();
 
     try {
@@ -252,9 +349,11 @@ async function connectGoogleAccount() {
         const idToken = await firebase.helpers.getIdToken(result.user, true);
         const user = await appClient.connectGoogleAccount({ idToken });
         applyConnectionState(user);
+        setGoogleModalStatus('Google connected successfully.', false);
+        closeGoogleModal();
     } catch (error) {
         console.error('Failed to connect Google account:', error);
-        setConnectStatus(googleConnectStatus, resolveFirebaseError(error), 'warning');
+        setGoogleModalStatus(resolveFirebaseError(error), true);
     } finally {
         connectGoogleBtn.disabled = connectionState.google_email_verified;
     }
@@ -287,6 +386,14 @@ function setConnectStatus(element, message, variant = 'default') {
     element.textContent = String(message || '');
     element.classList.toggle('is-success', variant === 'success');
     element.classList.toggle('is-warning', variant === 'warning');
+}
+
+function setGoogleModalStatus(message, isError) {
+    if (!googleModalStatus) {
+        return;
+    }
+    googleModalStatus.textContent = message || '';
+    googleModalStatus.classList.toggle('is-error', Boolean(isError));
 }
 
 function setupPasswordToggle(toggleId, inputId) {

@@ -276,15 +276,13 @@
   }
 
   .signup-header {
-    display: grid;
+    display: none;
     gap: 6px;
     margin-bottom: 14px;
     text-align: center;
   }
 
-  body.is-signup .signup-header {
-    display: grid;
-  }
+  body.is-signup .signup-header { display: grid; }
 
   .signup-logo {
     width: 78px;
@@ -319,15 +317,21 @@
   }
 
   .signup-back {
-    color: rgba(226, 232, 240, 0.78);
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.88);
     font-size: 12px;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    font-weight: 600;
+    text-decoration: none;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 20px rgba(2, 6, 23, 0.18);
   }
 
   .signup-back:hover {
-    color: #ffffff;
+    filter: brightness(0.96);
   }
 
   .status {
@@ -556,7 +560,7 @@
         <button id="createRequestBtn" class="primary" type="button">Start Chat</button>
       </section>
 
-      <section class="card">
+      <section class="card support-only">
         <h2 id="secondaryCardTitle">Open Existing Request</h2>
         <p class="copy" id="secondaryCardCopy">Ilagay ang request code at contact number para ma-open at ma-edit/chat mo ulit.</p>
         <div class="field">

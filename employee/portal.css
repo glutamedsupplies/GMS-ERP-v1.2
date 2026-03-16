@@ -812,6 +812,106 @@ tbody tr:hover {
   gap: 6px;
 }
 
+.modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(6, 10, 20, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 50;
+}
+
+.modal.is-open {
+  display: flex;
+}
+
+.modal-card {
+  width: min(520px, 94vw);
+  background: rgba(10, 18, 31, 0.96);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 18px;
+  box-shadow: 0 24px 54px rgba(0, 0, 0, 0.4);
+  color: #f8fafc;
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.modal-kicker {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.6);
+  font-weight: 700;
+}
+
+.modal-header h3 {
+  margin: 4px 0 0;
+  font-size: 20px;
+}
+
+.modal-copy {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: rgba(226, 232, 240, 0.72);
+}
+
+.modal-grid {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.modal-grid label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.7);
+  font-weight: 700;
+}
+
+.modal-grid input {
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+}
+
+.modal-grid button {
+  min-height: 44px;
+}
+
+.modal-status {
+  min-height: 18px;
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.modal-status.is-error {
+  color: #ffb0b0;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  font-size: 22px;
+  cursor: pointer;
+}
+
 .field label {
   color: var(--tenant-text);
   font-size: 11px;

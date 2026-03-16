@@ -1064,6 +1064,24 @@
                 skipAuthRedirect: true
             }
         ),
+        requestPasswordResetCode: ({ companyCode = '', email = '' } = {}) => request('/api/public/password-reset/request', {
+            method: 'POST',
+            body: {
+                companyCode,
+                email
+            },
+            skipAuthRedirect: true
+        }),
+        confirmPasswordReset: ({ companyCode = '', email = '', code = '', password = '' } = {}) => request('/api/public/password-reset/confirm', {
+            method: 'POST',
+            body: {
+                companyCode,
+                email,
+                code,
+                password
+            },
+            skipAuthRedirect: true
+        }),
         getBootstrap: () => request('/api/bootstrap'),
         parseOrderDraftWithAi: (payload) => request('/api/order-form/ai-parse', {
             method: 'POST',
