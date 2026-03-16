@@ -5,6 +5,9 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Customer Chat Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700&display=swap">
 <style>
   :root {
     --bg: #f4f7ff;
@@ -13,7 +16,9 @@
     --muted: #64748b;
     --line: #dce5f3;
     --accent: #0b7285;
+    --accent-strong: #0f766e;
     --accent-soft: #e0f5f8;
+    --accent-glow: rgba(11, 114, 133, 0.24);
     --danger: #b42318;
     --shadow: 0 18px 42px rgba(15, 23, 42, 0.1);
   }
@@ -22,10 +27,11 @@
 
   body {
     margin: 0;
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-family: "Plus Jakarta Sans", "Segoe UI", Tahoma, sans-serif;
     color: var(--text);
     background:
-      radial-gradient(circle at top right, rgba(11, 114, 133, 0.14), transparent 28%),
+      radial-gradient(circle at top right, rgba(11, 114, 133, 0.18), transparent 28%),
+      radial-gradient(circle at bottom left, rgba(15, 118, 110, 0.12), transparent 32%),
       linear-gradient(180deg, #fcfeff 0%, var(--bg) 100%);
   }
 
@@ -33,6 +39,10 @@
     max-width: 1080px;
     margin: 0 auto;
     padding: 30px 18px 40px;
+  }
+
+  body.is-signup .page {
+    max-width: 1120px;
   }
 
   .hero {
@@ -46,6 +56,7 @@
   .hero h1 {
     margin: 0 0 6px;
     font-size: 30px;
+    font-family: "Sora", "Plus Jakarta Sans", sans-serif;
   }
 
   .hero p {
@@ -67,16 +78,23 @@
   }
 
   .card {
-    background: var(--panel);
-    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(220, 229, 243, 0.9);
     border-radius: 18px;
     box-shadow: var(--shadow);
     padding: 18px;
+    backdrop-filter: blur(12px);
+  }
+
+  body.is-signup .card {
+    border-radius: 22px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.16);
   }
 
   h2 {
     margin: 0 0 8px;
     font-size: 20px;
+    font-family: "Sora", "Plus Jakarta Sans", sans-serif;
   }
 
   .copy {
@@ -90,6 +108,15 @@
     margin-bottom: 12px;
   }
 
+  .field-group-title {
+    margin: 16px 0 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
   label {
     display: block;
     margin-bottom: 5px;
@@ -99,7 +126,8 @@
   }
 
   input,
-  textarea {
+  textarea,
+  select {
     width: 100%;
     border: 1px solid var(--line);
     border-radius: 12px;
@@ -108,6 +136,18 @@
     color: var(--text);
     background: #fff;
     outline: none;
+  }
+
+  select {
+    appearance: none;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+      linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position:
+      calc(100% - 18px) calc(50% - 2px),
+      calc(100% - 12px) calc(50% - 2px);
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
   }
 
   textarea {
@@ -132,13 +172,34 @@
   }
 
   .primary {
-    background: var(--accent);
+    background: linear-gradient(140deg, var(--accent), var(--accent-strong));
     color: #fff;
+    box-shadow: 0 10px 24px var(--accent-glow);
   }
 
   .secondary {
     background: var(--accent-soft);
     color: var(--accent);
+  }
+
+  .signup-only { display: none; }
+  body.is-signup .signup-only { display: block; }
+  body.is-signup .support-only { display: none; }
+
+  .signup-banner {
+    border-radius: 14px;
+    padding: 12px 14px;
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 14px;
+    display: grid;
+    gap: 4px;
+  }
+
+  .signup-banner span {
+    font-weight: 700;
   }
 
   .status {
@@ -269,6 +330,10 @@
       <section class="card">
         <h2 id="primaryCardTitle">Start Chat</h2>
         <p class="copy" id="primaryCardCopy">Mag-send ng message request para diretsong pumasok sa support chat thread.</p>
+        <div class="signup-only signup-banner">
+          <span>Company admin approval required.</span>
+          Para sa security, kailangang i-approve muna ng head admin bago ma-activate ang account.
+        </div>
         <div class="field">
           <label for="companyCodeInput">Company ID</label>
           <input id="companyCodeInput" type="text" placeholder="Enter company ID">
@@ -283,12 +348,29 @@
             <input id="contactNumberInput" type="text" inputmode="numeric" placeholder="0917...">
           </div>
         </div>
+        <div class="row signup-only">
+          <div class="field">
+            <label for="signupEmailInput">Email</label>
+            <input id="signupEmailInput" type="email" placeholder="name@company.com" autocomplete="email">
+          </div>
+          <div class="field">
+            <label for="signupIdInput">Desired Employee ID</label>
+            <input id="signupIdInput" type="text" placeholder="e.g. EMP-1234" autocomplete="username">
+          </div>
+        </div>
+        <div class="field signup-only">
+          <label for="signupRoleInput">Requested Role</label>
+          <select id="signupRoleInput">
+            <option value="employee">Employee</option>
+            <option value="staff">Staff</option>
+          </select>
+        </div>
         <div class="field">
-          <label for="requestDetailsInput">Topic (optional)</label>
+          <label id="requestDetailsLabel" for="requestDetailsInput">Topic (optional)</label>
           <textarea id="requestDetailsInput" placeholder="Short topic/title ng concern mo"></textarea>
         </div>
         <div class="field">
-          <label for="initialMessageInput">Initial Message (optional)</label>
+          <label id="initialMessageLabel" for="initialMessageInput">Initial Message (optional)</label>
           <textarea id="initialMessageInput" placeholder="Extra context or question..."></textarea>
         </div>
         <button id="createRequestBtn" class="primary" type="button">Start Chat</button>

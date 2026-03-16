@@ -1290,6 +1290,23 @@
                 idToken: String(idToken || '').trim()
             }
         }),
+        listSignupRequests: ({ status = 'open', filter = '', limit = 200 } = {}) => request(
+            `/api/signup-requests?status=${encodeURIComponent(status)}&filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}`
+        ),
+        approveSignupRequest: (requestCode, payload = {}) => request(
+            `/api/signup-requests/${encodeURIComponent(requestCode)}/approve`,
+            {
+                method: 'POST',
+                body: payload
+            }
+        ),
+        rejectSignupRequest: (requestCode, payload = {}) => request(
+            `/api/signup-requests/${encodeURIComponent(requestCode)}/reject`,
+            {
+                method: 'POST',
+                body: payload
+            }
+        ),
         getCompanySettings: () => request('/api/company/settings'),
         updateCompanySettings: (payload) => request('/api/company/settings', {
             method: 'PUT',

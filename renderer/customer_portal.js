@@ -7,6 +7,11 @@ const primaryCardCopy = document.getElementById('primaryCardCopy');
 const companyCodeInput = document.getElementById('companyCodeInput');
 const clientNameInput = document.getElementById('clientNameInput');
 const contactNumberInput = document.getElementById('contactNumberInput');
+const signupEmailInput = document.getElementById('signupEmailInput');
+const signupIdInput = document.getElementById('signupIdInput');
+const signupRoleInput = document.getElementById('signupRoleInput');
+const requestDetailsLabel = document.getElementById('requestDetailsLabel');
+const initialMessageLabel = document.getElementById('initialMessageLabel');
 const requestDetailsInput = document.getElementById('requestDetailsInput');
 const initialMessageInput = document.getElementById('initialMessageInput');
 const createRequestBtn = document.getElementById('createRequestBtn');
@@ -50,6 +55,7 @@ function initialize() {
     state.companyCode = initialCompanyCode;
     state.intent = intent === 'signup' ? 'signup' : 'support';
     applyIntentDefaults();
+    document.body.classList.toggle('is-signup', state.intent === 'signup');
 
     createRequestBtn.addEventListener('click', createRequest);
     openRequestBtn.addEventListener('click', openRequestThread);
@@ -95,6 +101,12 @@ function initialize() {
 
 function applyIntentDefaults() {
     if (state.intent !== 'signup') {
+        if (requestDetailsLabel) {
+            requestDetailsLabel.textContent = 'Topic (optional)';
+        }
+        if (initialMessageLabel) {
+            initialMessageLabel.textContent = 'Initial Message (optional)';
+        }
         return;
     }
 
@@ -111,10 +123,16 @@ function applyIntentDefaults() {
         requestDetailsInput.value = 'Account sign up request';
     }
     if (requestDetailsInput) {
-        requestDetailsInput.placeholder = 'Account sign up request';
+        requestDetailsInput.placeholder = 'Optional notes for the head admin.';
+    }
+    if (requestDetailsLabel) {
+        requestDetailsLabel.textContent = 'Access Notes (optional)';
+    }
+    if (initialMessageLabel) {
+        initialMessageLabel.textContent = 'Approval Note (optional)';
     }
     if (initialMessageInput) {
-        initialMessageInput.placeholder = 'Include your email, role, and any access needed.';
+        initialMessageInput.placeholder = 'Add extra details for approval (modules, branch, schedule).';
     }
 }
 
@@ -122,6 +140,9 @@ async function createRequest() {
     const companyCode = readCompanyCode();
     const clientName = clientNameInput.value.trim();
     const contactNumber = contactNumberInput.value.trim();
+    const signupEmail = signupEmailInput ? signupEmailInput.value.trim() : '';
+    const signupId = signupIdInput ? signupIdInput.value.trim() : '';
+    const signupRole = signupRoleInput ? signupRoleInput.value.trim() : '';
     const defaultDetails = state.intent === 'signup' ? 'Account sign up request' : 'Customer chat thread';
     const requestDetails = requestDetailsInput.value.trim() || defaultDetails;
     const initialMessage = initialMessageInput.value.trim();
@@ -131,7 +152,18 @@ async function createRequest() {
         return;
     }
 
-    if (!initialMessage) {
+    if (state.intent === 'signup') {
+        if (!signupEmail || !signupId) {
+            setStatus('Email and desired employee ID are required for sign up.', true);
+            return;
+        }
+        if (!isValidEmail(signupEmail)) {
+            setStatus('Please provide a valid email address.', true);
+            return;
+        }
+    }
+
+    if (!initialMessage && state.intent !== 'signup') {
         setStatus(
             state.intent === 'signup'
                 ? 'Please enter your sign up details to continue.'
@@ -145,12 +177,34 @@ async function createRequest() {
     setStatus(state.intent === 'signup' ? 'Submitting sign up request...' : 'Starting chat...', false);
 
     try {
+        const requestMeta = state.intent === 'signup'
+            ? {
+                intent: 'signup',
+                name: clientName,
+                email: signupEmail,
+                role: signupRole || 'employee',
+                desiredId: signupId,
+                contactNumber
+            }
+            : {};
+        const signupMessage = state.intent === 'signup'
+            ? buildSignupMessage({
+                name: clientName,
+                email: signupEmail,
+                role: signupRole || 'employee',
+                desiredId: signupId,
+                contactNumber,
+                notes: requestDetails
+            })
+            : '';
+        const finalInitialMessage = initialMessage || signupMessage;
         const payload = await appClient.createPublicCustomerRequest({
             companyCode,
             clientName,
             contactNumber,
             requestDetails,
-            initialMessage
+            initialMessage: finalInitialMessage,
+            requestMeta
         });
         applyThread(payload);
         requestCodeInput.value = payload?.request?.requestCode || '';
@@ -158,7 +212,7 @@ async function createRequest() {
         initialMessageInput.value = '';
         setStatus(
             state.intent === 'signup'
-                ? `Sign up request submitted. Your code is ${payload?.request?.requestCode || '-'}.`
+                ? `Sign up request submitted. Your code is ${payload?.request?.requestCode || '-'}. Wait for admin approval.`
                 : `Chat started. Your code is ${payload?.request?.requestCode || '-'}.`,
             false
         );
@@ -374,6 +428,36 @@ function readCompanyCode() {
     return state.companyCode;
 }
 
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+}
+
+function buildSignupMessage({ name, email, role, desiredId, contactNumber, notes } = {}) {
+    const lines = [
+        'Signup request details:',
+        `Name: ${name || '-'}`,
+        `Email: ${email || '-'}`,
+        `Role: ${formatRoleLabel(role)}`,
+        `Desired ID: ${desiredId || '-'}`,
+        `Contact: ${contactNumber || '-'}`
+    ];
+    if (notes) {
+        lines.push(`Notes: ${notes}`);
+    }
+    return lines.join('\n');
+}
+
+function formatRoleLabel(role) {
+    const normalized = String(role || '').trim().toLowerCase();
+    if (normalized === 'staff') {
+        return 'Staff';
+    }
+    if (normalized === 'company_admin' || normalized === 'admin') {
+        return 'Company Admin';
+    }
+    return 'Employee';
+}
+
 function sanitizeContactInput(value) {
     return String(value || '').replace(/[^\d\s()+-]/g, '');
 }
@@ -445,4 +529,11 @@ function applyBranding(branding) {
             ? `Company: ${companyName} | Chat directly with support.`
             : 'Send your message and chat directly with support.');
     document.documentElement.style.setProperty('--accent', primaryColor);
+    if (appClient?.mixHexColors && appClient?.hexToRgba) {
+        const strong = appClient.mixHexColors(primaryColor, '#0f172a', 0.2);
+        const soft = appClient.mixHexColors(primaryColor, '#ffffff', 0.85);
+        document.documentElement.style.setProperty('--accent-strong', strong);
+        document.documentElement.style.setProperty('--accent-soft', soft);
+        document.documentElement.style.setProperty('--accent-glow', appClient.hexToRgba(primaryColor, 0.24));
+    }
 }
