@@ -5,11 +5,12 @@ const logoContainerEl = document.getElementById('logoContainer');
 const backgroundPhotoEl = document.getElementById('backgroundPhoto');
 const messageDiv = document.getElementById('message');
 const passwordInput = document.getElementById('password');
-const idInput = document.getElementById('idNumber');
+const emailInput = document.getElementById('email');
 const companyCodeInput = document.getElementById('companyCode');
 const companyCodeGroupEl = document.getElementById('companyCodeGroup');
-const customerPortalBtn = document.getElementById('customerPortalBtn');
+const signUpBtn = document.getElementById('signUpBtn');
 const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+const googleLoginBtn = document.getElementById('googleLoginBtn');
 const togglePassIcon = document.getElementById('togglePass')?.querySelector('i');
 const loginTitleEl = document.getElementById('loginTitle');
 const loginSubtitleEl = document.getElementById('loginSubtitle');
@@ -41,6 +42,7 @@ let lastBrandingSignature = '';
 let currentBranding = { ...DEFAULT_BRANDING };
 let welcomeTransitionActive = false;
 
+applyQueryPrefill();
 redirectIfSessionExists();
 refreshBranding();
 
@@ -57,9 +59,9 @@ if (loginBtn) {
     loginBtn.addEventListener('click', handleLogin);
 }
 
-if (customerPortalBtn) {
-    customerPortalBtn.addEventListener('click', () => {
-        window.location.assign(getCustomerPortalUrl());
+if (signUpBtn) {
+    signUpBtn.addEventListener('click', () => {
+        window.location.assign(getSignUpUrl());
     });
 }
 
@@ -78,12 +80,16 @@ if (passwordInput) {
     });
 }
 
-if (idInput) {
-    idInput.addEventListener('keydown', (event) => {
+if (emailInput) {
+    emailInput.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
             handleLogin();
         }
     });
+}
+
+if (googleLoginBtn) {
+    googleLoginBtn.addEventListener('click', handleGoogleLogin);
 }
 
 if (companyCodeInput) {
@@ -109,12 +115,12 @@ async function handleLogin() {
         return;
     }
 
-    const id = idInput.value.trim();
+    const email = emailInput?.value.trim() || '';
     const password = passwordInput.value.trim();
     const companyCode = String(companyCodeInput?.value || '').trim();
 
-    if (!id || !password) {
-        setMessage('Please enter username and password.', '#ffffff');
+    if (!email || !password) {
+        setMessage('Please enter email and password.', '#ffffff');
         return;
     }
 
@@ -122,14 +128,27 @@ async function handleLogin() {
     setMessage('Signing in...', '#ffffff');
 
     try {
-        const user = await appClient.login({
-            companyCode,
-            username: id,
-            password
-        });
+        const firebase = getFirebaseContext();
+        let user = null;
+
+        if (firebase) {
+            const credential = await firebase.helpers.signInWithEmailAndPassword(
+                firebase.auth,
+                email,
+                password
+            );
+            const idToken = await firebase.helpers.getIdToken(credential.user, true);
+            user = await appClient.loginWithFirebase({ idToken, companyCode });
+        } else {
+            user = await appClient.login({
+                companyCode,
+                username: email,
+                password
+            });
+        }
         const welcomeContext = await buildWelcomeContext(user, {
             companyCode,
-            loginId: id
+            loginId: email
         });
         await playWelcomeTransition(welcomeContext);
         redirectByRole(user.role, { bootstrap: welcomeContext.bootstrap });
@@ -381,11 +400,13 @@ function setMessage(message, color) {
     messageDiv.style.color = color;
 }
 
-function getCustomerPortalUrl() {
-    const companyCode = String(companyCodeInput?.value || '').trim();
-    return companyCode
-        ? `/renderer/customer_portal.html?companyCode=${encodeURIComponent(companyCode)}`
-        : '/renderer/customer_portal.html';
+function getFirebaseContext() {
+    const auth = window.firebaseAuth;
+    const helpers = window.firebaseAuthHelpers;
+    if (!auth || !helpers) {
+        return null;
+    }
+    return { auth, helpers };
 }
 
 function getForgotPasswordUrl() {
@@ -393,6 +414,80 @@ function getForgotPasswordUrl() {
     return companyCode
         ? `/renderer/forgot_password.html?companyCode=${encodeURIComponent(companyCode)}`
         : '/renderer/forgot_password.html';
+}
+
+function getSignUpUrl() {
+    const companyCode = String(companyCodeInput?.value || '').trim();
+    return companyCode
+        ? `/renderer/customer_portal.html?companyCode=${encodeURIComponent(companyCode)}&intent=signup`
+        : '/renderer/customer_portal.html?intent=signup';
+}
+
+function getGoogleLoginUrl() {
+    const companyCode = String(companyCodeInput?.value || '').trim();
+    return companyCode
+        ? `/api/auth/google?companyCode=${encodeURIComponent(companyCode)}`
+        : '/api/auth/google';
+}
+
+function handleGoogleLogin() {
+    if (welcomeTransitionActive) {
+        return;
+    }
+
+    const companyCode = String(companyCodeInput?.value || '').trim();
+    const firebase = getFirebaseContext();
+
+    if (firebase) {
+        loginBtn.disabled = true;
+        setMessage('Opening Google...', '#ffffff');
+        const provider = new firebase.helpers.GoogleAuthProvider();
+
+        firebase.helpers.signInWithPopup(firebase.auth, provider)
+            .then(async (result) => {
+                const idToken = await firebase.helpers.getIdToken(result.user, true);
+                const user = await appClient.loginWithFirebase({ idToken, companyCode });
+                const welcomeContext = await buildWelcomeContext(user, {
+                    companyCode,
+                    loginId: result.user?.email || user?.id || ''
+                });
+                await playWelcomeTransition(welcomeContext);
+                redirectByRole(user.role, { bootstrap: welcomeContext.bootstrap });
+            })
+            .catch((error) => {
+                console.error('Google login failed:', error);
+                setMessage(error?.message || 'Google login failed.', '#ff7a7a');
+            })
+            .finally(() => {
+                loginBtn.disabled = false;
+            });
+        return;
+    }
+
+    if (!companyCode) {
+        setMessage('Please enter company ID to continue with Google.', '#ffffff');
+        companyCodeInput?.focus?.();
+        return;
+    }
+
+    setMessage('Redirecting to Google...', '#ffffff');
+    window.location.assign(getGoogleLoginUrl());
+}
+
+function applyQueryPrefill() {
+    const params = new URLSearchParams(window.location.search);
+    const companyCode = String(params.get('companyCode') || '').trim();
+    const authError = String(params.get('authError') || '').trim();
+
+    if (companyCode && companyCodeInput) {
+        companyCodeInput.value = companyCode;
+    }
+
+    if (authError) {
+        setMessage(authError, '#ff7a7a');
+        const cleaned = window.location.pathname;
+        window.history.replaceState({}, '', cleaned);
+    }
 }
 
 async function refreshBranding() {
@@ -552,15 +647,15 @@ function resolveBrandingHint(branding, companyCode) {
         return 'Custom login background, logo, and color are loaded from Company Profile.';
     }
     if (branding.companyName && branding.whiteLabel) {
-        return 'Custom company color and logo are loaded live while you type the company code.';
+        return 'Custom company color and logo are loaded live while you type the company ID.';
     }
     if (branding.companyName) {
         return 'Company found. Default parent branding is active until White Label is enabled.';
     }
     if (companyCode) {
-        return 'No custom company theme found for this code yet. Showing the default sign-in style.';
+        return 'No custom company theme found for this ID yet. Showing the default sign-in style.';
     }
-    return 'Type your company code to preview your company theme before logging in.';
+    return 'Type your company ID to preview your company theme before logging in.';
 }
 
 function buildThemePalette(primaryColor) {

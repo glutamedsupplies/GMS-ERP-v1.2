@@ -2,7 +2,7 @@
 <html lang="en" data-app-page="index">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://www.googleapis.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#2575fc">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -353,15 +353,82 @@
     font-weight:800;
   }
 
+  .link-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-top:10px;
+  }
+
+  .link-btn,
   .forgot-link{
-    display:block;
-    margin-top:8px;
-    text-align:center;
+    background:none;
+    border:none;
+    padding:0;
     color:var(--text-soft);
     font-size:12px;
     font-weight:700;
     text-decoration:underline;
     text-underline-offset:3px;
+    cursor:pointer;
+  }
+
+  .link-btn:hover,
+  .forgot-link:hover{
+    color:#ffffff;
+  }
+
+  .divider{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin:12px 0 6px;
+    color:var(--text-faint);
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.12em;
+  }
+
+  .divider::before,
+  .divider::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background:rgba(255,255,255,0.16);
+  }
+
+  .oauth-btn{
+    background:rgba(255,255,255,0.92);
+    border:1px solid rgba(255,255,255,0.6);
+    color:#0b1735;
+    font-size:14px;
+    font-weight:800;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    box-shadow:0 14px 32px rgba(2, 6, 23, 0.2);
+  }
+
+  .oauth-btn:hover{
+    filter:brightness(1.02);
+  }
+
+  .google-badge{
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:800;
+    font-size:12px;
+    background:#ffffff;
+    color:#1f2937;
+    border:1px solid rgba(15, 23, 42, 0.12);
+    box-shadow:0 6px 14px rgba(15,23,42,0.12);
   }
 
   #message{
@@ -736,28 +803,35 @@
     </div>
     <h1 id="loginTitle">GMS ERP Login</h1>
     <div class="subtitle" id="loginSubtitle">Sign in to continue</div>
-    <div class="company-hint" id="brandingHint">Type your company code to preview your company theme before logging in.</div>
+    <div class="company-hint" id="brandingHint">Type your company ID to preview your company theme before logging in.</div>
 
     <div class="input-group company-code-group" id="companyCodeGroup">
       <span class="input-icon"><i class="fa-regular fa-building"></i></span>
-      <input type="text" id="companyCode" placeholder="Company Code">
+      <input type="text" id="companyCode" placeholder="Company ID" autocomplete="organization">
     </div>
 
     <div class="input-group">
-      <span class="input-icon"><i class="fa-regular fa-user"></i></span>
-      <input type="text" id="idNumber" placeholder="ID Number">
+      <span class="input-icon"><i class="fa-regular fa-envelope"></i></span>
+      <input type="email" id="email" placeholder="Email" autocomplete="email">
     </div>
 
     <div class="input-group">
       <span class="input-icon"><i class="fa-solid fa-lock"></i></span>
-      <input type="password" id="password" placeholder="Password">
+      <input type="password" id="password" placeholder="Password" autocomplete="current-password">
       <div class="toggle-pass" id="togglePass"><i class="fa-regular fa-eye"></i></div>
     </div>
 
-    <button id="loginBtn" class="login-btn">Log In</button>
-    <a id="forgotPasswordBtn" class="forgot-link" href="/renderer/forgot_password.html">Forgot Password?</a>
-    <button id="customerPortalBtn" class="customer-btn" type="button">Customer Request &amp; Chat</button>
-    <button id="installAppBtn" class="install-btn" type="button">Install</button>
+    <button id="loginBtn" class="login-btn">Login</button>
+    <div class="link-row">
+      <button id="signUpBtn" class="link-btn" type="button">Sign up</button>
+      <a id="forgotPasswordBtn" class="forgot-link" href="/renderer/forgot_password.html">Forgot Password?</a>
+    </div>
+    <div class="divider"><span>or</span></div>
+    <button id="googleLoginBtn" class="oauth-btn" type="button">
+      <span class="google-badge" aria-hidden="true">G</span>
+      Continue with Google
+    </button>
+    <button id="installAppBtn" class="install-btn" type="button" hidden>Install</button>
     <div id="message"></div>
   </section>
 </main>
@@ -782,6 +856,7 @@
   </section>
 </div>
 
+<script type="module" src="shared/firebase.js"></script>
 <script src="shared/app-client.js"></script>
 <script src="shared/pwa.js"></script>
 <script src="renderer/login.js"></script>

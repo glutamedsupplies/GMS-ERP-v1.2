@@ -2,14 +2,10 @@ const appClient = window.appClient;
 
 const form = document.getElementById('forgotPasswordForm');
 const companyCodeInput = document.getElementById('companyCodeInput');
-const usernameInput = document.getElementById('usernameInput');
-const nameInput = document.getElementById('nameInput');
-const contactInput = document.getElementById('contactInput');
-const messageInput = document.getElementById('messageInput');
+const emailInput = document.getElementById('emailInput');
 const submitBtn = document.getElementById('submitBtn');
 const statusEl = document.getElementById('status');
 const resultBox = document.getElementById('resultBox');
-const requestCodeLabel = document.getElementById('requestCodeLabel');
 const forgotTitle = document.getElementById('forgotTitle');
 const forgotSubtitle = document.getElementById('forgotSubtitle');
 const openChatLink = document.getElementById('openChatLink');
@@ -40,47 +36,34 @@ function initialize() {
         }, 180);
     });
 
-    contactInput?.addEventListener('input', () => {
-        contactInput.value = sanitizeContact(contactInput.value);
-    });
 }
 
 async function handleSubmit(event) {
     event.preventDefault();
 
-    const companyCode = String(companyCodeInput?.value || '').trim();
-    const username = String(usernameInput?.value || '').trim();
-    const clientName = String(nameInput?.value || '').trim();
-    const contactNumber = String(contactInput?.value || '').trim();
-    const note = String(messageInput?.value || '').trim();
+    const email = String(emailInput?.value || '').trim();
 
-    if (!companyCode || !username || !clientName || !contactNumber) {
-        setStatus('Company code, ID/Username, full name, and contact number are required.', true);
+    if (!email) {
+        setStatus('Email is required.', true);
         return;
     }
 
-    const requestDetails = `Forgot password request for user: ${username}`;
-    const initialMessage = note || `Please help reset the password for user ${username}.`;
+    const auth = window.firebaseAuth;
+    const helpers = window.firebaseAuthHelpers;
+    if (!auth || !helpers?.sendPasswordResetEmail) {
+        setStatus('Firebase auth is not ready yet. Please refresh the page.', true);
+        return;
+    }
 
     setBusy(true);
-    setStatus('Submitting recovery request...', false);
+    setStatus('Sending reset email...', false);
 
     try {
-        const payload = await appClient.createPublicCustomerRequest({
-            companyCode,
-            clientName,
-            contactNumber,
-            requestDetails,
-            initialMessage
-        });
-
-        const requestCode = String(payload?.request?.requestCode || '').trim();
-        requestCodeLabel.textContent = requestCode || '-';
+        await helpers.sendPasswordResetEmail(auth, email);
         resultBox.style.display = 'block';
-        setStatus('Recovery request submitted. Keep your request code for follow-up.', false, true);
-        messageInput.value = '';
+        setStatus('Reset email sent. Please check your inbox.', false, true);
     } catch (error) {
-        setStatus(error?.message || 'Unable to submit recovery request.', true);
+        setStatus(error?.message || 'Unable to send reset email.', true);
     } finally {
         setBusy(false);
     }
@@ -96,18 +79,12 @@ function updateOpenChatLink() {
         : '/renderer/customer_portal.html';
 }
 
-function sanitizeContact(value = '') {
-    return String(value)
-        .replace(/[^\d+]/g, '')
-        .replace(/(?!^)\+/g, '');
-}
-
 function setBusy(isBusy) {
     if (!submitBtn) {
         return;
     }
     submitBtn.disabled = Boolean(isBusy);
-    submitBtn.textContent = isBusy ? 'Submitting...' : 'Send Recovery Request';
+    submitBtn.textContent = isBusy ? 'Sending...' : 'Send Reset Email';
 }
 
 function setStatus(message, isError = false, isOk = false) {
@@ -142,8 +119,8 @@ function applyBranding(branding) {
 
     if (forgotSubtitle) {
         forgotSubtitle.textContent = companyName
-            ? `Submit a password recovery request for ${companyName}.`
-            : 'Submit a recovery request and support will help reset your password.';
+            ? `Reset your ${companyName} password using email.`
+            : 'Enter your email and we will send a reset link.';
     }
 
     document.documentElement.style.setProperty('--primary', primaryColor);

@@ -2,6 +2,8 @@ const appClient = window.appClient;
 
 const portalTitle = document.getElementById('portalTitle');
 const portalSubtitle = document.getElementById('portalSubtitle');
+const primaryCardTitle = document.getElementById('primaryCardTitle');
+const primaryCardCopy = document.getElementById('primaryCardCopy');
 const companyCodeInput = document.getElementById('companyCodeInput');
 const clientNameInput = document.getElementById('clientNameInput');
 const contactNumberInput = document.getElementById('contactNumberInput');
@@ -32,7 +34,8 @@ const state = {
     requestCode: '',
     authContactNumber: '',
     thread: null,
-    brandingTimer: null
+    brandingTimer: null,
+    intent: 'support'
 };
 
 initialize();
@@ -40,10 +43,13 @@ initialize();
 function initialize() {
     const params = new URLSearchParams(window.location.search);
     const initialCompanyCode = String(params.get('companyCode') || '').trim();
+    const intent = String(params.get('intent') || '').trim().toLowerCase();
     if (initialCompanyCode) {
         companyCodeInput.value = initialCompanyCode;
     }
     state.companyCode = initialCompanyCode;
+    state.intent = intent === 'signup' ? 'signup' : 'support';
+    applyIntentDefaults();
 
     createRequestBtn.addEventListener('click', createRequest);
     openRequestBtn.addEventListener('click', openRequestThread);
@@ -87,25 +93,56 @@ function initialize() {
     refreshBranding();
 }
 
+function applyIntentDefaults() {
+    if (state.intent !== 'signup') {
+        return;
+    }
+
+    if (primaryCardTitle) {
+        primaryCardTitle.textContent = 'Sign Up Request';
+    }
+    if (primaryCardCopy) {
+        primaryCardCopy.textContent = 'Submit a sign up request so the team can create your access.';
+    }
+    if (createRequestBtn) {
+        createRequestBtn.textContent = 'Submit Sign Up';
+    }
+    if (requestDetailsInput && !requestDetailsInput.value.trim()) {
+        requestDetailsInput.value = 'Account sign up request';
+    }
+    if (requestDetailsInput) {
+        requestDetailsInput.placeholder = 'Account sign up request';
+    }
+    if (initialMessageInput) {
+        initialMessageInput.placeholder = 'Include your email, role, and any access needed.';
+    }
+}
+
 async function createRequest() {
     const companyCode = readCompanyCode();
     const clientName = clientNameInput.value.trim();
     const contactNumber = contactNumberInput.value.trim();
-    const requestDetails = requestDetailsInput.value.trim() || 'Customer chat thread';
+    const defaultDetails = state.intent === 'signup' ? 'Account sign up request' : 'Customer chat thread';
+    const requestDetails = requestDetailsInput.value.trim() || defaultDetails;
     const initialMessage = initialMessageInput.value.trim();
 
     if (!companyCode || !clientName || !contactNumber) {
-        setStatus('Company code, name, and contact number are required.', true);
+        setStatus('Company ID, name, and contact number are required.', true);
         return;
     }
 
     if (!initialMessage) {
-        setStatus('Please enter an initial message to start the chat.', true);
+        setStatus(
+            state.intent === 'signup'
+                ? 'Please enter your sign up details to continue.'
+                : 'Please enter an initial message to start the chat.',
+            true
+        );
         return;
     }
 
     setBusy(createRequestBtn, true);
-    setStatus('Starting chat...', false);
+    setStatus(state.intent === 'signup' ? 'Submitting sign up request...' : 'Starting chat...', false);
 
     try {
         const payload = await appClient.createPublicCustomerRequest({
@@ -119,7 +156,12 @@ async function createRequest() {
         requestCodeInput.value = payload?.request?.requestCode || '';
         lookupContactInput.value = payload?.request?.contactNumber || contactNumber;
         initialMessageInput.value = '';
-        setStatus(`Chat started. Your code is ${payload?.request?.requestCode || '-'}.`, false);
+        setStatus(
+            state.intent === 'signup'
+                ? `Sign up request submitted. Your code is ${payload?.request?.requestCode || '-'}.`
+                : `Chat started. Your code is ${payload?.request?.requestCode || '-'}.`,
+            false
+        );
     } catch (error) {
         setStatus(error.message || 'Unable to submit request.', true);
     } finally {
@@ -133,7 +175,7 @@ async function openRequestThread() {
     const contactNumber = lookupContactInput.value.trim();
 
     if (!companyCode || !requestCode || !contactNumber) {
-        setStatus('Company code, request code, and contact number are required.', true);
+        setStatus('Company ID, request code, and contact number are required.', true);
         return;
     }
 
@@ -391,11 +433,16 @@ function applyBranding(branding) {
     const appName = String(branding.appName || 'GMS ERP').trim() || 'GMS ERP';
     const companyName = String(branding.companyName || '').trim();
     const primaryColor = String(branding.primaryColor || '').trim() || '#0b7285';
+    const isSignup = state.intent === 'signup';
 
-    document.title = `${appName} Customer Chat`;
-    portalTitle.textContent = `${appName} Customer Chat`;
-    portalSubtitle.textContent = companyName
-        ? `Company: ${companyName} | Chat directly with support.`
-        : 'Send your message and chat directly with support.';
+    document.title = `${appName} ${isSignup ? 'Sign Up' : 'Customer Chat'}`;
+    portalTitle.textContent = `${appName} ${isSignup ? 'Sign Up' : 'Customer Chat'}`;
+    portalSubtitle.textContent = isSignup
+        ? (companyName
+            ? `Company: ${companyName} | Submit your access request.`
+            : 'Submit your sign up request and we will get back to you.')
+        : (companyName
+            ? `Company: ${companyName} | Chat directly with support.`
+            : 'Send your message and chat directly with support.');
     document.documentElement.style.setProperty('--accent', primaryColor);
 }

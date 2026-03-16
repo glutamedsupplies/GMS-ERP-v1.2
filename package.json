@@ -99,9 +99,10 @@
   "dependencies": {
     "better-sqlite3": "^12.6.2",
     "body-parser": "^2.2.2",
-    "exceljs": "^4.4.0",
     "cors": "^2.8.6",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
+    "firebase": "^12.10.0",
     "openai": "^6.25.0",
     "pg": "^8.20.0",
     "sqlite3": "^5.1.7"

@@ -1258,6 +1258,19 @@
             setSessionUser(user);
             return user;
         },
+        loginWithFirebase: async ({ idToken = '', companyCode = '' } = {}) => {
+            const user = await request('/api/login/firebase', {
+                method: 'POST',
+                body: {
+                    idToken: String(idToken || '').trim(),
+                    companyCode: String(companyCode || '').trim()
+                },
+                skipAuthRedirect: true
+            });
+
+            setSessionUser(user);
+            return user;
+        },
         getCompanySettings: () => request('/api/company/settings'),
         updateCompanySettings: (payload) => request('/api/company/settings', {
             method: 'PUT',
