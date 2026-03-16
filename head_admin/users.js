@@ -541,3 +541,268 @@ function setEditStatus(message, isError = false) {
     editStatusEl.textContent = message || '';
     editStatusEl.style.color = isError ? '#b91c1c' : '#1f2937';
 }
+
+async function loadSignupRequests() {
+    if (!pendingSignupList || !pendingSignupEmpty) {
+        return;
+    }
+
+    pendingSignupList.innerHTML = '';
+    pendingSignupEmpty.textContent = 'Loading signup requests...';
+    pendingSignupEmpty.style.display = 'block';
+
+    try {
+        const requests = await appClient.listSignupRequests({ status: 'open', limit: 200 });
+        renderSignupRequests(Array.isArray(requests) ? requests : []);
+    } catch (error) {
+        console.error('Failed to load signup requests:', error);
+        pendingSignupEmpty.textContent = error?.message || 'Unable to load signup requests.';
+        pendingSignupEmpty.style.display = 'block';
+        if (pendingSignupCount) {
+            pendingSignupCount.textContent = '0';
+        }
+    }
+}
+
+function renderSignupRequests(requests) {
+    if (!pendingSignupList || !pendingSignupEmpty) {
+        return;
+    }
+
+    pendingSignupList.innerHTML = '';
+    const total = requests.length;
+    if (pendingSignupCount) {
+        pendingSignupCount.textContent = String(total);
+    }
+
+    if (!total) {
+        pendingSignupEmpty.textContent = 'No pending signup requests.';
+        pendingSignupEmpty.style.display = 'block';
+        return;
+    }
+
+    pendingSignupEmpty.style.display = 'none';
+    requests.forEach((request) => {
+        pendingSignupList.appendChild(buildSignupCard(request));
+    });
+}
+
+function buildSignupCard(request) {
+    const meta = request?.requestMeta || {};
+    const requestCode = String(request?.requestCode || '').trim();
+    const nameValue = String(meta.name || request?.clientName || '').trim();
+    const emailValue = String(meta.email || '').trim();
+    const desiredIdValue = String(meta.desiredId || meta.userId || meta.employeeId || '').trim();
+    const roleValue = String(meta.role || 'employee').trim().toLowerCase();
+    const contactValue = String(request?.contactNumber || '').trim();
+    const detailsValue = String(request?.requestDetails || '').trim();
+
+    const card = document.createElement('div');
+    card.className = 'pending-card';
+
+    const header = document.createElement('div');
+    header.className = 'pending-header';
+
+    const title = document.createElement('div');
+    title.className = 'pending-title';
+    title.textContent = nameValue || 'Signup Request';
+
+    const code = document.createElement('span');
+    code.className = 'pending-count';
+    code.textContent = requestCode || 'REQ';
+
+    header.appendChild(title);
+    header.appendChild(code);
+
+    const metaBlock = document.createElement('div');
+    metaBlock.className = 'pending-meta';
+    metaBlock.textContent = [
+        `Submitted: ${formatDateTime(request?.createdAt)}`,
+        contactValue ? `Contact: ${contactValue}` : null,
+        detailsValue ? `Notes: ${detailsValue}` : null
+    ].filter(Boolean).join(' | ');
+
+    const grid = document.createElement('div');
+    grid.className = 'pending-grid';
+
+    const nameField = buildPendingField('Full Name', buildInput('text', 'Full name', nameValue));
+    const idField = buildPendingField('User ID', buildInput('text', 'EMP-...', desiredIdValue));
+    const emailField = buildPendingField('Email', buildInput('email', 'name@company.com', emailValue));
+    const roleField = buildPendingField('Role', buildRoleSelect(roleValue));
+    const passwordField = buildPendingField('Temp Password', buildInput('password', 'At least 8 chars', ''));
+
+    grid.appendChild(nameField);
+    grid.appendChild(idField);
+    grid.appendChild(emailField);
+    grid.appendChild(roleField);
+    grid.appendChild(passwordField);
+
+    const reasonField = buildPendingField('Rejection Reason (optional)', buildTextarea('Why is it rejected?'));
+
+    const actions = document.createElement('div');
+    actions.className = 'pending-actions';
+    const approveBtn = document.createElement('button');
+    approveBtn.className = 'pending-btn pending-approve';
+    approveBtn.type = 'button';
+    approveBtn.textContent = 'Approve';
+    const rejectBtn = document.createElement('button');
+    rejectBtn.className = 'pending-btn pending-reject';
+    rejectBtn.type = 'button';
+    rejectBtn.textContent = 'Reject';
+    actions.appendChild(approveBtn);
+    actions.appendChild(rejectBtn);
+
+    const status = document.createElement('div');
+    status.className = 'pending-status';
+
+    card.appendChild(header);
+    card.appendChild(metaBlock);
+    card.appendChild(grid);
+    card.appendChild(reasonField);
+    card.appendChild(actions);
+    card.appendChild(status);
+
+    approveBtn.addEventListener('click', async () => {
+        const payload = {
+            userId: idField.querySelector('input')?.value.trim(),
+            name: nameField.querySelector('input')?.value.trim(),
+            email: emailField.querySelector('input')?.value.trim(),
+            role: roleField.querySelector('select')?.value || 'employee',
+            password: passwordField.querySelector('input')?.value || ''
+        };
+
+        if (!payload.userId || !payload.name) {
+            setPendingStatus(status, 'Name and User ID are required.', true);
+            return;
+        }
+
+        if (!payload.password || payload.password.length < 8) {
+            setPendingStatus(status, 'Password must be at least 8 characters.', true);
+            return;
+        }
+
+        if (payload.email && !isValidEmail(payload.email)) {
+            setPendingStatus(status, 'Please provide a valid email address.', true);
+            return;
+        }
+
+        setPendingBusy(card, true);
+        setPendingStatus(status, 'Approving signup request...', false);
+
+        try {
+            await appClient.approveSignupRequest(requestCode, payload);
+            setStatus(`Signup approved for ${payload.name}.`, false);
+            await Promise.all([loadSignupRequests(), refreshData()]);
+        } catch (error) {
+            console.error('Approve signup failed:', error);
+            setPendingStatus(status, error?.message || 'Unable to approve signup.', true);
+        } finally {
+            setPendingBusy(card, false);
+        }
+    });
+
+    rejectBtn.addEventListener('click', async () => {
+        const reason = reasonField.querySelector('textarea')?.value.trim() || '';
+        setPendingBusy(card, true);
+        setPendingStatus(status, 'Rejecting signup request...', false);
+
+        try {
+            await appClient.rejectSignupRequest(requestCode, { reason });
+            setStatus(`Signup request ${requestCode} rejected.`, false);
+            await loadSignupRequests();
+        } catch (error) {
+            console.error('Reject signup failed:', error);
+            setPendingStatus(status, error?.message || 'Unable to reject signup.', true);
+        } finally {
+            setPendingBusy(card, false);
+        }
+    });
+
+    return card;
+}
+
+function buildPendingField(labelText, fieldEl) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'pending-field';
+    const label = document.createElement('label');
+    label.textContent = labelText;
+    wrapper.appendChild(label);
+    wrapper.appendChild(fieldEl);
+    return wrapper;
+}
+
+function buildInput(type, placeholder, value) {
+    const input = document.createElement('input');
+    input.type = type;
+    input.placeholder = placeholder || '';
+    if (value) {
+        input.value = value;
+    }
+    return input;
+}
+
+function buildTextarea(placeholder) {
+    const textarea = document.createElement('textarea');
+    textarea.placeholder = placeholder || '';
+    return textarea;
+}
+
+function buildRoleSelect(selected) {
+    const select = document.createElement('select');
+    const roles = [
+        { value: 'employee', label: 'Employee' },
+        { value: 'staff', label: 'Staff' }
+    ];
+
+    roles.forEach((role) => {
+        const option = document.createElement('option');
+        option.value = role.value;
+        option.textContent = role.label;
+        if (role.value === selected) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+
+    return select;
+}
+
+function setPendingStatus(element, message, isError) {
+    if (!element) {
+        return;
+    }
+    element.textContent = message || '';
+    element.classList.toggle('is-error', Boolean(isError));
+}
+
+function setPendingBusy(card, busy) {
+    if (!card) {
+        return;
+    }
+    card.querySelectorAll('input, textarea, select, button').forEach((el) => {
+        el.disabled = Boolean(busy);
+    });
+}
+
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+}
+
+function formatDateTime(value) {
+    if (!value) {
+        return '-';
+    }
+
+    const parsed = new Date(String(value).replace(' ', 'T'));
+    if (Number.isNaN(parsed.getTime())) {
+        return String(value);
+    }
+
+    return parsed.toLocaleString('en-PH', {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}

@@ -56,6 +56,16 @@ function openSqliteDb(filePath) {
 }
 
 function listTables(db) {
+    if (db?.__isPostgresCompat) {
+        return db.prepare(`
+            SELECT table_name AS name
+            FROM information_schema.tables
+            WHERE table_schema = current_schema()
+              AND table_type = 'BASE TABLE'
+            ORDER BY table_name
+        `).all().map((row) => String(row.name || '').trim()).filter(Boolean);
+    }
+
     return db.prepare(`
         SELECT name
         FROM sqlite_master

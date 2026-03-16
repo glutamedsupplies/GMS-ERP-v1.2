@@ -21,3 +21,4 @@ render_backup.sql
 /exports/
 /logs/
 /.runtime/
+.runtime-data/

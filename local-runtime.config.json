@@ -3,7 +3,7 @@
   "bindHost": "127.0.0.1",
   "port": 3000,
   "dbBackend": "postgres",
-  "databaseUrl": "",
+  "databaseUrl": "postgresql://postgres:Shinn0701@127.0.0.1:5432/gms",
   "databaseSslMode": "disable",
   "timeZone": "Asia/Manila",
   "trustProxy": true,

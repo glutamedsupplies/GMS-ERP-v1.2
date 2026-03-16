@@ -516,26 +516,26 @@
         </div>
         <div class="field">
           <label for="companyCodeInput">Company ID</label>
-          <input id="companyCodeInput" type="text" placeholder="Enter company ID" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+          <input id="companyCodeInput" type="text" name="signup_company_code" placeholder="Enter company ID" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
         </div>
         <div class="row">
           <div class="field">
             <label for="clientNameInput">Name</label>
-            <input id="clientNameInput" type="text" placeholder="Your name" autocomplete="off" autocorrect="off" spellcheck="false">
+            <input id="clientNameInput" type="text" name="signup_name" placeholder="Your name" autocomplete="off" autocorrect="off" spellcheck="false">
           </div>
           <div class="field">
             <label for="contactNumberInput">Contact Number</label>
-            <input id="contactNumberInput" type="text" inputmode="numeric" placeholder="0917..." autocomplete="off" autocorrect="off" spellcheck="false">
+            <input id="contactNumberInput" type="text" name="signup_contact" inputmode="numeric" placeholder="0917..." autocomplete="off" autocorrect="off" spellcheck="false">
           </div>
         </div>
         <div class="row signup-only">
           <div class="field">
             <label for="signupEmailInput">Email</label>
-            <input id="signupEmailInput" type="email" placeholder="name@company.com" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+            <input id="signupEmailInput" type="email" name="signup_email" placeholder="name@company.com" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
           </div>
           <div class="field">
             <label for="signupIdInput">Desired Employee ID</label>
-            <input id="signupIdInput" type="text" placeholder="e.g. EMP-1234" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+            <input id="signupIdInput" type="text" name="signup_employee_id" placeholder="e.g. EMP-1234" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
           </div>
         </div>
         <div class="field signup-only">
@@ -547,11 +547,11 @@
         </div>
         <div class="field">
           <label id="requestDetailsLabel" for="requestDetailsInput">Topic (optional)</label>
-          <textarea id="requestDetailsInput" placeholder="Short topic/title ng concern mo"></textarea>
+          <textarea id="requestDetailsInput" name="signup_notes" placeholder="Short topic/title ng concern mo"></textarea>
         </div>
         <div class="field">
           <label id="initialMessageLabel" for="initialMessageInput">Initial Message (optional)</label>
-          <textarea id="initialMessageInput" placeholder="Extra context or question..."></textarea>
+          <textarea id="initialMessageInput" name="signup_message" placeholder="Extra context or question..."></textarea>
         </div>
         <button id="createRequestBtn" class="primary" type="button">Start Chat</button>
       </section>
@@ -561,11 +561,11 @@
         <p class="copy" id="secondaryCardCopy">Ilagay ang request code at contact number para ma-open at ma-edit/chat mo ulit.</p>
         <div class="field">
           <label for="requestCodeInput">Request Code</label>
-          <input id="requestCodeInput" type="text" placeholder="REQ-...." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+          <input id="requestCodeInput" type="text" name="signup_request_code" placeholder="REQ-...." autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
         </div>
         <div class="field">
           <label for="lookupContactInput">Contact Number (for verification)</label>
-          <input id="lookupContactInput" type="text" inputmode="numeric" placeholder="Contact number used on request" autocomplete="off" autocorrect="off" spellcheck="false">
+          <input id="lookupContactInput" type="text" name="signup_lookup_contact" inputmode="numeric" placeholder="Contact number used on request" autocomplete="off" autocorrect="off" spellcheck="false">
         </div>
         <button id="openRequestBtn" class="secondary" type="button">Open Request</button>
       </section>
