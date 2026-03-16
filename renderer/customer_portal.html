@@ -318,7 +318,8 @@
 
   .signup-back {
     color: #0f172a;
-    background: rgba(255, 255, 255, 0.88);
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(15, 23, 42, 0.12);
     font-size: 12px;
     text-decoration: none;
     font-weight: 700;
@@ -494,7 +495,7 @@
 </head>
 <body>
   <div class="page">
-    <div class="hero">
+    <div class="hero" id="heroHeader">
       <div>
         <h1 id="portalTitle">Customer Chat Portal</h1>
         <p id="portalSubtitle">Send your message and chat directly with support.</p>
@@ -504,7 +505,7 @@
 
     <div class="grid">
       <section class="card">
-        <div class="signup-only signup-header">
+        <div class="signup-only signup-header" id="signupHeader">
           <div class="signup-logo">
             <img id="signupLogo" src="/logo.png" alt="Company Logo">
           </div>
@@ -560,7 +561,7 @@
         <button id="createRequestBtn" class="primary" type="button">Start Chat</button>
       </section>
 
-      <section class="card support-only">
+      <section class="card support-only" id="secondaryCard">
         <h2 id="secondaryCardTitle">Open Existing Request</h2>
         <p class="copy" id="secondaryCardCopy">Ilagay ang request code at contact number para ma-open at ma-edit/chat mo ulit.</p>
         <div class="field">

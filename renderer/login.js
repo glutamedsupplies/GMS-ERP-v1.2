@@ -566,16 +566,6 @@ function handleGoogleLogin() {
                     return;
                 }
 
-                if (shouldDisableFirebase(error)) {
-                    firebaseDisabled = true;
-                }
-
-                if (shouldFallbackToLegacy(error)) {
-                    setMessage('Using classic Google sign-in...', '#ffffff');
-                    window.location.assign(getGoogleLoginUrl());
-                    return;
-                }
-
                 setMessage(resolveAuthErrorMessage(error), '#ff7a7a');
             })
             .finally(() => {
@@ -584,8 +574,7 @@ function handleGoogleLogin() {
         return;
     }
 
-    setMessage('Redirecting to Google...', '#ffffff');
-    window.location.assign(getGoogleLoginUrl());
+    setMessage('Google login is not ready yet. Please add your domain in Firebase or use email and password.', '#ff7a7a');
 }
 
 function applyQueryPrefill() {
@@ -598,7 +587,11 @@ function applyQueryPrefill() {
     }
 
     if (authError) {
-        setMessage(authError, '#ff7a7a');
+        if (/google login is not configured/i.test(authError)) {
+            setMessage('Google login is not ready yet. Please add your domain in Firebase or use email and password.', '#ff7a7a');
+        } else {
+            setMessage(authError, '#ff7a7a');
+        }
         const cleaned = window.location.pathname;
         window.history.replaceState({}, '', cleaned);
     }

@@ -756,6 +756,12 @@ tbody tr:hover {
   background: rgba(251, 191, 36, 0.2);
 }
 
+.connect-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .connect-row {
   display: grid;
   gap: 8px;
@@ -869,6 +875,12 @@ tbody tr:hover {
   display: grid;
   gap: 8px;
   margin-bottom: 10px;
+}
+
+.modal-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
 }
 
 .modal-grid label {

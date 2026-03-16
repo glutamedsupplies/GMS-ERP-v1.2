@@ -6,6 +6,9 @@ const primaryCardTitle = document.getElementById('primaryCardTitle');
 const primaryCardCopy = document.getElementById('primaryCardCopy');
 const secondaryCardTitle = document.getElementById('secondaryCardTitle');
 const secondaryCardCopy = document.getElementById('secondaryCardCopy');
+const secondaryCard = document.getElementById('secondaryCard');
+const heroHeader = document.getElementById('heroHeader');
+const signupHeader = document.getElementById('signupHeader');
 const signupTitle = document.getElementById('signupTitle');
 const signupSubtitle = document.getElementById('signupSubtitle');
 const signupLogo = document.getElementById('signupLogo');
@@ -60,7 +63,6 @@ function initialize() {
     state.companyCode = initialCompanyCode;
     state.intent = intent === 'signup' ? 'signup' : 'support';
     applyIntentDefaults();
-    document.body.classList.toggle('is-signup', state.intent === 'signup');
 
     createRequestBtn.addEventListener('click', createRequest);
     openRequestBtn.addEventListener('click', openRequestThread);
@@ -105,7 +107,19 @@ function initialize() {
 }
 
 function applyIntentDefaults() {
-    if (state.intent !== 'signup') {
+    const isSignup = state.intent === 'signup';
+    document.body.classList.toggle('is-signup', isSignup);
+    if (heroHeader) {
+        heroHeader.hidden = isSignup;
+    }
+    if (signupHeader) {
+        signupHeader.hidden = !isSignup;
+    }
+    if (secondaryCard) {
+        secondaryCard.hidden = isSignup;
+    }
+
+    if (!isSignup) {
         if (requestDetailsLabel) {
             requestDetailsLabel.textContent = 'Topic (optional)';
         }
@@ -144,12 +158,6 @@ function applyIntentDefaults() {
     }
     if (initialMessageInput) {
         initialMessageInput.placeholder = 'Add extra details for approval (modules, branch, schedule).';
-    }
-    if (secondaryCardTitle) {
-        secondaryCardTitle.textContent = 'Track Signup Request';
-    }
-    if (secondaryCardCopy) {
-        secondaryCardCopy.textContent = 'Gamitin ang request code at contact number para makita ang status ng sign up.';
     }
 }
 

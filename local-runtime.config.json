@@ -2,7 +2,7 @@
   "dataDir": "C:\\Users\\pc\\Documents\\GitHub\\GMS\\.runtime-data",
   "bindHost": "127.0.0.1",
   "port": 3000,
-  "dbBackend": "postgres",
+  "dbBackend": "sqlite",
   "databaseUrl": "postgresql://postgres:Shinn0701@127.0.0.1:5432/gms",
   "databaseSslMode": "disable",
   "timeZone": "Asia/Manila",
