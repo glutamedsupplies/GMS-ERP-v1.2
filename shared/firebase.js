@@ -11,13 +11,13 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDY_Bof8nlUHhecquJ9iQVhXlBS3RA53aw",
-    authDomain: "gmserp-51eb7.firebaseapp.com",
-    projectId: "gmserp-51eb7",
-    storageBucket: "gmserp-51eb7.firebasestorage.app",
-    messagingSenderId: "1017371442964",
-    appId: "1:1017371442964:web:e31fbbe103dd2730b00c01",
-    measurementId: "G-RW92ZVJYPN"
+    apiKey: "AIzaSyASv4cM9WXni5MiVNNzSe_ORI_1t726pnY",
+    authDomain: "gms-erp-fef85.firebaseapp.com",
+    projectId: "gms-erp-fef85",
+    storageBucket: "gms-erp-fef85.firebasestorage.app",
+    messagingSenderId: "235436761166",
+    appId: "1:235436761166:web:c26644cefd527e065ae31f",
+    measurementId: "G-BH70LFT608"
 };
 
 const app = initializeApp(firebaseConfig);

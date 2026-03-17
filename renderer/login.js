@@ -481,6 +481,9 @@ function getFirebaseContext() {
 
 function resolveAuthErrorMessage(error) {
     const code = String(error?.code || '').trim();
+    const host = (typeof window !== 'undefined' && window.location && window.location.hostname)
+        ? window.location.hostname
+        : 'your domain';
     if (!code.startsWith('auth/')) {
         return error?.message || 'Sign in failed.';
     }
@@ -501,8 +504,10 @@ function resolveAuthErrorMessage(error) {
             return 'Too many attempts. Please try again later.';
         case 'auth/network-request-failed':
             return 'Network error. Please check your connection.';
+        case 'auth/unauthorized-domain':
+            return `Domain not authorized (${host}). Add ${host} in Firebase Auth > Authorized domains.`;
         case 'auth/internal-error':
-            return 'Firebase error. Please enable Email/Password login and add your domain to Authorized Domains.';
+            return `Firebase error for ${host}. Enable Email/Password + Google in Firebase, add ${host} to Authorized domains, and add your email under OAuth consent screen > Test users if in Testing.`;
         default:
             return error?.message || 'Sign in failed.';
     }
