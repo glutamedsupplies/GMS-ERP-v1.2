@@ -42,6 +42,8 @@ const mReports = document.getElementById('mReports');
 const mAi = document.getElementById('mAi');
 
 const companyFilter = document.getElementById('companyFilter');
+const supportCompanyCodeInput = document.getElementById('supportCompanyCodeInput');
+const openSupportByCodeBtn = document.getElementById('openSupportByCodeBtn');
 const companySummary = document.getElementById('companySummary');
 const companiesList = document.getElementById('companiesList');
 const plansList = document.getElementById('plansList');
@@ -259,6 +261,17 @@ async function initialize() {
     });
     if (companyFilter) {
         companyFilter.addEventListener('input', renderCompanies);
+    }
+    if (openSupportByCodeBtn) {
+        openSupportByCodeBtn.addEventListener('click', startSupportSessionByCode);
+    }
+    if (supportCompanyCodeInput) {
+        supportCompanyCodeInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                startSupportSessionByCode();
+            }
+        });
     }
     if (accessFilter) {
         accessFilter.addEventListener('input', renderAccessLogs);
@@ -1061,6 +1074,7 @@ function renderCompanies() {
                   <button type="button" data-action="save-company" class="btn-success">Save Company</button>
                   <button type="button" data-action="save-branding" class="btn-warn">Save + Enable Branding</button>
                   <button type="button" data-action="reset-admin-password" class="btn-soft">Reset Admin Password</button>
+                  <button type="button" data-action="start-support-session" class="btn-soft">Open Support Session</button>
                   <button type="button" data-action="set-plan">Set Plan</button>
                   <button type="button" data-action="usage" class="btn-soft">Usage</button>
                   <button type="button" data-action="toggle-addon" data-addon="white_label">${whiteLabelAddon.is_active ? 'Disable' : 'Enable'} White Label</button>
@@ -1094,6 +1108,10 @@ function renderLogs() {
         const networkLabel = String(details.networkKey || formatNetworkFingerprint(ipAddress)).trim();
         const deviceSummary = summarizeClientEnvironment(details.userAgent || '');
         const note = String(details.message || '').trim();
+        const supportOperator = buildAccountDisplay({
+            name: details.supportOperatorName || '',
+            id: details.supportOperatorId || ''
+        });
         const chips = [
             companyLabel,
             accountRole ? `Role: ${accountRole}` : '',
@@ -1110,6 +1128,7 @@ function renderLogs() {
                             ${chips}
                         </div>
                         <span class="muted">Account: ${escape(accountDisplay)}</span>
+                        ${supportOperator ? `<span class="muted">Support Operator: ${escape(supportOperator)}</span>` : ''}
                         ${loginMethod || loginHandle ? `<span class="muted">Method: ${escape(loginMethod || '-')} | Login ID: ${escape(loginHandle || '-')}</span>` : ''}
                         ${deviceId || ipAddress || deviceSummary.fullLabel ? `<span class="muted">Device: ${escape(deviceSummary.fullLabel || 'Unknown device')} | Device ID: ${escape(deviceId || '-')} | IP: ${escape(ipAddress || '-')}</span>` : ''}
                         ${networkLabel ? `<span class="muted">Network: ${escape(networkLabel)}</span>` : ''}
@@ -1928,6 +1947,11 @@ async function handleCompanyAction(event) {
             return;
         }
 
+        if (action === 'start-support-session') {
+            await startCompanySupportSession(company);
+            return;
+        }
+
         if (action === 'delete-company') {
             await deleteCompany(company);
             return;
@@ -2054,6 +2078,56 @@ async function resetCompanyAdminPassword(company, row) {
     } catch (error) {
         console.error('Failed to update admin password:', error);
         setStatus(error.message || 'Failed to update admin password.', true);
+    }
+}
+
+async function startCompanySupportSession(company) {
+    const companyLabel = `${company.name} (${company.company_code})`;
+    const confirmed = window.confirm(
+        `Open a visible support session for "${companyLabel}"? This will be logged and the company page will show a support banner.`
+    );
+    if (!confirmed) {
+        return;
+    }
+
+    setStatus('Starting support session...');
+    try {
+        const payload = await appClient.startSuperCompanySupportSession(company.id);
+        setStatus('Support session started. Redirecting to company dashboard...');
+        window.location.replace(payload?.redirectPath || '/head_admin/dashboard.html');
+    } catch (error) {
+        console.error('Failed to start support session:', error);
+        setStatus(error.message || 'Failed to start support session.', true);
+    }
+}
+
+async function startSupportSessionByCode() {
+    const companyCodeValue = String(supportCompanyCodeInput?.value || '').trim();
+    if (!companyCodeValue) {
+        setStatus('Company code is required for quick support access.', true);
+        supportCompanyCodeInput?.focus();
+        return;
+    }
+
+    if (openSupportByCodeBtn) {
+        openSupportByCodeBtn.disabled = true;
+    }
+
+    setStatus('Opening company by code...');
+    try {
+        const payload = await appClient.startSuperCompanySupportSessionByCode(companyCodeValue);
+        if (supportCompanyCodeInput) {
+            supportCompanyCodeInput.value = '';
+        }
+        setStatus('Support session started. Redirecting to company dashboard...');
+        window.location.replace(payload?.redirectPath || '/head_admin/dashboard.html');
+    } catch (error) {
+        console.error('Failed to open support session by company code:', error);
+        setStatus(error.message || 'Failed to open company by code.', true);
+    } finally {
+        if (openSupportByCodeBtn) {
+            openSupportByCodeBtn.disabled = false;
+        }
     }
 }
 
@@ -2271,6 +2345,12 @@ function formatAuditActionLabel(action = '', details = {}) {
     if (normalizedAction === 'auth.logout') {
         return 'Logout';
     }
+    if (normalizedAction === 'support_access.start') {
+        return 'Support Session Started';
+    }
+    if (normalizedAction === 'support_access.end') {
+        return 'Support Session Ended';
+    }
 
     const fallback = String(action || '').trim().replace(/[._]+/g, ' ');
     return fallback
@@ -2294,6 +2374,9 @@ function formatLoginMethodLabel(value = '') {
     }
     if (normalized === 'session') {
         return 'Session';
+    }
+    if (normalized === 'support_session') {
+        return 'Support Session';
     }
     return normalized ? normalized.replace(/\b\w/g, (match) => match.toUpperCase()) : '';
 }

@@ -321,7 +321,9 @@
     function setOpen(nextOpen) {
         state.open = nextOpen;
         panel.classList.toggle('is-open', state.open);
-        launcher.textContent = state.open ? 'Close AI' : 'Ask AI';
+        if (launcher) {
+            launcher.textContent = state.open ? 'Close AI' : 'Ask AI';
+        }
         if (state.open) {
             syncTextareaHeight();
             textarea.focus();
@@ -358,9 +360,10 @@
         const typingBubble = addMessage('assistant', 'Typing...');
 
         try {
+            const recentHistory = state.history.slice(0, -1).slice(-4);
             const payload = {
                 message: raw,
-                history: state.history.slice(-4),
+                history: recentHistory,
                 threadId: state.conversationId
             };
 

@@ -76,7 +76,15 @@ const FIREBASE_DISABLE_CODES = new Set([
 ]);
 const FIREBASE_POPUP_CANCEL_CODES = new Set([
     'auth/popup-closed-by-user',
-    'auth/cancelled-popup-request',
+    'auth/cancelled-popup-request'
+]);
+const FIREBASE_GOOGLE_REDIRECT_CODES = new Set([
+    'auth/internal-error',
+    'auth/operation-not-allowed',
+    'auth/unauthorized-domain',
+    'auth/app-not-authorized',
+    'auth/invalid-api-key',
+    'auth/network-request-failed',
     'auth/popup-blocked'
 ]);
 
@@ -531,6 +539,14 @@ function isFirebasePopupCancelled(error) {
     return FIREBASE_POPUP_CANCEL_CODES.has(code);
 }
 
+function shouldRedirectGoogleLoginToServer(error) {
+    const code = String(error?.code || '').trim();
+    if (!code) {
+        return true;
+    }
+    return FIREBASE_GOOGLE_REDIRECT_CODES.has(code);
+}
+
 function getForgotPasswordUrl() {
     const companyCode = String(companyCodeInput?.value || '').trim();
     return companyCode
@@ -552,6 +568,11 @@ function getGoogleLoginUrl() {
         : '/api/auth/google';
 }
 
+function redirectGoogleLoginToServer() {
+    setMessage('Redirecting to Google...', '#ffffff');
+    window.location.assign(getGoogleLoginUrl());
+}
+
 function handleGoogleLogin() {
     if (welcomeTransitionActive) {
         return;
@@ -566,44 +587,52 @@ function handleGoogleLogin() {
         return;
     }
 
-    if (firebase) {
-        loginBtn.disabled = true;
-        setMessage('Opening Google...', '#ffffff');
-        const provider = new firebase.helpers.GoogleAuthProvider();
-
-        firebase.helpers.signInWithPopup(firebase.auth, provider)
-            .then(async (result) => {
-                const idToken = await firebase.helpers.getIdToken(result.user, true);
-                const user = await appClient.loginWithFirebase({ idToken, companyCode });
-                const welcomeContext = await buildWelcomeContext(user, {
-                    companyCode,
-                    loginId: result.user?.email || user?.id || ''
-                });
-                await playWelcomeTransition(welcomeContext);
-                redirectByRole(user.role, { bootstrap: welcomeContext.bootstrap });
-            })
-            .catch((error) => {
-                console.error('Google login failed:', error);
-                if (isFirebasePopupCancelled(error)) {
-                    setMessage('Google sign-in canceled.', '#ffffff');
-                    return;
-                }
-
-                const message = String(error?.message || '');
-                if (error?.code === 'INVALID_CREDENTIALS' && /no account matched/i.test(message)) {
-                    setMessage('Your Google account is not linked yet. Please sign in with email and password first.', '#ff7a7a');
-                    return;
-                }
-
-                setMessage(resolveAuthErrorMessage(error), '#ff7a7a');
-            })
-            .finally(() => {
-                loginBtn.disabled = false;
-            });
+    if (!firebase) {
+        redirectGoogleLoginToServer();
         return;
     }
 
-    setMessage('Google login is not ready yet. Please add your domain in Firebase or use email and password.', '#ff7a7a');
+    loginBtn.disabled = true;
+    setMessage('Opening Google...', '#ffffff');
+    const provider = new firebase.helpers.GoogleAuthProvider();
+
+    firebase.helpers.signInWithPopup(firebase.auth, provider)
+        .then(async (result) => {
+            const idToken = await firebase.helpers.getIdToken(result.user, true);
+            const user = await appClient.loginWithFirebase({ idToken, companyCode });
+            const welcomeContext = await buildWelcomeContext(user, {
+                companyCode,
+                loginId: result.user?.email || user?.id || ''
+            });
+            await playWelcomeTransition(welcomeContext);
+            redirectByRole(user.role, { bootstrap: welcomeContext.bootstrap });
+        })
+        .catch((error) => {
+            console.error('Google login failed:', error);
+            if (isFirebasePopupCancelled(error)) {
+                setMessage('Google sign-in canceled.', '#ffffff');
+                return;
+            }
+
+            const message = String(error?.message || '');
+            if (error?.code === 'INVALID_CREDENTIALS' && /no account matched/i.test(message)) {
+                setMessage('Your Google account is not linked yet. Please sign in with email and password first.', '#ff7a7a');
+                return;
+            }
+
+            if (shouldRedirectGoogleLoginToServer(error)) {
+                if (shouldDisableFirebase(error)) {
+                    firebaseDisabled = true;
+                }
+                redirectGoogleLoginToServer();
+                return;
+            }
+
+            setMessage(resolveAuthErrorMessage(error), '#ff7a7a');
+        })
+        .finally(() => {
+            loginBtn.disabled = false;
+        });
 }
 
 function applyQueryPrefill() {

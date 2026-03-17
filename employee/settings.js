@@ -280,11 +280,13 @@ function closeGoogleModal() {
 async function confirmGoogleConnect() {
     const email = String(loginEmailInput?.value || '').trim();
     const code = String(loginEmailCodeInput?.value || '').trim();
+    const matchesVerifiedEmail = connectionState.login_email_verified
+        && String(connectionState.login_email || '').trim().toLowerCase() === email.toLowerCase();
     if (!email) {
         setGoogleModalStatus('Email is required.', true);
         return;
     }
-    if (!code && !connectionState.login_email_verified) {
+    if (!code && !matchesVerifiedEmail) {
         setGoogleModalStatus('Verification code is required.', true);
         return;
     }
@@ -307,62 +309,30 @@ async function confirmGoogleConnect() {
         return;
     }
 
-    await connectGoogleAccountWithModal();
+    await connectGoogleAccountWithModal(email);
 }
 
-async function connectGoogleAccountWithModal() {
-    const firebase = getFirebaseContext();
-    if (!firebase) {
-        setGoogleModalStatus('Firebase auth is not ready yet.', true);
+async function connectGoogleAccountWithModal(email) {
+    const normalizedEmail = String(email || loginEmailInput?.value || '').trim();
+    if (!normalizedEmail) {
+        setGoogleModalStatus('Email is required.', true);
         connectGoogleBtn.disabled = false;
         return;
     }
 
-    setGoogleModalStatus('Opening Google...', false);
-    const provider = new firebase.helpers.GoogleAuthProvider();
+    setGoogleModalStatus('Connecting Google...', false);
 
     try {
-        const result = await firebase.helpers.signInWithPopup(firebase.auth, provider);
-        const idToken = await firebase.helpers.getIdToken(result.user, true);
-        const user = await appClient.connectGoogleAccount({ idToken });
+        const user = await appClient.connectGoogleAccount({ email: normalizedEmail });
         applyConnectionState(user);
         setGoogleModalStatus('Google connected successfully.', false);
         closeGoogleModal();
     } catch (error) {
         console.error('Failed to connect Google account:', error);
-        setGoogleModalStatus(resolveFirebaseError(error), true);
+        setGoogleModalStatus(error.message || 'Unable to connect Google.', true);
     } finally {
         connectGoogleBtn.disabled = connectionState.google_email_verified;
     }
-}
-
-function getFirebaseContext() {
-    const auth = window.firebaseAuth;
-    const helpers = window.firebaseAuthHelpers;
-    if (!auth || !helpers) {
-        return null;
-    }
-    return { auth, helpers };
-}
-
-function resolveFirebaseError(error) {
-    const code = String(error?.code || '').trim();
-    const host = (typeof window !== 'undefined' && window.location && window.location.hostname)
-        ? window.location.hostname
-        : 'your domain';
-    if (code === 'auth/unauthorized-domain') {
-        return `Domain not authorized (${host}). Add ${host} in Firebase Auth > Authorized domains.`;
-    }
-    if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-        return 'Google sign-in canceled.';
-    }
-    if (code === 'auth/popup-blocked') {
-        return 'Popup blocked. Allow popups and try again.';
-    }
-    if (code === 'auth/internal-error') {
-        return `Google sign-in is not ready for ${host}. Enable Google provider, add ${host} in Firebase Auth > Authorized domains, and add your email under OAuth consent screen > Test users if in Testing.`;
-    }
-    return error?.message || 'Google sign-in failed.';
 }
 
 function setConnectStatus(element, message, variant = 'default') {

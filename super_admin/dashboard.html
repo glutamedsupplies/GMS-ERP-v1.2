@@ -167,7 +167,7 @@
     <section class="card" style="margin-top:14px;">
       <div class="card-head">
         <h2>Customer Chat Inbox</h2>
-        <p class="section-hint">Dito na rin maiipon ang customer messages na puwedeng sagutin ng admin.</p>
+        <p class="section-hint">Dito na rin maiipon ang customer portal at AI handoff messages na puwedeng sagutin ng admin.</p>
       </div>
       <div id="customerChatDeskStatus" class="muted" style="margin-bottom:10px;">Loading customer chat inbox...</div>
 
@@ -194,6 +194,7 @@
         </section>
 
         <section class="customer-chat-panel">
+          <p class="muted" style="margin:0 0 10px;">Kapag nag-handoff ang AI sa Customer Service, dito rin lalabas ang concern para mabasa at mareplyan ng admin.</p>
           <div class="customer-chat-detail-head">
             <div class="customer-chat-meta">
               <label>Request Code</label>
@@ -253,8 +254,11 @@
         </div>
         <div class="toolbar">
           <input id="companyFilter" type="search" placeholder="Search by company, code, subdomain, domain, app name">
+          <input id="supportCompanyCodeInput" type="search" placeholder="Quick support access by company code">
+          <button id="openSupportByCodeBtn" type="button" class="btn-soft">Open By Code</button>
           <span id="companySummary" class="muted"></span>
         </div>
+        <p class="muted" style="margin:6px 0 0;">Super admin shortcut: enter a company code here to open a logged support session immediately.</p>
         <div id="companiesList" class="list"></div>
       </section>
       <section class="card">
@@ -327,6 +331,7 @@
     </div>
   </div>
 
+  <script>window.GMS_DISABLE_AI_ASSISTANT = true;</script>
   <script src="../shared/app-client.js"></script>
   <script src="./dashboard.js"></script>
 </body>

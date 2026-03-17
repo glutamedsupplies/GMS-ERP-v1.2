@@ -14,6 +14,7 @@
     let redirectPending = false;
     const DEFAULT_PRIMARY_COLOR = '#2575fc';
     const BRAND_THEME_STORAGE_KEY = 'appBrandThemeV1';
+    const SUPPORT_SESSION_BANNER_ID = 'appSupportSessionBanner';
 
     ensureResponsiveDocumentSetup();
 
@@ -681,6 +682,7 @@
     }
 
     function clearStoredSession() {
+        clearSupportSessionBanner();
         SESSION_KEYS.forEach((key) => {
             localStorage.removeItem(key);
         });
@@ -708,6 +710,184 @@
             companyId: localStorage.getItem('companyId') || '',
             companyCode: localStorage.getItem('companyCode') || ''
         };
+    }
+
+    function normalizeSupportSessionPayload(value = null) {
+        if (!value || typeof value !== 'object') {
+            return null;
+        }
+
+        const companyId = String(value.companyId || value.company_id || '').trim();
+        const operatorUserId = String(value.operatorUserId || value.operator_user_id || '').trim();
+        if (!companyId || !operatorUserId) {
+            return null;
+        }
+
+        return {
+            active: value.active !== false,
+            companyId,
+            companyCode: String(value.companyCode || value.company_code || '').trim(),
+            companyName: String(value.companyName || value.company_name || '').trim(),
+            operatorUserId,
+            operatorUserKey: String(value.operatorUserKey || value.operator_user_key || '').trim(),
+            operatorName: String(value.operatorName || value.operator_name || '').trim(),
+            operatorRole: String(value.operatorRole || value.operator_role || '').trim(),
+            targetUserId: String(value.targetUserId || value.target_user_id || '').trim(),
+            targetRole: String(value.targetRole || value.target_role || '').trim(),
+            startedAt: String(value.startedAt || value.started_at || '').trim()
+        };
+    }
+
+    function formatSupportSessionTimestamp(value = '') {
+        const text = String(value || '').trim();
+        if (!text) {
+            return '';
+        }
+
+        const date = new Date(text);
+        if (Number.isNaN(date.getTime())) {
+            return text;
+        }
+
+        return date.toLocaleString();
+    }
+
+    function clearSupportSessionBanner() {
+        const existing = document.getElementById(SUPPORT_SESSION_BANNER_ID);
+        if (existing) {
+            existing.remove();
+        }
+    }
+
+    async function endActiveSupportSession(button = null) {
+        const previousLabel = button?.textContent || 'End Support Session';
+        if (button) {
+            button.disabled = true;
+            button.textContent = 'Ending...';
+        }
+
+        try {
+            const payload = await request('/api/support-session/end', {
+                method: 'POST',
+                skipAuthRedirect: true
+            });
+
+            clearSupportSessionBanner();
+            if (payload?.user?.id) {
+                setSessionUser(payload.user);
+            } else {
+                clearStoredSession();
+            }
+
+            navigateTo(payload?.redirectPath || '/super_admin/dashboard.html');
+            return payload;
+        } catch (error) {
+            window.alert(error.message || 'Failed to end support session.');
+            throw error;
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.textContent = previousLabel;
+            }
+        }
+    }
+
+    function syncSupportSessionBanner(value = null) {
+        const supportSession = normalizeSupportSessionPayload(value);
+        if (!supportSession || !supportSession.active) {
+            clearSupportSessionBanner();
+            return null;
+        }
+
+        const mountBanner = () => {
+            if (!(document.body instanceof HTMLElement)) {
+                return null;
+            }
+
+            let banner = document.getElementById(SUPPORT_SESSION_BANNER_ID);
+            if (!(banner instanceof HTMLElement)) {
+                banner = document.createElement('section');
+                banner.id = SUPPORT_SESSION_BANNER_ID;
+                banner.dataset.appSupportSession = 'true';
+                Object.assign(banner.style, {
+                    margin: '12px',
+                    padding: '14px 16px',
+                    borderRadius: '18px',
+                    border: '1px solid rgba(14, 116, 144, 0.18)',
+                    background: 'linear-gradient(135deg, rgba(224, 242, 254, 0.96), rgba(240, 249, 255, 0.98))',
+                    boxShadow: '0 18px 34px rgba(8, 47, 73, 0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '14px',
+                    color: '#0f172a'
+                });
+
+                const copy = document.createElement('div');
+                copy.style.display = 'grid';
+                copy.style.gap = '4px';
+                copy.style.minWidth = '0';
+
+                const title = document.createElement('strong');
+                title.dataset.role = 'support-title';
+                title.style.fontSize = '14px';
+
+                const meta = document.createElement('div');
+                meta.dataset.role = 'support-meta';
+                meta.style.fontSize = '12px';
+                meta.style.lineHeight = '1.5';
+                meta.style.color = '#0f4c5c';
+
+                const action = document.createElement('button');
+                action.type = 'button';
+                action.textContent = 'End Support Session';
+                action.dataset.role = 'support-end';
+                Object.assign(action.style, {
+                    border: '0',
+                    borderRadius: '999px',
+                    padding: '10px 14px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #0f766e, #155e75)',
+                    color: '#ffffff',
+                    whiteSpace: 'nowrap'
+                });
+                action.addEventListener('click', () => {
+                    endActiveSupportSession(action);
+                });
+
+                copy.appendChild(title);
+                copy.appendChild(meta);
+                banner.appendChild(copy);
+                banner.appendChild(action);
+                document.body.prepend(banner);
+            }
+
+            const title = banner.querySelector('[data-role="support-title"]');
+            const meta = banner.querySelector('[data-role="support-meta"]');
+            if (title instanceof HTMLElement) {
+                title.textContent = 'Support Session Active';
+            }
+            if (meta instanceof HTMLElement) {
+                const details = [
+                    `Super Admin: ${supportSession.operatorName || supportSession.operatorUserId}`,
+                    `Company: ${supportSession.companyName || supportSession.companyCode || supportSession.companyId}`,
+                    supportSession.targetUserId ? `Logged in as: ${supportSession.targetUserId}` : '',
+                    supportSession.startedAt ? `Started: ${formatSupportSessionTimestamp(supportSession.startedAt)}` : ''
+                ].filter(Boolean);
+                meta.textContent = details.join(' | ');
+            }
+
+            return banner;
+        };
+
+        if (document.readyState === 'loading' || !(document.body instanceof HTMLElement)) {
+            document.addEventListener('DOMContentLoaded', mountBanner, { once: true });
+            return null;
+        }
+
+        return mountBanner();
     }
 
     function buildAvatarUrl(name, background = '4e73df', color = 'ffffff') {
@@ -1014,6 +1194,7 @@
 
         if (user && user.id) {
             setSessionUser(user);
+            syncSupportSessionBanner(user.support_session || user.supportSession || null);
             return user;
         }
 
@@ -1052,7 +1233,8 @@
             branchId: user.branch_id || '',
             branchName: user.branch_name || '',
             timeZone: user.time_zone || user.timezone || user.timeZone || '',
-            feature_access: normalizeUserFeatureAccess(user.feature_access || {})
+            feature_access: normalizeUserFeatureAccess(user.feature_access || {}),
+            support_session: normalizeSupportSessionPayload(user.support_session || user.supportSession || null)
         };
     }
 
@@ -1137,7 +1319,10 @@
             },
             skipAuthRedirect: true
         }),
-        getBootstrap: () => request('/api/bootstrap'),
+        getBootstrap: () => request('/api/bootstrap').then((payload) => {
+            syncSupportSessionBanner(payload?.support_session || payload?.user?.support_session || payload?.user?.supportSession || null);
+            return payload;
+        }),
         parseOrderDraftWithAi: (payload) => request('/api/order-form/ai-parse', {
             method: 'POST',
             body: payload
@@ -1357,10 +1542,11 @@
                 code: String(code || '').trim()
             }
         }),
-        connectGoogleAccount: async ({ idToken = '' } = {}) => request('/api/account/connect/google', {
+        connectGoogleAccount: async ({ idToken = '', email = '' } = {}) => request('/api/account/connect/google', {
             method: 'POST',
             body: {
-                idToken: String(idToken || '').trim()
+                idToken: String(idToken || '').trim(),
+                email: String(email || '').trim()
             }
         }),
         listSignupRequests: ({ status = 'open', filter = '', limit = 200 } = {}) => request(
@@ -1477,6 +1663,15 @@
         deleteSuperCompany: (companyId) => request(`/api/super/companies/${encodeURIComponent(companyId)}`, {
             method: 'DELETE'
         }),
+        startSuperCompanySupportSessionByCode: (companyCode) => request('/api/super/support-session', {
+            method: 'POST',
+            body: {
+                companyCode: String(companyCode || '').trim()
+            }
+        }),
+        startSuperCompanySupportSession: (companyId) => request(`/api/super/companies/${encodeURIComponent(companyId)}/support-session`, {
+            method: 'POST'
+        }),
         updateSuperCompanyAdminCredentials: (companyId, payload) => request(`/api/super/companies/${encodeURIComponent(companyId)}/admin-credentials`, {
             method: 'PUT',
             body: payload
@@ -1516,6 +1711,8 @@
         unblockSuperDevice: (blockId) => request(`/api/super/blocked-devices/${encodeURIComponent(blockId)}`, {
             method: 'DELETE'
         }),
+        endSupportSession: () => endActiveSupportSession(),
+        syncSupportSessionBanner,
         getUser: (userId) => request(`/api/users/${encodeURIComponent(userId)}`),
         saveUserProfile: (payload) => request(`/api/users/${encodeURIComponent(payload.id)}/profile`, {
             method: 'PUT',
