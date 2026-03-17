@@ -176,6 +176,11 @@ button {
   grid-template-columns: 1.4fr 1fr;
 }
 
+.grid--support {
+  margin-top: 14px;
+  grid-template-columns: 1fr 1fr;
+}
+
 .card {
   padding: 18px;
 }
@@ -595,6 +600,7 @@ button[disabled] {
 
 @media (max-width: 1180px) {
   .grid--compose,
+  .grid--support,
   .grid--lists,
   .stat-strip {
     grid-template-columns: 1fr 1fr;
@@ -624,6 +630,7 @@ button[disabled] {
   .modal-grid,
   .company-edit-grid,
   .grid--compose,
+  .grid--support,
   .grid--lists,
   .stat-strip {
     grid-template-columns: 1fr;

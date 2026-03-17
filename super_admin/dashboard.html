@@ -115,6 +115,51 @@
       </section>
     </div>
 
+    <div class="grid grid--support">
+      <section class="card">
+        <div class="card-head">
+          <h2>Customer Service Contacts</h2>
+          <p class="section-hint">Ito ang details na ibibigay ng AI kapag kailangan ng human handoff.</p>
+        </div>
+        <div class="form">
+          <div class="full">
+            <label>Handoff Message</label>
+            <textarea id="customerServiceHandoffMessage" placeholder="Mukhang mas okay ito i-handoff sa Customer Service para may actual tao kang makausap."></textarea>
+          </div>
+          <div><label>Email 1</label><input id="customerServiceEmail1" type="email"></div>
+          <div><label>Email 2</label><input id="customerServiceEmail2" type="email"></div>
+          <div><label>Phone</label><input id="customerServicePhone1" type="text"></div>
+          <div class="full">
+            <button id="saveCustomerServiceConfigBtn" type="button" class="btn-success">Save Customer Service Contacts</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Create Customer Service Account</h2>
+          <p class="section-hint">These logins use Super Admin access para makasagot sa customer chat inbox.</p>
+        </div>
+        <div class="form">
+          <div><label>Name</label><input id="customerServiceName" type="text"></div>
+          <div><label>Username</label><input id="customerServiceUsername" type="text"></div>
+          <div><label>Email</label><input id="customerServiceEmail" type="email"></div>
+          <div><label>Password</label><input id="customerServicePassword" type="password"></div>
+          <div class="full">
+            <button id="createCustomerServiceBtn" type="button">Create Customer Service Account</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:14px;">
+      <div class="card-head">
+        <h2>Customer Service Accounts</h2>
+        <p class="section-hint">Manage the logins who will receive escalated AI concerns.</p>
+      </div>
+      <div id="customerServiceAccountsList" class="list"></div>
+    </section>
+
     <div class="grid grid--lists">
       <section class="card">
         <div class="card-head">
@@ -139,7 +184,7 @@
     <section class="card" style="margin-top:14px;">
       <div class="card-head">
         <h2>Audit Logs</h2>
-        <p class="section-hint">Latest super admin actions and trail events</p>
+        <p class="section-hint">Latest login, logout, and trail events with account, device, and network details</p>
       </div>
       <div id="auditList" class="list"></div>
     </section>
@@ -147,10 +192,10 @@
     <section class="card" style="margin-top:14px;">
       <div class="card-head">
         <h2>Access Logs</h2>
-        <p class="section-hint">Recent website opens by device and host</p>
+        <p class="section-hint">Recent website opens with account, device, IP, and possible wifi/network changes</p>
       </div>
       <div class="toolbar">
-        <input id="accessFilter" type="search" placeholder="Search device, IP, host, path, user agent">
+        <input id="accessFilter" type="search" placeholder="Search account, role, device, IP, host, path, user agent">
         <span id="accessSummary" class="muted"></span>
       </div>
       <div id="accessList" class="list"></div>

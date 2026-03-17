@@ -655,6 +655,9 @@
             if (response.status === 401 && !options.skipAuthRedirect) {
                 handleUnauthorized();
             }
+            if (response.status === 403 && payload.code === 'DEVICE_BLOCKED') {
+                handleDeviceBlocked(errorMessage);
+            }
 
             const error = new Error(errorMessage);
             error.code = payload.code || `HTTP_${response.status}`;
@@ -949,6 +952,58 @@
         window.setTimeout(() => {
             redirectPending = false;
             redirectToLogin();
+        }, 0);
+    }
+
+    function handleDeviceBlocked(message = 'This device has been blocked by the administrator.') {
+        clearStoredSession();
+
+        if (redirectPending) {
+            return;
+        }
+
+        redirectPending = true;
+        window.setTimeout(() => {
+            redirectPending = false;
+            if (!(document.body instanceof HTMLElement)) {
+                window.alert(message);
+                return;
+            }
+
+            document.title = 'Device Blocked';
+            document.body.innerHTML = '';
+
+            const shell = document.createElement('main');
+            shell.style.minHeight = '100vh';
+            shell.style.display = 'grid';
+            shell.style.placeItems = 'center';
+            shell.style.padding = '24px';
+            shell.style.background = 'linear-gradient(180deg, #fff7ed 0%, #ffffff 100%)';
+
+            const card = document.createElement('section');
+            card.style.maxWidth = '520px';
+            card.style.width = '100%';
+            card.style.padding = '24px';
+            card.style.borderRadius = '18px';
+            card.style.background = '#ffffff';
+            card.style.boxShadow = '0 24px 70px rgba(15, 23, 42, 0.12)';
+            card.style.border = '1px solid rgba(249, 115, 22, 0.18)';
+
+            const heading = document.createElement('h1');
+            heading.textContent = 'Device Blocked';
+            heading.style.margin = '0 0 12px';
+            heading.style.color = '#9a3412';
+
+            const copy = document.createElement('p');
+            copy.textContent = message || 'This device has been blocked by the administrator.';
+            copy.style.margin = '0';
+            copy.style.color = '#7c2d12';
+            copy.style.lineHeight = '1.6';
+
+            card.appendChild(heading);
+            card.appendChild(copy);
+            shell.appendChild(card);
+            document.body.appendChild(shell);
         }, 0);
     }
 
@@ -1365,6 +1420,25 @@
             method: 'DELETE'
         }),
         getSuperBootstrap: () => request('/api/super/bootstrap'),
+        getSuperCustomerServiceConfig: () => request('/api/super/customer-service-config'),
+        updateSuperCustomerServiceConfig: (payload) => request('/api/super/customer-service-config', {
+            method: 'PUT',
+            body: payload
+        }),
+        listSuperCustomerServiceUsers: ({ filter = '' } = {}) => request(
+            `/api/super/customer-service-users?filter=${encodeURIComponent(filter)}`
+        ),
+        createSuperCustomerServiceUser: (payload) => request('/api/super/customer-service-users', {
+            method: 'POST',
+            body: payload
+        }),
+        updateSuperCustomerServiceUser: (userId, payload) => request(`/api/super/customer-service-users/${encodeURIComponent(userId)}`, {
+            method: 'PUT',
+            body: payload
+        }),
+        deleteSuperCustomerServiceUser: (userId) => request(`/api/super/customer-service-users/${encodeURIComponent(userId)}`, {
+            method: 'DELETE'
+        }),
         listSuperCompanies: () => request('/api/super/companies'),
         listSuperCustomerRequests: ({ companyId = '', filter = '', status = '', limit = 200 } = {}) => request(
             `/api/super/customer-requests?companyId=${encodeURIComponent(companyId)}&filter=${encodeURIComponent(filter)}&status=${encodeURIComponent(status)}&limit=${encodeURIComponent(limit)}`

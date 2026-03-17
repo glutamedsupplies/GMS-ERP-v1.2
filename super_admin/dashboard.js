@@ -52,6 +52,17 @@ const accessList = document.getElementById('accessList');
 const blockedFilter = document.getElementById('blockedFilter');
 const blockedSummary = document.getElementById('blockedSummary');
 const blockedList = document.getElementById('blockedList');
+const customerServiceHandoffMessage = document.getElementById('customerServiceHandoffMessage');
+const customerServiceEmail1 = document.getElementById('customerServiceEmail1');
+const customerServiceEmail2 = document.getElementById('customerServiceEmail2');
+const customerServicePhone1 = document.getElementById('customerServicePhone1');
+const saveCustomerServiceConfigBtn = document.getElementById('saveCustomerServiceConfigBtn');
+const customerServiceName = document.getElementById('customerServiceName');
+const customerServiceUsername = document.getElementById('customerServiceUsername');
+const customerServiceEmail = document.getElementById('customerServiceEmail');
+const customerServicePassword = document.getElementById('customerServicePassword');
+const createCustomerServiceBtn = document.getElementById('createCustomerServiceBtn');
+const customerServiceAccountsList = document.getElementById('customerServiceAccountsList');
 const planEditModal = document.getElementById('planEditModal');
 const planEditCloseBtn = document.getElementById('planEditCloseBtn');
 const planEditCancelBtn = document.getElementById('planEditCancelBtn');
@@ -77,12 +88,15 @@ const MAX_LOGO_BYTES = 700 * 1024;
 const MAX_LOGO_DIMENSION = 900;
 
 const state = {
+    session: null,
     bootstrap: null,
     companies: [],
     plans: [],
     logs: [],
     accessLogs: [],
     blockedDevices: [],
+    customerServiceConfig: null,
+    customerServiceUsers: [],
     editingPlanOriginalId: ''
 };
 let pendingCompanyLogoPath = '';
@@ -94,6 +108,7 @@ async function initialize() {
     if (!session) {
         return;
     }
+    state.session = session;
 
     refreshBtn.addEventListener('click', loadData);
     if (customerChatBtn) {
@@ -107,8 +122,17 @@ async function initialize() {
     });
     createCompanyBtn.addEventListener('click', createCompany);
     createPlanBtn.addEventListener('click', createPlan);
+    if (saveCustomerServiceConfigBtn) {
+        saveCustomerServiceConfigBtn.addEventListener('click', saveCustomerServiceConfig);
+    }
+    if (createCustomerServiceBtn) {
+        createCustomerServiceBtn.addEventListener('click', createCustomerServiceAccount);
+    }
     companiesList.addEventListener('click', handleCompanyAction);
     plansList.addEventListener('click', handlePlanAction);
+    if (customerServiceAccountsList) {
+        customerServiceAccountsList.addEventListener('click', handleCustomerServiceAccountAction);
+    }
     if (companyPrimaryColorPicker && companyPrimaryColor) {
         companyPrimaryColorPicker.addEventListener('input', onCreatePrimaryColorPickerInput);
         companyPrimaryColor.addEventListener('input', onCreatePrimaryColorHexInput);
@@ -153,13 +177,15 @@ async function initialize() {
 async function loadData() {
     setStatus('Loading...');
     try {
-        const [bootstrap, companies, plans, logs, accessLogs, blockedDevices] = await Promise.all([
+        const [bootstrap, companies, plans, logs, accessLogs, blockedDevices, customerServiceConfig, customerServiceUsers] = await Promise.all([
             appClient.getSuperBootstrap(),
             appClient.listSuperCompanies(),
             appClient.listSuperPlans(),
             appClient.listSuperAuditLogs({ limit: 200 }),
             appClient.listSuperAccessLogs({ limit: 200 }),
-            appClient.listSuperBlockedDevices({ limit: 200 })
+            appClient.listSuperBlockedDevices({ limit: 200 }),
+            appClient.getSuperCustomerServiceConfig(),
+            appClient.listSuperCustomerServiceUsers()
         ]);
 
         state.bootstrap = bootstrap || {};
@@ -168,8 +194,12 @@ async function loadData() {
         state.logs = logs || [];
         state.accessLogs = accessLogs || [];
         state.blockedDevices = blockedDevices || [];
+        state.customerServiceConfig = customerServiceConfig || {};
+        state.customerServiceUsers = customerServiceUsers || [];
 
         renderOverviewStats();
+        renderCustomerServiceConfig();
+        renderCustomerServiceAccounts();
         renderPlans();
         renderCompanies();
         renderLogs();
@@ -200,6 +230,212 @@ function renderOverviewStats() {
     }
     if (metricWhiteLabel) {
         metricWhiteLabel.textContent = String(whiteLabelCount);
+    }
+}
+
+function renderCustomerServiceConfig() {
+    const config = state.customerServiceConfig || {};
+    const emails = Array.isArray(config.emails) ? config.emails : [];
+    const phones = Array.isArray(config.phones) ? config.phones : [];
+
+    if (customerServiceHandoffMessage) {
+        customerServiceHandoffMessage.value = String(config.handoff_message || '').trim();
+    }
+    if (customerServiceEmail1) {
+        customerServiceEmail1.value = String(emails[0] || '').trim();
+    }
+    if (customerServiceEmail2) {
+        customerServiceEmail2.value = String(emails[1] || '').trim();
+    }
+    if (customerServicePhone1) {
+        customerServicePhone1.value = String(phones[0] || '').trim();
+    }
+}
+
+function renderCustomerServiceAccounts() {
+    if (!customerServiceAccountsList) {
+        return;
+    }
+
+    const currentUserId = String(state.session?.userId || '').trim();
+    if (!state.customerServiceUsers.length) {
+        customerServiceAccountsList.innerHTML = '<div class="row">No customer service accounts yet.</div>';
+        return;
+    }
+
+    customerServiceAccountsList.innerHTML = state.customerServiceUsers.map((user) => {
+        const isActive = Boolean(user?.is_active);
+        const isCurrentUser = String(user?.id || '').trim() === currentUserId;
+        return `
+            <div class="row" data-cs-user-id="${escape(user.id || '')}">
+                <div class="row-head">
+                    <div class="plan-meta">
+                        <div class="plan-title">
+                            <strong>${escape(user.name || user.id || '')}</strong>
+                            <span class="${isActive ? 'status-pill status-pill--active' : 'status-pill status-pill--inactive'}">${isActive ? 'active' : 'inactive'}</span>
+                            <span class="inline-chip">Super Admin Access</span>
+                            ${isCurrentUser ? '<span class="inline-chip">Current Login</span>' : ''}
+                        </div>
+                        <span class="muted">Username: ${escape(user.id || '')}</span>
+                        <span class="muted">Created: ${escape(user.created_at || '-')}</span>
+                    </div>
+                </div>
+                <div class="company-edit-grid" style="margin-top:0;">
+                    <div><label>Name</label><input data-role="cs-name" type="text" value="${escape(user.name || '')}"></div>
+                    <div><label>Email</label><input data-role="cs-email" type="email" value="${escape(user.login_email || '')}"></div>
+                    <div><label>Status</label><select data-role="cs-active"><option value="true" ${isActive ? 'selected' : ''}>Active</option><option value="false" ${isActive ? '' : 'selected'}>Inactive</option></select></div>
+                    <div><label>Username</label><input data-role="cs-username" type="text" value="${escape(user.id || '')}" readonly></div>
+                    <div class="span-2"><label>New Password (optional)</label><input data-role="cs-password" type="password" placeholder="Leave blank para same password pa rin"></div>
+                </div>
+                <div class="company-actions">
+                    <button type="button" data-action="save-cs-user" class="btn-success">Save Account</button>
+                    <button type="button" data-action="delete-cs-user" class="btn-danger" ${isCurrentUser ? 'disabled' : ''}>Delete</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function saveCustomerServiceConfig() {
+    const emails = [
+        customerServiceEmail1?.value || '',
+        customerServiceEmail2?.value || ''
+    ].map((value) => String(value || '').trim()).filter(Boolean);
+    const phones = [
+        customerServicePhone1?.value || ''
+    ].map((value) => String(value || '').trim()).filter(Boolean);
+
+    saveCustomerServiceConfigBtn.disabled = true;
+    setStatus('Saving customer service contacts...');
+    try {
+        state.customerServiceConfig = await appClient.updateSuperCustomerServiceConfig({
+            handoff_message: String(customerServiceHandoffMessage?.value || '').trim(),
+            emails,
+            phones
+        });
+        renderCustomerServiceConfig();
+        setStatus('Customer service contacts updated.');
+    } catch (error) {
+        console.error('Failed to update customer service contacts:', error);
+        setStatus(error.message || 'Failed to update customer service contacts.', true);
+    } finally {
+        saveCustomerServiceConfigBtn.disabled = false;
+    }
+}
+
+async function createCustomerServiceAccount() {
+    const payload = {
+        name: String(customerServiceName?.value || '').trim(),
+        username: String(customerServiceUsername?.value || '').trim(),
+        email: String(customerServiceEmail?.value || '').trim(),
+        password: String(customerServicePassword?.value || '').trim()
+    };
+
+    if (!payload.name || !payload.username || !payload.password) {
+        setStatus('Name, username, and password are required for customer service accounts.', true);
+        return;
+    }
+
+    createCustomerServiceBtn.disabled = true;
+    setStatus('Creating customer service account...');
+    try {
+        await appClient.createSuperCustomerServiceUser(payload);
+        resetCustomerServiceAccountForm();
+        await loadData();
+        setStatus('Customer service account created.');
+    } catch (error) {
+        console.error('Failed to create customer service account:', error);
+        setStatus(error.message || 'Failed to create customer service account.', true);
+    } finally {
+        createCustomerServiceBtn.disabled = false;
+    }
+}
+
+function resetCustomerServiceAccountForm() {
+    if (customerServiceName) {
+        customerServiceName.value = '';
+    }
+    if (customerServiceUsername) {
+        customerServiceUsername.value = '';
+    }
+    if (customerServiceEmail) {
+        customerServiceEmail.value = '';
+    }
+    if (customerServicePassword) {
+        customerServicePassword.value = '';
+    }
+}
+
+async function handleCustomerServiceAccountAction(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+        return;
+    }
+
+    const action = target.dataset.action || '';
+    if (!action) {
+        return;
+    }
+
+    const row = target.closest('[data-cs-user-id]');
+    if (!(row instanceof HTMLElement)) {
+        return;
+    }
+
+    const userId = row.getAttribute('data-cs-user-id') || '';
+    if (!userId) {
+        return;
+    }
+
+    if (action === 'save-cs-user') {
+        target.setAttribute('disabled', 'true');
+        try {
+            await saveCustomerServiceAccount(row, userId);
+        } finally {
+            target.removeAttribute('disabled');
+        }
+        return;
+    }
+
+    if (action !== 'delete-cs-user') {
+        return;
+    }
+
+    const confirmed = window.confirm(`Delete customer service account "${userId}"?`);
+    if (!confirmed) {
+        return;
+    }
+
+    target.setAttribute('disabled', 'true');
+    setStatus('Deleting customer service account...');
+    try {
+        await appClient.deleteSuperCustomerServiceUser(userId);
+        await loadData();
+        setStatus('Customer service account deleted.');
+    } catch (error) {
+        console.error('Failed to delete customer service account:', error);
+        setStatus(error.message || 'Failed to delete customer service account.', true);
+    } finally {
+        target.removeAttribute('disabled');
+    }
+}
+
+async function saveCustomerServiceAccount(row, userId) {
+    const payload = {
+        name: readEditorValue(row, 'cs-name'),
+        email: readEditorValue(row, 'cs-email'),
+        password: readEditorValue(row, 'cs-password'),
+        is_active: readEditorValue(row, 'cs-active') !== 'false'
+    };
+
+    setStatus('Saving customer service account...');
+    try {
+        await appClient.updateSuperCustomerServiceUser(userId, payload);
+        await loadData();
+        setStatus('Customer service account updated.');
+    } catch (error) {
+        console.error('Failed to update customer service account:', error);
+        setStatus(error.message || 'Failed to update customer service account.', true);
     }
 }
 
@@ -381,12 +617,47 @@ function renderLogs() {
         return;
     }
 
-    auditList.innerHTML = state.logs.map((log) => `
-        <div class="row">
-            <strong>${escape(log.action || '')}</strong> | ${escape(log.target_type || '')}:${escape(log.target_id || '')}<br>
-            <span class="muted">${escape(log.company_id || 'global')} | ${escape(log.actor_user_id || '-')} | ${escape(log.created_at || '')}</span>
-        </div>
-    `).join('');
+    auditList.innerHTML = state.logs.map((log) => {
+        const details = parseAuditDetails(log.details_json);
+        const accountDisplay = buildAccountDisplay({
+            name: details.accountName || log.actor_name || '',
+            id: details.accountId || log.actor_user_id || log.target_id || ''
+        }) || `${log.target_type || 'item'}:${log.target_id || '-'}`;
+        const accountRole = String(details.accountRole || log.actor_role || '').trim();
+        const companyLabel = String(details.companyName || log.company_name || details.companyCode || log.company_code || log.company_id || 'Global').trim();
+        const loginHandle = String(details.loginHandle || '').trim();
+        const loginMethod = formatLoginMethodLabel(details.loginMethod || '');
+        const deviceId = String(details.deviceId || '').trim();
+        const ipAddress = String(details.ipAddress || '').trim();
+        const networkLabel = String(details.networkKey || formatNetworkFingerprint(ipAddress)).trim();
+        const deviceSummary = summarizeClientEnvironment(details.userAgent || '');
+        const note = String(details.message || '').trim();
+        const chips = [
+            companyLabel,
+            accountRole ? `Role: ${accountRole}` : '',
+            details.status ? `Status: ${details.status}` : '',
+            deviceSummary.deviceType || ''
+        ].filter(Boolean).map((label) => `<span class="inline-chip">${escape(label)}</span>`).join('');
+
+        return `
+            <div class="row">
+                <div class="row-head">
+                    <div class="plan-meta">
+                        <div class="plan-title">
+                            <strong>${escape(formatAuditActionLabel(log.action || '', details))}</strong>
+                            ${chips}
+                        </div>
+                        <span class="muted">Account: ${escape(accountDisplay)}</span>
+                        ${loginMethod || loginHandle ? `<span class="muted">Method: ${escape(loginMethod || '-')} | Login ID: ${escape(loginHandle || '-')}</span>` : ''}
+                        ${deviceId || ipAddress || deviceSummary.fullLabel ? `<span class="muted">Device: ${escape(deviceSummary.fullLabel || 'Unknown device')} | Device ID: ${escape(deviceId || '-')} | IP: ${escape(ipAddress || '-')}</span>` : ''}
+                        ${networkLabel ? `<span class="muted">Network: ${escape(networkLabel)}</span>` : ''}
+                        ${note ? `<span class="muted">Note: ${escape(note)}</span>` : ''}
+                        <span class="muted">${escape(log.created_at || '')}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 function renderAccessLogs() {
@@ -407,12 +678,16 @@ function renderAccessLogs() {
     const filteredLogs = query
         ? state.accessLogs.filter((log) => {
             const haystack = [
+                log.user_name,
+                log.user_id,
+                log.user_role,
                 log.device_id,
                 log.ip_address,
                 log.host,
                 log.path,
                 log.user_agent,
-                log.company_name
+                log.company_name,
+                log.company_code
             ].map((value) => normalizeSearchText(value)).join(' ');
             return haystack.includes(query);
         })
@@ -428,26 +703,43 @@ function renderAccessLogs() {
     }
 
     accessList.innerHTML = filteredLogs.map((log) => {
+        const accountDisplay = buildAccountDisplay({
+            name: log.user_name || '',
+            id: log.user_id || ''
+        }) || 'Guest / before login';
+        const roleLabel = String(log.user_role || '').trim();
         const deviceId = String(log.device_id || '').trim();
         const ipAddress = String(log.ip_address || '').trim();
         const host = String(log.host || '').trim() || 'unknown host';
         const path = String(log.path || '').trim() || '/';
         const createdAt = String(log.created_at || '').trim();
-        const companyName = String(log.company_name || '').trim();
+        const companyName = String(log.company_name || log.company_code || '').trim();
+        const deviceSummary = summarizeClientEnvironment(log.user_agent || '');
         const userAgent = truncateText(String(log.user_agent || '').trim(), 160);
+        const networkLabel = formatNetworkFingerprint(ipAddress);
+        const deviceIpCount = Math.max(0, Number(log.device_ip_count || 0));
+        const possibleNetworkChange = deviceIpCount > 1 ? `Possible different wifi/network (${deviceIpCount} IPs seen)` : '';
         const blocked = isAccessBlocked(log);
+        const chips = [
+            path,
+            companyName,
+            roleLabel ? `Role: ${roleLabel}` : '',
+            deviceSummary.deviceType || ''
+        ].filter(Boolean).map((label) => `<span class="inline-chip">${escape(label)}</span>`).join('');
 
         return `
             <div class="row" data-access-id="${escape(log.id)}">
                 <div class="row-head">
                     <div class="plan-meta">
                         <div class="plan-title">
-                            <strong>${escape(host)}</strong>
-                            <span class="inline-chip">${escape(path)}</span>
-                            ${companyName ? `<span class="inline-chip">${escape(companyName)}</span>` : ''}
+                            <strong>${escape(accountDisplay)}</strong>
+                            ${chips}
                         </div>
-                        <span class="muted">Device: ${escape(deviceId || '-')} | IP: ${escape(ipAddress || '-')}</span>
-                        <span class="muted">${escape(createdAt || '')}</span>
+                        <span class="muted">Host: ${escape(host)} | Opened: ${escape(createdAt || '')}</span>
+                        <span class="muted">Device: ${escape(deviceSummary.fullLabel || 'Unknown device')} | Device ID: ${escape(deviceId || '-')}</span>
+                        <span class="muted">IP: ${escape(ipAddress || '-')} ${networkLabel ? `| Network: ${escape(networkLabel)}` : ''}</span>
+                        ${possibleNetworkChange ? `<span class="muted">${escape(possibleNetworkChange)}</span>` : ''}
+                        <span class="muted">Device visits logged: ${escape(String(log.device_access_count || 1))}</span>
                     </div>
                     <div class="plan-actions">
                         <button type="button" data-action="block-device" class="${blocked ? 'btn-soft' : 'btn-danger'}" ${blocked ? 'disabled' : ''}>
@@ -505,6 +797,7 @@ function renderBlockedDevices() {
         const host = String(block.host || '').trim() || 'unknown host';
         const createdAt = String(block.created_at || '').trim();
         const reason = String(block.reason || '').trim() || 'No reason provided.';
+        const deviceSummary = summarizeClientEnvironment(block.user_agent || '');
         const userAgent = truncateText(String(block.user_agent || '').trim(), 160);
 
         return `
@@ -515,7 +808,7 @@ function renderBlockedDevices() {
                             <strong>${escape(deviceId || ipAddress || 'Unknown Device')}</strong>
                             <span class="inline-chip">${escape(host)}</span>
                         </div>
-                        <span class="muted">Device: ${escape(deviceId || '-')} | IP: ${escape(ipAddress || '-')}</span>
+                        <span class="muted">Device: ${escape(deviceId || '-')} | IP: ${escape(ipAddress || '-')} | ${escape(deviceSummary.fullLabel || 'Unknown device')}</span>
                         <span class="muted">Reason: ${escape(reason)}</span>
                         <span class="muted">${escape(createdAt || '')}</span>
                     </div>
@@ -1482,6 +1775,128 @@ function formatBytes(value) {
         return `${(bytes / 1024).toFixed(1)} KB`;
     }
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function parseAuditDetails(value) {
+    try {
+        const parsed = JSON.parse(String(value || '{}'));
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch (_error) {
+        return {};
+    }
+}
+
+function buildAccountDisplay({ name = '', id = '' } = {}) {
+    const normalizedName = String(name || '').trim();
+    const normalizedId = String(id || '').trim();
+    if (normalizedName && normalizedId && normalizedName.toLowerCase() !== normalizedId.toLowerCase()) {
+        return `${normalizedName} (${normalizedId})`;
+    }
+    return normalizedName || normalizedId || '';
+}
+
+function formatAuditActionLabel(action = '', details = {}) {
+    const normalizedAction = String(action || '').trim().toLowerCase();
+    if (normalizedAction === 'auth.login.success') {
+        return 'Login Success';
+    }
+    if (normalizedAction === 'auth.login.failed') {
+        return 'Login Failed';
+    }
+    if (normalizedAction === 'auth.login.rate_limited') {
+        return 'Login Blocked';
+    }
+    if (normalizedAction === 'auth.logout') {
+        return 'Logout';
+    }
+
+    const fallback = String(action || '').trim().replace(/[._]+/g, ' ');
+    return fallback
+        ? fallback.replace(/\b\w/g, (match) => match.toUpperCase())
+        : (details.status ? `Auth ${details.status}` : 'Audit Event');
+}
+
+function formatLoginMethodLabel(value = '') {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'password') {
+        return 'Password';
+    }
+    if (normalized === 'google') {
+        return 'Google';
+    }
+    if (normalized === 'google_oauth') {
+        return 'Google OAuth';
+    }
+    if (normalized === 'firebase') {
+        return 'Firebase';
+    }
+    if (normalized === 'session') {
+        return 'Session';
+    }
+    return normalized ? normalized.replace(/\b\w/g, (match) => match.toUpperCase()) : '';
+}
+
+function formatNetworkFingerprint(ipAddress = '') {
+    const normalized = String(ipAddress || '').trim().replace(/^::ffff:/i, '');
+    if (!normalized || normalized.toLowerCase() === 'unknown') {
+        return '';
+    }
+    if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(normalized)) {
+        const parts = normalized.split('.');
+        return `${parts[0]}.${parts[1]}.${parts[2]}.*`;
+    }
+    if (normalized.includes(':')) {
+        const parts = normalized.split(':').filter(Boolean);
+        return parts.length ? `${parts.slice(0, 4).join(':')}::*` : normalized;
+    }
+    return normalized;
+}
+
+function summarizeClientEnvironment(userAgent = '') {
+    const ua = String(userAgent || '');
+    const lower = ua.toLowerCase();
+    let deviceType = 'Desktop';
+    if (/ipad|tablet/.test(lower)) {
+        deviceType = 'Tablet';
+    } else if (/mobile|iphone|android/.test(lower)) {
+        deviceType = 'Phone';
+    }
+
+    let os = 'Unknown OS';
+    if (/windows nt/i.test(ua)) {
+        os = 'Windows';
+    } else if (/android/i.test(ua)) {
+        os = 'Android';
+    } else if (/iphone|ipad|ipod/i.test(ua)) {
+        os = 'iOS';
+    } else if (/mac os x|macintosh/i.test(ua)) {
+        os = 'macOS';
+    } else if (/linux/i.test(ua)) {
+        os = 'Linux';
+    } else if (/cros/i.test(ua)) {
+        os = 'ChromeOS';
+    }
+
+    let browser = 'Unknown Browser';
+    if (/edg\//i.test(ua)) {
+        browser = 'Edge';
+    } else if (/opr\//i.test(ua) || /opera/i.test(ua)) {
+        browser = 'Opera';
+    } else if (/chrome\//i.test(ua) && !/edg\//i.test(ua) && !/opr\//i.test(ua)) {
+        browser = 'Chrome';
+    } else if (/firefox\//i.test(ua)) {
+        browser = 'Firefox';
+    } else if (/safari\//i.test(ua) && !/chrome\//i.test(ua) && !/chromium/i.test(ua)) {
+        browser = 'Safari';
+    }
+
+    return {
+        deviceType,
+        os,
+        browser,
+        shortLabel: `${deviceType} / ${browser}`,
+        fullLabel: `${deviceType} / ${os} / ${browser}`
+    };
 }
 
 function truncateText(value, maxLength = 140) {

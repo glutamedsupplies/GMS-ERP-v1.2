@@ -7,11 +7,11 @@
     const CONFIG = {
         endpoint: '/api/public/ai/chat',
         title: 'GMS AI Assistant',
-        subtitle: 'Ask about GMS ERP features and steps.'
+        subtitle: 'Taglish help for GMS ERP steps, modules, and common issues.'
     };
     const STORAGE = {
-        conversationKey: 'gmsAiConversationId',
-        historyPrefix: 'gmsAiHistory:',
+        conversationKey: 'gmsAiConversationId:v2',
+        historyPrefix: 'gmsAiHistory:v2:',
         maxMessages: 24
     };
 
@@ -88,6 +88,28 @@
         }
     }
 
+    function saveConversationId(conversationId) {
+        if (!conversationId) {
+            return;
+        }
+        try {
+            localStorage.setItem(STORAGE.conversationKey, conversationId);
+        } catch (_error) {
+            // Ignore storage errors
+        }
+    }
+
+    function clearStoredHistory(conversationId) {
+        if (!conversationId) {
+            return;
+        }
+        try {
+            localStorage.removeItem(getHistoryStorageKey(conversationId));
+        } catch (_error) {
+            // Ignore storage errors
+        }
+    }
+
     function createEl(tag, className, attrs = {}) {
         const el = document.createElement(tag);
         if (className) {
@@ -129,12 +151,12 @@
 .gms-ai-panel{
   position:fixed;
   right:18px;
-  bottom:72px;
-  width:min(360px, 92vw);
-  height:520px;
+  bottom:78px;
+  width:min(420px, calc(100vw - 24px));
+  height:min(620px, calc(100vh - 96px));
   z-index:10000;
-  border-radius:18px;
-  background:rgba(15,23,42,0.98);
+  border-radius:22px;
+  background:linear-gradient(180deg,rgba(15,23,42,0.99) 0%,rgba(16,24,39,0.99) 100%);
   border:1px solid rgba(255,255,255,0.12);
   box-shadow:0 30px 70px rgba(2,6,23,0.5);
   display:none;
@@ -145,74 +167,100 @@
 }
 .gms-ai-panel.is-open{display:flex;}
 .gms-ai-header{
-  padding:14px 16px;
+  padding:14px 16px 12px;
   display:flex;
   align-items:center;
   justify-content:space-between;
+  gap:12px;
   background:rgba(255,255,255,0.04);
   border-bottom:1px solid rgba(255,255,255,0.08);
 }
 .gms-ai-title{font-weight:800;font-size:14px;}
 .gms-ai-subtitle{font-size:11px;color:rgba(226,232,240,0.7);}
+.gms-ai-header-actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.gms-ai-reset,
 .gms-ai-close{
-  border:none;
-  background:transparent;
+  border:1px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.04);
   color:#e2e8f0;
-  font-size:18px;
+  font-size:12px;
+  font-weight:700;
+  border-radius:10px;
+  min-height:32px;
+  padding:0 10px;
   cursor:pointer;
+}
+.gms-ai-close{
+  width:32px;
+  padding:0;
+  font-size:16px;
 }
 .gms-ai-messages{
   flex:1;
-  padding:14px;
+  padding:16px;
   overflow:auto;
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:12px;
+  scroll-behavior:smooth;
 }
 .gms-ai-bubble{
-  max-width:85%;
-  padding:10px 12px;
-  border-radius:14px;
-  font-size:12.5px;
-  line-height:1.5;
+  width:fit-content;
+  max-width:92%;
+  padding:12px 14px;
+  border-radius:18px;
+  font-size:13px;
+  line-height:1.55;
   white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+  box-shadow:0 10px 25px rgba(2,6,23,0.16);
 }
 .gms-ai-bubble.user{
   align-self:flex-end;
   background:rgba(45,212,191,0.2);
   border:1px solid rgba(45,212,191,0.35);
+  border-bottom-right-radius:6px;
 }
 .gms-ai-bubble.assistant{
   align-self:flex-start;
   background:rgba(255,255,255,0.06);
   border:1px solid rgba(255,255,255,0.12);
+  border-bottom-left-radius:6px;
 }
 .gms-ai-input{
   padding:12px;
   border-top:1px solid rgba(255,255,255,0.08);
   display:flex;
+  align-items:flex-end;
   gap:8px;
   background:rgba(15,23,42,0.95);
 }
 .gms-ai-textarea{
   flex:1;
-  min-height:36px;
+  min-height:44px;
   max-height:140px;
-  resize:vertical;
+  resize:none;
   border-radius:12px;
   border:1px solid rgba(255,255,255,0.12);
   background:rgba(255,255,255,0.05);
   color:#f8fafc;
-  padding:8px 10px;
-  font-size:12.5px;
+  padding:11px 12px;
+  font-size:13px;
+  line-height:1.45;
   font-family:inherit;
 }
 .gms-ai-send{
   border:none;
   border-radius:12px;
-  padding:0 14px;
+  min-height:44px;
+  padding:0 16px;
   font-weight:700;
-  font-size:12px;
+  font-size:12.5px;
   background:#22c55e;
   color:#0f172a;
   cursor:pointer;
@@ -222,21 +270,44 @@
   cursor:wait;
 }
 @media (max-width: 520px){
-  .gms-ai-panel{right:12px;left:12px;width:auto;height:70vh;}
+  .gms-ai-panel{
+    right:8px;
+    left:8px;
+    bottom:74px;
+    width:auto;
+    height:min(76vh, 640px);
+  }
   .gms-ai-launcher{right:12px;}
+  .gms-ai-bubble{max-width:96%;}
 }
         `;
         document.head.appendChild(style);
     }
 
+    function getWelcomeMessage() {
+        return 'Hi! Ako ang GMS AI Assistant. Pwede tayo mag-Taglish. Ask mo lang tungkol sa GMS ERP, at kapag kailangan ng tao, ibibigay ko ang Customer Service details.';
+    }
+
     function normalizeAssistantReply(text = '') {
         return String(text || '')
             .replace(/\r\n/g, '\n')
+            .replace(/^\s{0,3}#{1,6}\s*/gm, '')
+            .replace(/\*\*(.*?)\*\*/g, '$1')
+            .replace(/__(.*?)__/g, '$1')
+            .replace(/`{1,3}([^`]+)`{1,3}/g, '$1')
             .split('\n')
             .map((line) => line.replace(/[ \t]+/g, ' ').trim())
             .join('\n')
             .replace(/\n{3,}/g, '\n\n')
             .trim();
+    }
+
+    function syncTextareaHeight() {
+        if (!textarea) {
+            return;
+        }
+        textarea.style.height = 'auto';
+        textarea.style.height = `${Math.min(textarea.scrollHeight, 140)}px`;
     }
 
     function addMessage(role, text) {
@@ -252,6 +323,21 @@
         panel.classList.toggle('is-open', state.open);
         launcher.textContent = state.open ? 'Close AI' : 'Ask AI';
         if (state.open) {
+            syncTextareaHeight();
+            textarea.focus();
+        }
+    }
+
+    function startNewConversation() {
+        clearStoredHistory(state.conversationId);
+        state.history = [];
+        state.conversationId = generateConversationId();
+        saveConversationId(state.conversationId);
+        messagesEl.innerHTML = '';
+        addMessage('assistant', getWelcomeMessage());
+        persistHistory(state.conversationId, state.history);
+        syncTextareaHeight();
+        if (state.open) {
             textarea.focus();
         }
     }
@@ -262,6 +348,7 @@
         if (!raw) return;
 
         textarea.value = '';
+        syncTextareaHeight();
         state.sending = true;
         sendButton.disabled = true;
 
@@ -315,9 +402,13 @@
         const subtitle = createEl('div', 'gms-ai-subtitle', { text: CONFIG.subtitle });
         titleWrap.appendChild(title);
         titleWrap.appendChild(subtitle);
+        const headerActions = createEl('div', 'gms-ai-header-actions');
+        const resetBtn = createEl('button', 'gms-ai-reset', { type: 'button', text: 'New chat' });
         const closeBtn = createEl('button', 'gms-ai-close', { type: 'button', text: 'x' });
+        headerActions.appendChild(resetBtn);
+        headerActions.appendChild(closeBtn);
         header.appendChild(titleWrap);
-        header.appendChild(closeBtn);
+        header.appendChild(headerActions);
 
         messagesEl = createEl('div', 'gms-ai-messages');
         const storedHistory = loadStoredHistory(state.conversationId);
@@ -328,11 +419,11 @@
                 addMessage(role, entry.text);
             });
         } else {
-            addMessage('assistant', 'Hi! Ask me about attendance, sales, inventory, users, and reports.');
+            addMessage('assistant', getWelcomeMessage());
         }
 
         const inputWrap = createEl('div', 'gms-ai-input');
-        textarea = createEl('textarea', 'gms-ai-textarea', { placeholder: 'Type your question...' });
+        textarea = createEl('textarea', 'gms-ai-textarea', { placeholder: 'Type mo question mo...' });
         sendButton = createEl('button', 'gms-ai-send', { type: 'button', text: 'Send' });
         inputWrap.appendChild(textarea);
         inputWrap.appendChild(sendButton);
@@ -345,14 +436,17 @@
         document.body.appendChild(panel);
 
         launcher.addEventListener('click', () => setOpen(!state.open));
+        resetBtn.addEventListener('click', startNewConversation);
         closeBtn.addEventListener('click', () => setOpen(false));
         sendButton.addEventListener('click', sendMessage);
+        textarea.addEventListener('input', syncTextareaHeight);
         textarea.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
                 sendMessage();
             }
         });
+        syncTextareaHeight();
     }
 
     let launcher;
