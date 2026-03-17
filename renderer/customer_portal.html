@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Customer Chat Portal</title>
+<title>GMS ERP Portal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700&display=swap">
@@ -554,6 +554,12 @@
 </style>
 </head>
 <body>
+  <script>
+    if (new URLSearchParams(window.location.search).get('intent') === 'signup') {
+      document.body.classList.add('is-signup');
+      document.title = 'GMS ERP Sign Up';
+    }
+  </script>
   <div class="page">
     <div class="hero" id="heroHeader">
       <div>
@@ -636,7 +642,7 @@
       </section>
     </div>
 
-    <div id="portalStatus" class="status">Fill up the form to start.</div>
+    <div id="portalStatus" class="status">Fill up the form to continue.</div>
 
     <section id="requestThreadSection" class="card thread">
       <h2>Chat Thread</h2>

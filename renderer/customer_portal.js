@@ -120,6 +120,7 @@ function applyIntentDefaults() {
     }
 
     if (!isSignup) {
+        setStatus('Fill up the form to continue.', false);
         if (requestDetailsLabel) {
             requestDetailsLabel.textContent = 'Topic (optional)';
         }
@@ -134,6 +135,8 @@ function applyIntentDefaults() {
         }
         return;
     }
+
+    setStatus('Complete the sign up form to request access.', false);
 
     if (primaryCardTitle) {
         primaryCardTitle.textContent = 'Sign Up Request';

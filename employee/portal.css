@@ -587,10 +587,22 @@ tbody tr:hover {
 .action-button:disabled,
 .primary-button:disabled,
 .secondary-button:disabled {
-  opacity: 0.58;
+  opacity: 1;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+  color: rgba(15, 23, 42, 0.58);
+}
+
+.modal .secondary-button:disabled {
+  background: rgba(148, 163, 184, 0.18);
+  border-color: rgba(148, 163, 184, 0.24);
+  color: rgba(226, 232, 240, 0.64);
+}
+
+.modal .primary-button:disabled {
+  background: linear-gradient(135deg, rgba(71, 85, 105, 0.72), rgba(51, 65, 85, 0.82));
+  color: rgba(241, 245, 249, 0.74);
 }
 
 .status-banner {
