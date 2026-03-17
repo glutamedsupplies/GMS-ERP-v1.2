@@ -36,7 +36,7 @@ if (!process.versions?.electron) {
         const lanHost = SERVER_CONFIG.lanHost || '127.0.0.1';
 
         return {
-            localUrl: `http://127.0.0.1:${SERVER_CONFIG.port}/index.html`,
+            localUrl: `http://127.0.0.1:${SERVER_CONFIG.port}/login.html`,
             lanUrl: `http://${lanHost}:${SERVER_CONFIG.port}/`
         };
     }

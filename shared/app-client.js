@@ -776,9 +776,9 @@
     function getLoginUrl() {
         const baseDomain = getBaseDomain(window.location.hostname);
         if (baseDomain) {
-            return `${window.location.protocol}//${baseDomain}/index.html`;
+            return `${window.location.protocol}//${baseDomain}/login.html`;
         }
-        return '/index.html';
+        return '/login.html';
     }
 
     function redirectToLogin() {

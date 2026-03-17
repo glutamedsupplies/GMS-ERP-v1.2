@@ -1,7 +1,9 @@
-const STATIC_CACHE = 'attendance-static-v5';
+const STATIC_CACHE = 'attendance-static-v6';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
+    '/login.html',
+    '/privacy',
     '/manifest.webmanifest',
     '/logo.png',
     '/assets/icons/icon-192.png',

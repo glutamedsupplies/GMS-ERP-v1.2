@@ -1,67 +1,45 @@
-<!DOCTYPE html>
-<html lang="en" data-app-page="index">
+﻿<!DOCTYPE html>
+<html lang="en" data-app-page="home">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://www.googleapis.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#2575fc">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#0ea5a4">
+<meta name="description" content="GMS ERP helps teams manage attendance, sales, inventory, and operations from one secure workspace.">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
-<title id="pageTitle">GMS ERP Login</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<title>GMS ERP</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Sora:wght@400;500;600;700&display=swap');
 
   :root{
     --brand-primary:#0ea5a4;
-    --brand-primary-rgb:14,165,164;
-    --page-gradient:
-      radial-gradient(circle at 12% 18%, rgba(45, 212, 191, 0.28) 0%, transparent 36%),
-      radial-gradient(circle at 88% 10%, rgba(251, 191, 36, 0.22) 0%, transparent 34%),
-      linear-gradient(140deg, #0b1220 0%, #0b1c2d 56%, #0f172a 100%);
-    --button-gradient:linear-gradient(135deg, #2dd4bf 0%, #14b8a6 56%, #22c55e 100%);
-    --card-surface:rgba(12, 18, 32, 0.72);
-    --card-border:rgba(255,255,255,0.14);
-    --card-shadow:0 36px 90px rgba(2, 6, 23, 0.55);
-    --input-surface:rgba(255,255,255,0.08);
-    --input-border:rgba(255,255,255,0.12);
+    --brand-secondary:#fbbf24;
+    --brand-accent:#22c55e;
+    --bg-ink:#0b1220;
+    --bg-ink-soft:#0f172a;
+    --card:#0f1b2d;
+    --card-border:rgba(255,255,255,0.12);
     --text-main:#f8fafc;
-    --text-soft:rgba(226,232,240,0.86);
-    --text-faint:rgba(148,163,184,0.84);
-    --glow:rgba(45,212,191,0.34);
-    --background-image:none;
+    --text-soft:rgba(226,232,240,0.82);
+    --text-faint:rgba(148,163,184,0.8);
+    --button-gradient:linear-gradient(135deg, #2dd4bf 0%, #14b8a6 55%, #22c55e 100%);
+    --surface-glow:rgba(45,212,191,0.3);
   }
 
   *{box-sizing:border-box}
 
-  html,
-  body{
-    min-height:100%;
-  }
-
   body{
     margin:0;
     min-height:100dvh;
-    height:100dvh;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    position:relative;
-    overflow:hidden;
-    padding:clamp(10px, 2.4vh, 20px) clamp(10px, 2vw, 18px);
     font-family:'Sora',sans-serif;
     color:var(--text-main);
-    background:var(--page-gradient);
-    transition:background .72s ease;
-  }
-
-  body.is-welcome-active .login-shell{
-    transform:scale(0.94);
-    opacity:0.14;
-    filter:blur(14px);
-    transition:transform .45s ease, opacity .45s ease, filter .45s ease;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(45,212,191,0.22) 0%, transparent 38%),
+      radial-gradient(circle at 85% 15%, rgba(251,191,36,0.2) 0%, transparent 36%),
+      linear-gradient(150deg, var(--bg-ink) 0%, var(--bg-ink-soft) 58%, #101b35 100%);
+    position:relative;
+    overflow-x:hidden;
   }
 
   body::after{
@@ -69,804 +47,352 @@
     position:fixed;
     inset:0;
     pointer-events:none;
-    background:
-      linear-gradient(135deg, rgba(2,6,23,0.12) 0%, rgba(2,6,23,0.78) 100%),
-      radial-gradient(circle at top, rgba(255,255,255,0.06) 0%, transparent 36%);
+    background:linear-gradient(180deg, rgba(2,6,23,0.25), rgba(2,6,23,0.78));
   }
 
-  .background-photo{
-    position:fixed;
-    inset:-8%;
-    background-image:var(--background-image);
-    background-position:center;
-    background-size:cover;
-    filter:blur(18px) saturate(1.12) brightness(0.66);
-    transform:scale(1.02);
-    opacity:0;
-    transition:opacity .55s ease, transform .75s ease;
-    pointer-events:none;
-  }
-
-  .background-photo.has-image{
-    opacity:0.92;
-    transform:scale(1.08);
-  }
-
-  .ambient{
+  .orb{
     position:fixed;
     border-radius:999px;
-    filter:blur(14px);
-    opacity:0.78;
+    filter:blur(12px);
+    opacity:0.7;
     pointer-events:none;
     mix-blend-mode:screen;
-    animation:floatOrb 16s ease-in-out infinite;
+    animation:floatOrb 14s ease-in-out infinite;
   }
 
-  .ambient-a{
+  .orb.one{
     top:-90px;
-    left:-70px;
+    left:-60px;
     width:320px;
     height:320px;
-    background:radial-gradient(circle, rgba(var(--brand-primary-rgb),0.4) 0%, rgba(255,255,255,0) 68%);
+    background:radial-gradient(circle, rgba(45,212,191,0.42), rgba(45,212,191,0));
   }
 
-  .ambient-b{
-    right:-70px;
-    bottom:-90px;
+  .orb.two{
+    bottom:-110px;
+    right:-80px;
     width:360px;
     height:360px;
-    background:radial-gradient(circle, rgba(251,191,36,0.22) 0%, rgba(255,255,255,0) 68%);
-    animation-delay:-5s;
+    background:radial-gradient(circle, rgba(251,191,36,0.32), rgba(251,191,36,0));
+    animation-delay:-6s;
   }
 
-  .ambient-c{
-    top:44%;
-    left:50%;
-    width:260px;
-    height:260px;
-    background:radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 72%);
-    animation-delay:-10s;
-  }
-
-  .login-shell{
+  header{
     position:relative;
     z-index:1;
-    width:min(100%, 410px);
-    max-height:100%;
     display:flex;
     align-items:center;
+    justify-content:space-between;
+    padding:22px clamp(20px, 4vw, 56px);
+    gap:18px;
   }
 
-  .login-card{
-    position:relative;
-    overflow:hidden;
-    width:100%;
-    max-height:calc(100dvh - 24px);
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    padding:clamp(18px, 3.4vh, 34px) clamp(16px, 4vw, 28px);
-    border-radius:26px;
-    border:1px solid var(--card-border);
-    background:linear-gradient(160deg, rgba(15,23,42,0.82), rgba(6,10,20,0.86));
-    box-shadow:var(--card-shadow);
-    backdrop-filter:blur(20px) saturate(1.08);
-    transform:translateY(0);
-    transition:transform .35s ease, box-shadow .35s ease, border-color .35s ease;
-  }
-
-  .login-card:hover{
-    transform:translateY(-4px);
-    box-shadow:0 42px 96px rgba(2, 6, 23, 0.55);
-  }
-
-  .login-card.is-branding-updating{
-    animation:cardPulse .72s ease;
-  }
-
-  .login-card-glow{
-    position:absolute;
-    inset:auto -18% 58% auto;
-    width:220px;
-    height:220px;
-    border-radius:999px;
-    background:radial-gradient(circle, rgba(var(--brand-primary-rgb),0.38) 0%, rgba(var(--brand-primary-rgb),0) 72%);
-    filter:blur(10px);
-    pointer-events:none;
-  }
-
-  .logo-container{
-    position:relative;
-    width:clamp(72px, 11vh, 98px);
-    height:clamp(72px, 11vh, 98px);
-    margin:0 auto 12px;
+  .logo{
     display:flex;
     align-items:center;
-    justify-content:center;
-    border-radius:50%;
-    padding:0;
-    background:rgba(255,255,255,0.08);
-    border:1px solid rgba(255,255,255,0.18);
-    box-shadow:0 18px 38px rgba(2, 6, 23, 0.32);
-    overflow:hidden;
-    transition:transform .35s ease, box-shadow .35s ease;
+    gap:12px;
+    font-weight:700;
+    letter-spacing:0.02em;
   }
 
-  .logo-container.is-branding-updating{
-    animation:logoBounce .7s ease;
-  }
-
-  .logo-container img{
-    width:100%;
-    height:100%;
+  .logo img{
+    width:48px;
+    height:48px;
+    border-radius:12px;
     object-fit:cover;
-    object-position:center;
-    display:block;
-    border-radius:50%;
+    box-shadow:0 10px 20px rgba(2,6,23,0.4);
+    border:1px solid rgba(255,255,255,0.1);
   }
 
-  h1{
-    margin:0 0 6px;
-    text-align:center;
-    font-family:'Fraunces',serif;
-    font-size:clamp(26px, 5vw, 36px);
-    line-height:1.04;
-    letter-spacing:-0.02em;
-    text-shadow:0 10px 28px rgba(2, 6, 23, 0.3);
+  nav{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    flex-wrap:wrap;
   }
 
-  .subtitle{
-    text-align:center;
+  nav a{
     color:var(--text-soft);
+    text-decoration:none;
     font-size:13px;
     font-weight:600;
   }
 
-  .company-hint{
-    margin:8px auto 14px;
-    max-width:260px;
-    text-align:center;
-    color:var(--text-faint);
-    font-size:11.5px;
-    line-height:1.4;
+  nav a:hover{
+    color:#fff;
   }
 
-  .input-group{
-    position:relative;
-    display:flex;
-    align-items:center;
-    gap:10px;
-    margin:8px 0;
-    border:1px solid var(--input-border);
-    border-radius:16px;
-    padding:0 12px;
-    background:var(--input-surface);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,0.06);
-    transition:border-color .22s ease, box-shadow .22s ease, transform .22s ease, background .22s ease;
-  }
-
-  .input-group:focus-within{
-    border-color:rgba(var(--brand-primary-rgb),0.5);
-    box-shadow:0 0 0 4px rgba(var(--brand-primary-rgb),0.12), inset 0 1px 0 rgba(255,255,255,0.08);
-    background:rgba(255,255,255,0.12);
-    transform:translateY(-1px);
-  }
-
-  .input-group.is-searching{
-    box-shadow:0 0 0 4px rgba(var(--brand-primary-rgb),0.08), 0 0 28px rgba(var(--brand-primary-rgb),0.18);
-  }
-
-  .input-group.is-brand-loaded{
-    border-color:rgba(var(--brand-primary-rgb),0.36);
-  }
-
-  .input-icon{
-    width:18px;
-    text-align:center;
-    color:var(--text-soft);
-    font-size:15px;
-    flex:0 0 auto;
-  }
-
-  .input-group input{
-    flex:1;
-    height:46px;
-    border:none;
-    outline:none;
-    background:transparent;
-    color:var(--text-main);
-    font-size:15px;
-    font-weight:600;
-    min-width:0;
-  }
-
-  .input-group input::placeholder{
-    color:rgba(226,232,240,0.56);
-    font-weight:500;
-  }
-
-  .toggle-pass{
-    display:flex;
+  .primary-btn{
+    display:inline-flex;
     align-items:center;
     justify-content:center;
-    width:34px;
-    height:34px;
-    border-radius:12px;
-    cursor:pointer;
-    color:var(--text-main);
-    transition:background .18s ease, transform .18s ease;
-  }
-
-  .toggle-pass:hover{
-    background:rgba(255,255,255,0.1);
-    transform:translateY(-1px);
-  }
-
-  .login-btn,
-  .customer-btn,
-  .install-btn{
-    width:100%;
-    height:46px;
-    margin-top:10px;
-    border:none;
+    padding:12px 20px;
     border-radius:16px;
-    font:inherit;
-    cursor:pointer;
-    transition:transform .18s ease, box-shadow .18s ease, filter .18s ease, border-color .18s ease;
-  }
-
-  .login-btn{
-    margin-top:12px;
     background:var(--button-gradient);
     color:#fff;
-    font-size:16px;
-    font-weight:800;
-    box-shadow:0 18px 34px rgba(var(--brand-primary-rgb),0.3);
-  }
-
-  .login-btn:hover,
-  .customer-btn:hover,
-  .install-btn:hover{
-    transform:translateY(-2px);
-  }
-
-  .login-btn:disabled{
-    opacity:.74;
-    cursor:wait;
-    transform:none;
-    filter:saturate(.85);
-  }
-
-  .customer-btn{
-    background:rgba(255,255,255,0.08);
-    border:1px solid rgba(255,255,255,0.22);
-    color:#fff;
-    font-size:14px;
     font-weight:700;
-    box-shadow:0 10px 24px rgba(2, 6, 23, 0.14);
-  }
-
-  .install-btn{
-    background:rgba(255,255,255,0.92);
-    color:#102341;
     font-size:14px;
-    font-weight:800;
+    text-decoration:none;
+    box-shadow:0 18px 36px rgba(14,165,164,0.35);
   }
 
-  .link-row{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    margin-top:10px;
-  }
-
-  .link-btn,
-  .forgot-link{
-    background:none;
-    border:none;
-    padding:0;
-    color:var(--text-soft);
-    font-size:12px;
-    font-weight:700;
-    text-decoration:underline;
-    text-underline-offset:3px;
-    cursor:pointer;
-  }
-
-  .link-btn:hover,
-  .forgot-link:hover{
-    color:#ffffff;
-  }
-
-  .divider{
-    display:flex;
-    align-items:center;
-    gap:12px;
-    margin:12px 0 6px;
-    color:var(--text-faint);
-    font-size:11px;
-    font-weight:700;
-    text-transform:uppercase;
-    letter-spacing:0.12em;
-  }
-
-  .divider::before,
-  .divider::after{
-    content:"";
-    flex:1;
-    height:1px;
-    background:rgba(255,255,255,0.16);
-  }
-
-  .oauth-btn{
-    background:rgba(248,250,252,0.94);
-    border:1px solid rgba(148,163,184,0.5);
-    color:#0f172a;
-    font-size:14px;
-    font-weight:800;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:10px;
-    box-shadow:0 14px 32px rgba(2, 6, 23, 0.18);
-  }
-
-  .oauth-btn:hover{
-    filter:brightness(1.02);
-  }
-
-  .google-badge{
-    width:22px;
-    height:22px;
-    border-radius:50%;
+  .secondary-btn{
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    font-weight:800;
-    font-size:12px;
-    background:#ffffff;
-    color:#1f2937;
-    border:1px solid rgba(15, 23, 42, 0.12);
-    box-shadow:0 6px 14px rgba(15,23,42,0.12);
+    padding:12px 18px;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,0.18);
+    color:#fff;
+    font-weight:600;
+    font-size:13px;
+    text-decoration:none;
+    background:rgba(255,255,255,0.08);
   }
 
-  .google-badge img{
-    width:16px;
-    height:16px;
-    display:block;
-  }
-
-  #message{
-    min-height:18px;
-    margin-top:10px;
-    text-align:center;
-    font-size:12px;
-    line-height:1.35;
-    font-weight:700;
-  }
-
-  #message:empty{
-    min-height:0;
-    margin-top:0;
-  }
-
-  .welcome-overlay{
-    position:fixed;
-    inset:0;
-    z-index:6;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:18px;
-    opacity:0;
-    pointer-events:none;
-    background:
-      radial-gradient(circle at 18% 14%, rgba(var(--brand-primary-rgb),0.16) 0%, transparent 30%),
-      linear-gradient(140deg, rgba(2,6,23,0.34) 0%, rgba(2,6,23,0.76) 100%);
-    backdrop-filter:blur(10px);
-    transition:opacity .34s ease;
-  }
-
-  .welcome-overlay.is-visible{
-    opacity:1;
-    pointer-events:auto;
-  }
-
-  .welcome-overlay.is-exiting{
-    opacity:0;
-  }
-
-  .welcome-panel{
-    position:relative;
-    width:min(100%, 520px);
-    padding:28px 24px 22px;
-    border-radius:32px;
-    border:1px solid rgba(255,255,255,0.16);
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
-    box-shadow:0 36px 90px rgba(2, 6, 23, 0.46);
-    overflow:hidden;
-    transform:scale(.84) translateY(16px);
-    transition:transform .52s cubic-bezier(.22,.9,.27,1), opacity .36s ease;
-  }
-
-  .welcome-overlay.is-visible .welcome-panel{
-    transform:scale(1) translateY(0);
-  }
-
-  .welcome-overlay.is-zooming .welcome-panel{
-    transform:scale(1.08) translateY(-3px);
-  }
-
-  .welcome-overlay.is-exiting .welcome-panel{
-    transform:scale(1.14) translateY(-14px);
-    opacity:0;
-  }
-
-  .welcome-panel::before{
-    content:"";
-    position:absolute;
-    inset:-24% auto auto 54%;
-    width:220px;
-    height:220px;
-    border-radius:999px;
-    background:radial-gradient(circle, rgba(var(--brand-primary-rgb),0.34) 0%, rgba(var(--brand-primary-rgb),0) 72%);
-    filter:blur(10px);
-    pointer-events:none;
-  }
-
-  .welcome-emblem{
-    position:relative;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    width:132px;
-    height:132px;
-  }
-
-  .welcome-rings{
-    --ring-size:96px;
-    position:absolute;
-    top:50%;
-    left:50%;
-    width:var(--ring-size);
-    height:var(--ring-size);
-    margin-left:calc(var(--ring-size) / -2);
-    margin-top:calc(var(--ring-size) / -2);
-    border-radius:50%;
-    border:1px solid rgba(255,255,255,0.16);
-    background:radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 72%);
-    transform-origin:center;
-    animation:welcomePulse 1.7s ease-in-out infinite;
-  }
-
-  .welcome-rings::before,
-  .welcome-rings::after{
-    content:"";
-    position:absolute;
-    inset:-12px;
-    border-radius:50%;
-    border:1px solid rgba(var(--brand-primary-rgb),0.22);
-  }
-
-  .welcome-rings::after{
-    inset:-24px;
-    opacity:.72;
-  }
-
-  .welcome-content{
+  main{
     position:relative;
     z-index:1;
+    padding:10px clamp(20px, 6vw, 84px) 60px;
+  }
+
+  .hero{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+    gap:36px;
+    align-items:center;
+  }
+
+  .hero h1{
+    font-family:'Fraunces',serif;
+    font-size:clamp(32px, 6vw, 56px);
+    line-height:1.05;
+    margin:0 0 12px;
+    letter-spacing:-0.02em;
+  }
+
+  .hero p{
+    color:var(--text-soft);
+    font-size:15px;
+    line-height:1.7;
+    margin:0 0 22px;
+    max-width:520px;
+  }
+
+  .hero-actions{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+
+  .hero-card{
+    padding:24px;
+    border-radius:22px;
+    background:linear-gradient(160deg, rgba(15,23,42,0.88), rgba(6,10,20,0.86));
+    border:1px solid var(--card-border);
+    box-shadow:0 30px 80px rgba(2,6,23,0.45);
+  }
+
+  .stat-list{
     display:grid;
     gap:14px;
-    justify-items:center;
-    text-align:center;
   }
 
-  .welcome-logo-wrap{
-    position:relative;
-    width:104px;
-    height:104px;
+  .stat{
     display:flex;
+    justify-content:space-between;
     align-items:center;
-    justify-content:center;
-    border-radius:50%;
-    background:rgba(255,255,255,0.12);
-    border:1px solid rgba(255,255,255,0.18);
-    box-shadow:0 20px 38px rgba(2, 6, 23, 0.3);
-    overflow:hidden;
+    padding:12px 14px;
+    border-radius:16px;
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.08);
   }
 
-  .welcome-logo-wrap img{
-    width:100%;
-    height:100%;
-    object-fit:cover;
-    border-radius:50%;
-  }
-
-  .welcome-chip-row{
-    display:flex;
-    flex-wrap:wrap;
-    justify-content:center;
-    gap:8px;
-  }
-
-  .welcome-chip{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    min-height:36px;
-    padding:0 14px;
-    border-radius:999px;
-    border:1px solid rgba(var(--brand-primary-rgb),0.22);
-    background:rgba(var(--brand-primary-rgb),0.12);
-    color:#fff;
-    font-size:12px;
-    font-weight:800;
-    letter-spacing:.08em;
-    text-transform:uppercase;
-  }
-
-  .welcome-chip.is-soft{
-    border-color:rgba(255,255,255,0.14);
-    background:rgba(255,255,255,0.08);
+  .stat span{
+    font-weight:600;
+    font-size:13px;
     color:var(--text-soft);
   }
 
-  .welcome-title{
-    margin:0;
-    font-family:'Space Grotesk',sans-serif;
-    font-size:clamp(28px, 6vw, 42px);
-    line-height:1.02;
-    letter-spacing:-0.04em;
-    text-shadow:0 16px 36px rgba(2, 6, 23, 0.34);
-  }
-
-  .welcome-copy{
-    margin:0;
-    max-width:360px;
-    color:var(--text-soft);
+  .stat strong{
     font-size:14px;
+    font-weight:800;
+  }
+
+  .section-title{
+    margin:50px 0 20px;
+    font-size:20px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--text-faint);
+    font-weight:700;
+  }
+
+  .feature-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+    gap:18px;
+  }
+
+  .feature-card{
+    padding:20px;
+    border-radius:20px;
+    background:rgba(15,23,42,0.7);
+    border:1px solid rgba(255,255,255,0.1);
+    box-shadow:0 18px 40px rgba(2,6,23,0.35);
+  }
+
+  .feature-card h3{
+    margin:0 0 8px;
+    font-size:16px;
+  }
+
+  .feature-card p{
+    margin:0;
+    color:var(--text-soft);
+    font-size:13px;
     line-height:1.6;
   }
 
-  .welcome-progress{
-    width:min(100%, 280px);
-    height:8px;
-    border-radius:999px;
-    overflow:hidden;
-    background:rgba(255,255,255,0.1);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,0.08);
+  .cta{
+    margin-top:46px;
+    padding:26px;
+    border-radius:24px;
+    background:linear-gradient(160deg, rgba(14,165,164,0.2), rgba(34,197,94,0.12));
+    border:1px solid rgba(45,212,191,0.25);
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
   }
 
-  .welcome-progress span{
-    display:block;
-    width:100%;
-    height:100%;
-    transform-origin:left center;
-    transform:scaleX(0);
-    background:var(--button-gradient);
-    border-radius:inherit;
+  .cta h2{
+    margin:0;
+    font-size:22px;
   }
 
-  .welcome-overlay.is-visible .welcome-progress span{
-    animation:welcomeLoad 1.22s cubic-bezier(.22,.9,.3,1) forwards;
+  .cta p{
+    margin:6px 0 0;
+    color:var(--text-soft);
+    font-size:13px;
+  }
+
+  footer{
+    position:relative;
+    z-index:1;
+    padding:30px clamp(20px, 6vw, 84px) 40px;
+    color:var(--text-faint);
+    font-size:12px;
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:space-between;
+    gap:16px;
+  }
+
+  footer a{
+    color:var(--text-soft);
+    text-decoration:none;
+    font-weight:600;
+  }
+
+  footer a:hover{
+    color:#fff;
   }
 
   @keyframes floatOrb{
     0%,100%{transform:translate3d(0,0,0)}
-    50%{transform:translate3d(0,-18px,0)}
+    50%{transform:translate3d(0,-20px,0)}
   }
 
-  @keyframes cardPulse{
-    0%{transform:translateY(0) scale(1)}
-    35%{transform:translateY(-4px) scale(1.01)}
-    100%{transform:translateY(0) scale(1)}
-  }
-
-  @keyframes logoBounce{
-    0%{transform:translateY(0) scale(1)}
-    35%{transform:translateY(-6px) scale(1.04)}
-    100%{transform:translateY(0) scale(1)}
-  }
-
-  @keyframes welcomePulse{
-    0%,100%{transform:scale(.98); opacity:.82}
-    50%{transform:scale(1.06); opacity:1}
-  }
-
-  @keyframes welcomeLoad{
-    from{transform:scaleX(0)}
-    to{transform:scaleX(1)}
-  }
-
-  @media (max-width: 520px){
-    body{
-      padding:10px;
+  @media (max-width: 720px){
+    header{
+      flex-direction:column;
+      align-items:flex-start;
     }
 
-    .login-shell{
-      width:100%;
-    }
-
-    .login-card{
-      max-height:calc(100dvh - 20px);
-      padding:18px 14px 14px;
-      border-radius:22px;
-    }
-
-    .logo-container{
-      width:74px;
-      height:74px;
-      margin-bottom:10px;
-    }
-
-    h1{
-      font-size:24px;
-    }
-
-    .company-hint{
-      display:none;
-    }
-
-    .input-group input{
-      height:44px;
-    }
-
-    .login-btn,
-    .customer-btn,
-    .install-btn{
-      height:44px;
-      margin-top:8px;
-    }
-
-    .welcome-panel{
-      padding:24px 18px 18px;
-      border-radius:26px;
-    }
-
-    .welcome-emblem{
-      width:112px;
-      height:112px;
-    }
-
-    .welcome-logo-wrap{
-      width:88px;
-      height:88px;
-    }
-
-    .welcome-title{
-      font-size:28px;
-    }
-  }
-
-  @media (max-height: 760px){
-    body{
-      padding:8px;
-    }
-
-    .login-card{
-      max-height:calc(100dvh - 16px);
-      padding:16px 14px 12px;
-      border-radius:22px;
-    }
-
-    .logo-container{
-      width:68px;
-      height:68px;
-      margin-bottom:8px;
-    }
-
-    h1{
-      font-size:22px;
-      margin-bottom:4px;
-    }
-
-    .subtitle{
-      font-size:12px;
-    }
-
-    .company-hint{
-      display:none;
-    }
-
-    .input-group{
-      margin:6px 0;
-      border-radius:14px;
-    }
-
-    .input-group input,
-    .login-btn,
-    .customer-btn,
-    .install-btn{
-      height:42px;
-    }
-
-    .forgot-link{
-      margin-top:6px;
-      font-size:11px;
-    }
-
-    #message{
-      margin-top:8px;
-      font-size:11px;
+    .cta{
+      flex-direction:column;
+      align-items:flex-start;
     }
   }
 </style>
 </head>
 <body>
-<div id="backgroundPhoto" class="background-photo" aria-hidden="true"></div>
-<div class="ambient ambient-a" aria-hidden="true"></div>
-<div class="ambient ambient-b" aria-hidden="true"></div>
-<div class="ambient ambient-c" aria-hidden="true"></div>
+<div class="orb one" aria-hidden="true"></div>
+<div class="orb two" aria-hidden="true"></div>
 
-<main class="login-shell">
-  <section class="login-card" id="loginCard">
-    <div class="login-card-glow" aria-hidden="true"></div>
-    <div class="logo-container" id="logoContainer">
-      <img id="brandLogo" src="/logo.png" alt="Company Logo">
+<header>
+  <div class="logo">
+    <img src="/logo.png" alt="GMS ERP logo">
+    <div>
+      <div>GMS ERP</div>
+      <div style="font-size:12px; color: var(--text-faint);">Unified operations workspace</div>
     </div>
-    <h1 id="loginTitle">GMS ERP Login</h1>
-    <div class="subtitle" id="loginSubtitle">Sign in to continue</div>
-    <div class="company-hint" id="brandingHint">Type your company ID to preview your company theme before logging in.</div>
+  </div>
+  <nav>
+    <a href="#features">Features</a>
+    <a href="/privacy">Privacy Policy</a>
+    <a class="secondary-btn" href="/login.html">Sign in</a>
+  </nav>
+</header>
 
-    <div class="input-group company-code-group" id="companyCodeGroup">
-      <span class="input-icon"><i class="fa-regular fa-building"></i></span>
-      <input type="text" id="companyCode" name="login_company_code" placeholder="Company ID" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+<main>
+  <section class="hero">
+    <div>
+      <h1>Run attendance, sales, and inventory in one calm workspace.</h1>
+      <p>GMS ERP is built for teams that need clear, real-time visibility. Track attendance, manage orders, and monitor inventory while keeping every role aligned with the right dashboard.</p>
+      <div class="hero-actions">
+        <a class="primary-btn" href="/login.html">Go to Sign In</a>
+        <a class="secondary-btn" href="/privacy">View Privacy Policy</a>
+      </div>
     </div>
+    <div class="hero-card" aria-label="Platform highlights">
+      <div class="stat-list">
+        <div class="stat"><span>Attendance</span><strong>Clock in/out tracking</strong></div>
+        <div class="stat"><span>Sales</span><strong>Order & invoice flow</strong></div>
+        <div class="stat"><span>Inventory</span><strong>Stock visibility</strong></div>
+        <div class="stat"><span>Roles</span><strong>Head, employee, admin</strong></div>
+      </div>
+    </div>
+  </section>
 
-    <div class="input-group">
-      <span class="input-icon"><i class="fa-regular fa-envelope"></i></span>
-      <input type="email" id="email" name="login_email" placeholder="Email" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
-    </div>
+  <div id="features" class="section-title">What you can do</div>
+  <section class="feature-grid">
+    <article class="feature-card">
+      <h3>Attendance visibility</h3>
+      <p>Monitor time-in/time-out activity with clear records and role-based access controls.</p>
+    </article>
+    <article class="feature-card">
+      <h3>Sales and order flow</h3>
+      <p>Capture sales data, preview order numbers, and keep your front desk synced with the back office.</p>
+    </article>
+    <article class="feature-card">
+      <h3>Inventory confidence</h3>
+      <p>Track inventory variants, product sets, and stock signals without losing the big picture.</p>
+    </article>
+    <article class="feature-card">
+      <h3>Customer requests</h3>
+      <p>Receive structured customer requests through a clean portal and follow up with context.</p>
+    </article>
+  </section>
 
-    <div class="input-group">
-      <span class="input-icon"><i class="fa-solid fa-lock"></i></span>
-      <input type="password" id="password" name="login_password" placeholder="Password" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false">
-      <div class="toggle-pass" id="togglePass"><i class="fa-regular fa-eye"></i></div>
+  <section class="cta">
+    <div>
+      <h2>Ready to continue?</h2>
+      <p>Sign in to access your company workspace and dashboards.</p>
     </div>
-
-    <button id="loginBtn" class="login-btn">Login</button>
-    <div class="link-row">
-      <button id="signUpBtn" class="link-btn" type="button">Sign up</button>
-      <a id="forgotPasswordBtn" class="forgot-link" href="/renderer/forgot_password.html">Forgot Password?</a>
-    </div>
-    <div class="divider"><span>or</span></div>
-    <button id="googleLoginBtn" class="oauth-btn" type="button">
-      <span class="google-badge" aria-hidden="true">
-        <img src="/assets/google-g.svg" alt="">
-      </span>
-      Continue with Google
-    </button>
-    <button id="installAppBtn" class="install-btn" type="button" hidden>Install</button>
-    <div id="message"></div>
+    <a class="primary-btn" href="/login.html">Sign in</a>
   </section>
 </main>
 
-<div id="welcomeOverlay" class="welcome-overlay" hidden aria-hidden="true">
-  <section class="welcome-panel" aria-live="polite">
-    <div class="welcome-content">
-      <div class="welcome-emblem">
-        <div class="welcome-rings" aria-hidden="true"></div>
-        <div class="welcome-logo-wrap">
-          <img id="welcomeLogo" src="/logo.png" alt="Welcome Logo">
-        </div>
-      </div>
-      <div class="welcome-chip-row">
-        <span class="welcome-chip" id="welcomeRoleChip">Workspace</span>
-        <span class="welcome-chip is-soft" id="welcomeDestinationChip">Loading panel</span>
-      </div>
-      <h2 class="welcome-title" id="welcomeTitle">Welcome</h2>
-      <p class="welcome-copy" id="welcomeCopy">Preparing your workspace.</p>
-      <div class="welcome-progress" aria-hidden="true"><span></span></div>
-    </div>
-  </section>
-</div>
-
-<script type="module" src="shared/firebase.js"></script>
-<script src="shared/app-client.js"></script>
-<script src="shared/pwa.js"></script>
-<script src="renderer/login.js"></script>
+<footer>
+  <div>Copyright 2026 GMS ERP. All rights reserved.</div>
+  <div>
+    <a href="/privacy">Privacy Policy</a>
+  </div>
+</footer>
 </body>
 </html>
+
+
