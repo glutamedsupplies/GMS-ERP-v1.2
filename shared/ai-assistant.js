@@ -285,7 +285,7 @@
     }
 
     function getWelcomeMessage() {
-        return 'Hi! Ako ang GMS AI Assistant. Pwede tayo mag-Taglish. Ask mo lang tungkol sa GMS ERP, at kapag kailangan ng tao, ibibigay ko ang Customer Service details.';
+        return 'Hi! Ako ang GMS AI Assistant. Pwede tayo mag-Taglish. Tanong ka lang tungkol sa GMS ERP, at ie-explain ko nang malinaw step by step.';
     }
 
     function normalizeAssistantReply(text = '') {

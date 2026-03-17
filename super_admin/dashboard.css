@@ -522,6 +522,160 @@ button[disabled] {
   margin-top: 12px;
 }
 
+.customer-chat-layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 14px;
+}
+
+.customer-chat-panel {
+  min-width: 0;
+}
+
+.customer-chat-toolbar {
+  grid-template-columns: 1fr;
+}
+
+.customer-chat-request-list {
+  max-height: 680px;
+}
+
+.customer-chat-request-item {
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.customer-chat-request-item:hover,
+.customer-chat-request-item.is-active {
+  background: #edf8f7;
+}
+
+.customer-chat-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+  font-weight: 700;
+}
+
+.customer-chat-status-pill--open {
+  background: #e8f3ff;
+  color: #0b5ad6;
+}
+
+.customer-chat-status-pill--in-progress {
+  background: #fff4df;
+  color: #b54708;
+}
+
+.customer-chat-status-pill--resolved {
+  background: #e8f8ef;
+  color: #027a48;
+}
+
+.customer-chat-status-pill--closed {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.customer-chat-sub {
+  font-size: 13px;
+  color: var(--sa-muted);
+  margin-bottom: 4px;
+}
+
+.customer-chat-preview {
+  font-size: 13px;
+  color: #24364b;
+  line-height: 1.4;
+}
+
+.customer-chat-detail-head {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.customer-chat-meta {
+  background: #f8fbff;
+  border: 1px solid #d5e1f2;
+  border-radius: 11px;
+  padding: 10px;
+}
+
+.customer-chat-meta label {
+  display: block;
+  color: var(--sa-muted);
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+
+.customer-chat-meta strong {
+  word-break: break-word;
+}
+
+.customer-chat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.customer-chat-inline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--sa-muted);
+  font-size: 13px;
+}
+
+.customer-chat-inline-row input[type="checkbox"] {
+  width: auto;
+}
+
+.customer-chat-box {
+  border: 1px solid #d5e1f2;
+  border-radius: 12px;
+  background: #fbfdff;
+  min-height: 220px;
+  max-height: 390px;
+  overflow: auto;
+  padding: 11px;
+  margin-bottom: 8px;
+}
+
+.customer-chat-message {
+  border: 1px solid #d5e1f2;
+  border-radius: 10px;
+  background: #fff;
+  margin-bottom: 9px;
+  padding: 8px 10px;
+}
+
+.customer-chat-message.customer {
+  border-color: #bdd8fb;
+  background: #eef6ff;
+}
+
+.customer-chat-message.admin {
+  border-color: #bfe9e4;
+  background: #e8f7f5;
+}
+
+.customer-chat-meta-line {
+  color: var(--sa-muted);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.customer-chat-input-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+}
+
 .muted {
   color: var(--sa-muted);
   font-size: 12px;
@@ -606,6 +760,10 @@ button[disabled] {
     grid-template-columns: 1fr 1fr;
   }
 
+  .customer-chat-layout {
+    grid-template-columns: 1fr;
+  }
+
   .company-edit-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -629,6 +787,7 @@ button[disabled] {
   .form,
   .modal-grid,
   .company-edit-grid,
+  .customer-chat-grid,
   .grid--compose,
   .grid--support,
   .grid--lists,
@@ -645,6 +804,10 @@ button[disabled] {
   .card-head {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .customer-chat-input-row {
+    grid-template-columns: 1fr;
   }
 
   .section-hint {

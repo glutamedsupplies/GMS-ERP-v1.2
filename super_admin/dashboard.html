@@ -155,9 +155,94 @@
     <section class="card" style="margin-top:14px;">
       <div class="card-head">
         <h2>Customer Service Accounts</h2>
-        <p class="section-hint">Manage the logins who will receive escalated AI concerns.</p>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <p class="section-hint" style="margin:0;">Manage the logins who will receive escalated AI concerns.</p>
+          <button id="openCustomerChatDeskBtn" type="button" class="btn-soft">Open Customer Chat Desk</button>
+        </div>
       </div>
+      <p class="muted" style="margin:0 0 10px;">Dito gumagawa ng account. Pwede na rin silang magbasa at mag-reply sa inbox section sa ibaba, o buksan ang hiwalay na Customer Chat Desk page kung gusto nila ng mas focused view.</p>
       <div id="customerServiceAccountsList" class="list"></div>
+    </section>
+
+    <section class="card" style="margin-top:14px;">
+      <div class="card-head">
+        <h2>Customer Chat Inbox</h2>
+        <p class="section-hint">Dito na rin maiipon ang customer messages na puwedeng sagutin ng admin.</p>
+      </div>
+      <div id="customerChatDeskStatus" class="muted" style="margin-bottom:10px;">Loading customer chat inbox...</div>
+
+      <div class="customer-chat-layout">
+        <section class="customer-chat-panel">
+          <div class="toolbar customer-chat-toolbar">
+            <select id="customerChatCompanySelect">
+              <option value="">Select company</option>
+            </select>
+            <input id="customerChatSearchInput" type="search" placeholder="Search code, customer, contact, details...">
+            <select id="customerChatStatusFilter">
+              <option value="">All Status</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="resolved">Resolved</option>
+              <option value="closed">Closed</option>
+            </select>
+            <button id="customerChatRefreshBtn" type="button" class="btn-soft">Refresh List</button>
+          </div>
+
+          <div id="customerChatRequestList" class="list customer-chat-request-list">
+            <div class="row muted">Select a company to view requests.</div>
+          </div>
+        </section>
+
+        <section class="customer-chat-panel">
+          <div class="customer-chat-detail-head">
+            <div class="customer-chat-meta">
+              <label>Request Code</label>
+              <strong id="customerChatDetailCode">-</strong>
+            </div>
+            <div class="customer-chat-meta">
+              <label>Created</label>
+              <strong id="customerChatDetailCreated">-</strong>
+            </div>
+            <div class="customer-chat-meta">
+              <label>Updated</label>
+              <strong id="customerChatDetailUpdated">-</strong>
+            </div>
+            <div class="customer-chat-meta">
+              <label>Messages</label>
+              <strong id="customerChatDetailMessages">0</strong>
+            </div>
+          </div>
+
+          <div class="customer-chat-grid">
+            <input id="customerChatDetailName" type="text" placeholder="Customer name">
+            <input id="customerChatDetailContact" type="text" inputmode="numeric" placeholder="Contact number">
+          </div>
+          <textarea id="customerChatDetailRequest" placeholder="Request details"></textarea>
+          <div class="customer-chat-grid" style="margin-top:8px;">
+            <select id="customerChatDetailStatus">
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="resolved">Resolved</option>
+              <option value="closed">Closed</option>
+            </select>
+            <button id="customerChatSaveDetailBtn" type="button" class="btn-success">Save Request Update</button>
+          </div>
+          <label class="customer-chat-inline-row">
+            <input id="customerChatAllowEditCheckbox" type="checkbox">
+            Allow customer to keep editing this request
+          </label>
+
+          <h3 style="margin:14px 0 8px;">Customer Chat</h3>
+          <div id="customerChatBox" class="customer-chat-box">
+            <div class="row muted">Select a request to view messages.</div>
+          </div>
+          <div class="customer-chat-input-row">
+            <textarea id="customerChatAdminMessageInput" placeholder="Reply to customer..."></textarea>
+            <button id="customerChatSendMessageBtn" type="button">Send Reply</button>
+            <button id="customerChatReloadThreadBtn" type="button" class="btn-soft">Reload</button>
+          </div>
+        </section>
+      </div>
     </section>
 
     <div class="grid grid--lists">

@@ -63,6 +63,27 @@ const customerServiceEmail = document.getElementById('customerServiceEmail');
 const customerServicePassword = document.getElementById('customerServicePassword');
 const createCustomerServiceBtn = document.getElementById('createCustomerServiceBtn');
 const customerServiceAccountsList = document.getElementById('customerServiceAccountsList');
+const openCustomerChatDeskBtn = document.getElementById('openCustomerChatDeskBtn');
+const customerChatDeskStatus = document.getElementById('customerChatDeskStatus');
+const customerChatCompanySelect = document.getElementById('customerChatCompanySelect');
+const customerChatSearchInput = document.getElementById('customerChatSearchInput');
+const customerChatStatusFilter = document.getElementById('customerChatStatusFilter');
+const customerChatRefreshBtn = document.getElementById('customerChatRefreshBtn');
+const customerChatRequestList = document.getElementById('customerChatRequestList');
+const customerChatDetailCode = document.getElementById('customerChatDetailCode');
+const customerChatDetailCreated = document.getElementById('customerChatDetailCreated');
+const customerChatDetailUpdated = document.getElementById('customerChatDetailUpdated');
+const customerChatDetailMessages = document.getElementById('customerChatDetailMessages');
+const customerChatDetailName = document.getElementById('customerChatDetailName');
+const customerChatDetailContact = document.getElementById('customerChatDetailContact');
+const customerChatDetailRequest = document.getElementById('customerChatDetailRequest');
+const customerChatDetailStatus = document.getElementById('customerChatDetailStatus');
+const customerChatAllowEditCheckbox = document.getElementById('customerChatAllowEditCheckbox');
+const customerChatSaveDetailBtn = document.getElementById('customerChatSaveDetailBtn');
+const customerChatBox = document.getElementById('customerChatBox');
+const customerChatAdminMessageInput = document.getElementById('customerChatAdminMessageInput');
+const customerChatSendMessageBtn = document.getElementById('customerChatSendMessageBtn');
+const customerChatReloadThreadBtn = document.getElementById('customerChatReloadThreadBtn');
 const planEditModal = document.getElementById('planEditModal');
 const planEditCloseBtn = document.getElementById('planEditCloseBtn');
 const planEditCancelBtn = document.getElementById('planEditCancelBtn');
@@ -97,6 +118,15 @@ const state = {
     blockedDevices: [],
     customerServiceConfig: null,
     customerServiceUsers: [],
+    customerChat: {
+        selectedCompanyId: '',
+        requests: [],
+        selectedCode: '',
+        selectedThread: null,
+        filter: '',
+        status: '',
+        searchTimer: null
+    },
     editingPlanOriginalId: ''
 };
 let pendingCompanyLogoPath = '';
@@ -116,6 +146,11 @@ async function initialize() {
             window.location.replace('/super_admin/customer_requests.html');
         });
     }
+    if (openCustomerChatDeskBtn) {
+        openCustomerChatDeskBtn.addEventListener('click', () => {
+            window.location.replace('/super_admin/customer_requests.html');
+        });
+    }
     logoutBtn.addEventListener('click', async () => {
         await appClient.clearSession();
         appClient.redirectToLogin?.();
@@ -132,6 +167,74 @@ async function initialize() {
     plansList.addEventListener('click', handlePlanAction);
     if (customerServiceAccountsList) {
         customerServiceAccountsList.addEventListener('click', handleCustomerServiceAccountAction);
+    }
+    if (customerChatCompanySelect) {
+        customerChatCompanySelect.addEventListener('change', () => {
+            state.customerChat.selectedCompanyId = String(customerChatCompanySelect.value || '').trim();
+            state.customerChat.selectedCode = '';
+            state.customerChat.selectedThread = null;
+            loadDashboardCustomerChats({ keepSelection: false });
+        });
+    }
+    if (customerChatSearchInput) {
+        customerChatSearchInput.addEventListener('input', () => {
+            state.customerChat.filter = customerChatSearchInput.value.trim();
+            if (state.customerChat.searchTimer) {
+                window.clearTimeout(state.customerChat.searchTimer);
+            }
+            state.customerChat.searchTimer = window.setTimeout(() => {
+                loadDashboardCustomerChats({ keepSelection: true });
+            }, 170);
+        });
+    }
+    if (customerChatStatusFilter) {
+        customerChatStatusFilter.addEventListener('change', () => {
+            state.customerChat.status = customerChatStatusFilter.value;
+            loadDashboardCustomerChats({ keepSelection: true });
+        });
+    }
+    if (customerChatRefreshBtn) {
+        customerChatRefreshBtn.addEventListener('click', () => loadDashboardCustomerChats({ keepSelection: true }));
+    }
+    if (customerChatSaveDetailBtn) {
+        customerChatSaveDetailBtn.addEventListener('click', saveDashboardCustomerChatRequest);
+    }
+    if (customerChatSendMessageBtn) {
+        customerChatSendMessageBtn.addEventListener('click', sendDashboardCustomerChatReply);
+    }
+    if (customerChatReloadThreadBtn) {
+        customerChatReloadThreadBtn.addEventListener('click', () => {
+            if (!state.customerChat.selectedCode) {
+                setCustomerChatStatus('Select a request first.', true);
+                return;
+            }
+            loadDashboardCustomerChatThread(state.customerChat.selectedCode);
+        });
+    }
+    if (customerChatRequestList) {
+        customerChatRequestList.addEventListener('click', (event) => {
+            const item = event.target.closest('.customer-chat-request-item[data-code]');
+            if (!(item instanceof HTMLElement)) {
+                return;
+            }
+            const requestCode = String(item.dataset.code || '').trim();
+            if (!requestCode) {
+                return;
+            }
+            loadDashboardCustomerChatThread(requestCode);
+        });
+    }
+    if (customerChatDetailContact) {
+        customerChatDetailContact.addEventListener('input', () => {
+            customerChatDetailContact.value = sanitizeContactInput(customerChatDetailContact.value);
+        });
+    }
+    if (customerChatAdminMessageInput) {
+        customerChatAdminMessageInput.addEventListener('keydown', (event) => {
+            if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                sendDashboardCustomerChatReply();
+            }
+        });
     }
     if (companyPrimaryColorPicker && companyPrimaryColor) {
         companyPrimaryColorPicker.addEventListener('input', onCreatePrimaryColorPickerInput);
@@ -171,6 +274,7 @@ async function initialize() {
     }
 
     resetCreateCompanyBrandingInputs();
+    setDashboardCustomerChatDetailEnabled(false);
     await loadData();
 }
 
@@ -200,12 +304,14 @@ async function loadData() {
         renderOverviewStats();
         renderCustomerServiceConfig();
         renderCustomerServiceAccounts();
+        renderDashboardCustomerChatCompanyOptions();
         renderPlans();
         renderCompanies();
         renderLogs();
         renderAccessLogs();
         renderBlockedDevices();
         populatePlanSelect();
+        await loadDashboardCustomerChats({ keepSelection: true, silent: true });
 
         const stats = state.bootstrap?.stats || {};
         setStatus(`Loaded ${state.companies.length} companies, ${state.plans.length} plans, ${Number(stats.users || 0)} users.`);
@@ -294,6 +400,362 @@ function renderCustomerServiceAccounts() {
             </div>
         `;
     }).join('');
+}
+
+function renderDashboardCustomerChatCompanyOptions() {
+    if (!customerChatCompanySelect) {
+        return;
+    }
+
+    if (!state.companies.length) {
+        customerChatCompanySelect.innerHTML = '<option value="">No companies</option>';
+        state.customerChat.selectedCompanyId = '';
+        renderDashboardCustomerChatRequestList();
+        setDashboardCustomerChatDetailEnabled(false);
+        setCustomerChatStatus('No companies available.', false);
+        return;
+    }
+
+    if (!state.customerChat.selectedCompanyId || !state.companies.some((entry) => entry.id === state.customerChat.selectedCompanyId)) {
+        state.customerChat.selectedCompanyId = state.companies[0].id;
+    }
+
+    customerChatCompanySelect.innerHTML = state.companies.map((company) => {
+        const companyCode = String(company.company_code || '').trim();
+        const companyName = String(company.name || '').trim();
+        const label = companyCode ? `${companyName} (${companyCode})` : companyName;
+        return `<option value="${escape(company.id || '')}">${escape(label || company.id || '-')}</option>`;
+    }).join('');
+    customerChatCompanySelect.value = state.customerChat.selectedCompanyId;
+}
+
+async function loadDashboardCustomerChats({ keepSelection = true, silent = false } = {}) {
+    if (!customerChatRequestList) {
+        return;
+    }
+
+    if (!state.customerChat.selectedCompanyId) {
+        customerChatRequestList.innerHTML = '<div class="row muted">Select a company to view requests.</div>';
+        setDashboardCustomerChatDetailEnabled(false);
+        setCustomerChatStatus('Select a company first.', false);
+        return;
+    }
+
+    setBusy(customerChatRefreshBtn, true);
+    if (!silent) {
+        setCustomerChatStatus('Loading customer chat inbox...', false);
+    }
+
+    try {
+        const rows = await appClient.listSuperCustomerRequests({
+            companyId: state.customerChat.selectedCompanyId,
+            filter: state.customerChat.filter,
+            status: state.customerChat.status,
+            limit: 300
+        });
+        state.customerChat.requests = Array.isArray(rows) ? rows : [];
+        renderDashboardCustomerChatRequestList();
+
+        if (!state.customerChat.requests.length) {
+            state.customerChat.selectedCode = '';
+            state.customerChat.selectedThread = null;
+            setDashboardCustomerChatDetailEnabled(false);
+            setCustomerChatStatus('No customer messages found for this company.', false);
+            return;
+        }
+
+        const hasSelected = keepSelection
+            && state.customerChat.selectedCode
+            && state.customerChat.requests.some((entry) => entry.requestCode === state.customerChat.selectedCode);
+        const nextCode = hasSelected ? state.customerChat.selectedCode : state.customerChat.requests[0].requestCode;
+        if (nextCode) {
+            await loadDashboardCustomerChatThread(nextCode, { silent: true });
+        }
+        setCustomerChatStatus(`Loaded ${state.customerChat.requests.length} customer request(s).`, false);
+    } catch (error) {
+        console.error('Failed to load dashboard customer chats:', error);
+        state.customerChat.requests = [];
+        state.customerChat.selectedCode = '';
+        state.customerChat.selectedThread = null;
+        renderDashboardCustomerChatRequestList();
+        setDashboardCustomerChatDetailEnabled(false);
+        setCustomerChatStatus(error.message || 'Unable to load customer chat inbox.', true);
+    } finally {
+        setBusy(customerChatRefreshBtn, false);
+    }
+}
+
+function renderDashboardCustomerChatRequestList() {
+    if (!customerChatRequestList) {
+        return;
+    }
+
+    if (!state.customerChat.requests.length) {
+        customerChatRequestList.innerHTML = '<div class="row muted">No requests yet.</div>';
+        return;
+    }
+
+    customerChatRequestList.innerHTML = state.customerChat.requests.map((entry) => {
+        const activeClass = entry.requestCode === state.customerChat.selectedCode ? 'is-active' : '';
+        const detailPreview = truncateText(entry.requestDetails || '', 92);
+        return `
+            <div class="row customer-chat-request-item ${activeClass}" data-code="${escape(entry.requestCode || '')}">
+                <div class="customer-chat-title">
+                    <span>${escape(entry.requestCode || '-')}</span>
+                    <span class="status-pill ${buildCustomerChatStatusClass(entry.status)}">${escape(formatCustomerChatStatus(entry.status))}</span>
+                </div>
+                <div class="customer-chat-sub">
+                    ${escape(entry.clientName || '-')} | ${escape(entry.contactNumber || '-')}
+                </div>
+                <div class="customer-chat-sub">
+                    Messages: ${escape(String(entry.messageCount || 0))} | ${escape(formatCustomerChatDateTime(entry.updatedAt || entry.createdAt))}
+                </div>
+                <div class="customer-chat-preview">${escape(detailPreview || 'No request details.')}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function loadDashboardCustomerChatThread(requestCode, { silent = false } = {}) {
+    if (!requestCode || !state.customerChat.selectedCompanyId) {
+        return;
+    }
+
+    if (!silent) {
+        setCustomerChatStatus(`Loading ${requestCode}...`, false);
+    }
+
+    try {
+        const payload = await appClient.getSuperCustomerRequestThread(state.customerChat.selectedCompanyId, requestCode);
+        state.customerChat.selectedCode = requestCode;
+        state.customerChat.selectedThread = payload;
+        applyDashboardCustomerChatThread(payload);
+        renderDashboardCustomerChatRequestList();
+        if (!silent) {
+            setCustomerChatStatus(`Loaded ${requestCode}.`, false);
+        }
+    } catch (error) {
+        console.error('Failed to load dashboard customer chat thread:', error);
+        if (!silent) {
+            setCustomerChatStatus(error.message || 'Unable to load request thread.', true);
+        }
+    }
+}
+
+function applyDashboardCustomerChatThread(payload) {
+    const request = payload?.request;
+    const messages = Array.isArray(payload?.messages) ? payload.messages : [];
+    if (!request) {
+        setDashboardCustomerChatDetailEnabled(false);
+        return;
+    }
+
+    setDashboardCustomerChatDetailEnabled(true);
+    customerChatDetailCode.textContent = request.requestCode || '-';
+    customerChatDetailCreated.textContent = formatCustomerChatDateTime(request.createdAt);
+    customerChatDetailUpdated.textContent = formatCustomerChatDateTime(request.updatedAt || request.createdAt);
+    customerChatDetailMessages.textContent = String(messages.length);
+    customerChatDetailName.value = request.clientName || '';
+    customerChatDetailContact.value = request.contactNumber || '';
+    customerChatDetailRequest.value = request.requestDetails || '';
+    customerChatDetailStatus.value = request.status || 'open';
+    customerChatAllowEditCheckbox.checked = Boolean(request.allowCustomerEdit);
+
+    renderDashboardCustomerChatMessages(messages);
+}
+
+function renderDashboardCustomerChatMessages(messages) {
+    if (!customerChatBox) {
+        return;
+    }
+
+    if (!messages.length) {
+        customerChatBox.innerHTML = '<div class="row muted">No messages yet.</div>';
+        return;
+    }
+
+    customerChatBox.innerHTML = '';
+    messages.forEach((message) => {
+        const messageEl = document.createElement('div');
+        const senderType = message.senderType === 'admin' ? 'admin' : 'customer';
+        messageEl.className = `customer-chat-message ${senderType}`;
+
+        const metaEl = document.createElement('div');
+        metaEl.className = 'customer-chat-meta-line';
+        metaEl.textContent = `${message.senderName || (senderType === 'admin' ? 'Admin' : 'Customer')} | ${formatCustomerChatDateTime(message.createdAt)}`;
+
+        const contentEl = document.createElement('div');
+        contentEl.textContent = message.message || '';
+        contentEl.style.whiteSpace = 'pre-wrap';
+
+        messageEl.appendChild(metaEl);
+        messageEl.appendChild(contentEl);
+        customerChatBox.appendChild(messageEl);
+    });
+    customerChatBox.scrollTop = customerChatBox.scrollHeight;
+}
+
+async function saveDashboardCustomerChatRequest() {
+    if (!state.customerChat.selectedCode || !state.customerChat.selectedCompanyId) {
+        setCustomerChatStatus('Select a request first.', true);
+        return;
+    }
+
+    const clientName = customerChatDetailName.value.trim();
+    const contactNumber = customerChatDetailContact.value.trim();
+    const requestDetails = customerChatDetailRequest.value.trim();
+    const status = customerChatDetailStatus.value;
+    const allowCustomerEdit = customerChatAllowEditCheckbox.checked;
+
+    if (!clientName || !contactNumber) {
+        setCustomerChatStatus('Name and contact number are required.', true);
+        return;
+    }
+
+    setBusy(customerChatSaveDetailBtn, true);
+    setCustomerChatStatus(`Saving ${state.customerChat.selectedCode}...`, false);
+
+    try {
+        const payload = await appClient.updateSuperCustomerRequestByCode(state.customerChat.selectedCompanyId, state.customerChat.selectedCode, {
+            clientName,
+            contactNumber,
+            requestDetails,
+            status,
+            allowCustomerEdit
+        });
+        state.customerChat.selectedThread = payload;
+        applyDashboardCustomerChatThread(payload);
+        await loadDashboardCustomerChats({ keepSelection: true, silent: true });
+        setCustomerChatStatus(`Request ${state.customerChat.selectedCode} updated.`, false);
+    } catch (error) {
+        console.error('Failed to update dashboard customer request:', error);
+        setCustomerChatStatus(error.message || 'Unable to update request.', true);
+    } finally {
+        setBusy(customerChatSaveDetailBtn, false);
+    }
+}
+
+async function sendDashboardCustomerChatReply() {
+    if (!state.customerChat.selectedCode || !state.customerChat.selectedCompanyId) {
+        setCustomerChatStatus('Select a request first.', true);
+        return;
+    }
+
+    const message = customerChatAdminMessageInput.value.trim();
+    if (!message) {
+        setCustomerChatStatus('Reply message cannot be empty.', true);
+        return;
+    }
+
+    setBusy(customerChatSendMessageBtn, true);
+    setCustomerChatStatus(`Sending reply to ${state.customerChat.selectedCode}...`, false);
+
+    try {
+        const payload = await appClient.sendSuperCustomerRequestMessage(state.customerChat.selectedCompanyId, state.customerChat.selectedCode, {
+            message,
+            senderName: state.session?.userName || 'Super Admin'
+        });
+        customerChatAdminMessageInput.value = '';
+        state.customerChat.selectedThread = payload;
+        applyDashboardCustomerChatThread(payload);
+        await loadDashboardCustomerChats({ keepSelection: true, silent: true });
+        setCustomerChatStatus('Reply sent.', false);
+    } catch (error) {
+        console.error('Failed to send dashboard customer reply:', error);
+        setCustomerChatStatus(error.message || 'Unable to send reply.', true);
+    } finally {
+        setBusy(customerChatSendMessageBtn, false);
+    }
+}
+
+function setDashboardCustomerChatDetailEnabled(enabled) {
+    const disabled = !enabled;
+    [
+        customerChatDetailName,
+        customerChatDetailContact,
+        customerChatDetailRequest,
+        customerChatDetailStatus,
+        customerChatAllowEditCheckbox,
+        customerChatSaveDetailBtn,
+        customerChatAdminMessageInput,
+        customerChatSendMessageBtn,
+        customerChatReloadThreadBtn
+    ].forEach((node) => {
+        if (node) {
+            node.disabled = disabled;
+        }
+    });
+
+    if (disabled) {
+        if (customerChatDetailCode) customerChatDetailCode.textContent = '-';
+        if (customerChatDetailCreated) customerChatDetailCreated.textContent = '-';
+        if (customerChatDetailUpdated) customerChatDetailUpdated.textContent = '-';
+        if (customerChatDetailMessages) customerChatDetailMessages.textContent = '0';
+        if (customerChatDetailName) customerChatDetailName.value = '';
+        if (customerChatDetailContact) customerChatDetailContact.value = '';
+        if (customerChatDetailRequest) customerChatDetailRequest.value = '';
+        if (customerChatDetailStatus) customerChatDetailStatus.value = 'open';
+        if (customerChatAllowEditCheckbox) customerChatAllowEditCheckbox.checked = false;
+        if (customerChatAdminMessageInput) customerChatAdminMessageInput.value = '';
+        if (customerChatBox) {
+            customerChatBox.innerHTML = '<div class="row muted">Select a request to view messages.</div>';
+        }
+    }
+}
+
+function setCustomerChatStatus(message, isError = false) {
+    if (!customerChatDeskStatus) {
+        return;
+    }
+    customerChatDeskStatus.textContent = message || '';
+    customerChatDeskStatus.style.color = isError ? '#b91c1c' : '#576982';
+}
+
+function buildCustomerChatStatusClass(statusValue) {
+    const normalized = String(statusValue || '').trim().toLowerCase();
+    if (normalized === 'in_progress') {
+        return 'customer-chat-status-pill--in-progress';
+    }
+    if (normalized === 'resolved') {
+        return 'customer-chat-status-pill--resolved';
+    }
+    if (normalized === 'closed') {
+        return 'customer-chat-status-pill--closed';
+    }
+    return 'customer-chat-status-pill--open';
+}
+
+function formatCustomerChatStatus(status) {
+    const normalized = String(status || '').trim();
+    if (!normalized) {
+        return 'Open';
+    }
+    return normalized
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function formatCustomerChatDateTime(value) {
+    if (!value) {
+        return '-';
+    }
+
+    const parsed = new Date(String(value).replace(' ', 'T'));
+    if (Number.isNaN(parsed.getTime())) {
+        return String(value);
+    }
+
+    return parsed.toLocaleString('en-PH', {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function sanitizeContactInput(value) {
+    return String(value || '').replace(/[^\d\s()+-]/g, '');
 }
 
 async function saveCustomerServiceConfig() {
@@ -1905,6 +2367,13 @@ function truncateText(value, maxLength = 140) {
         return text;
     }
     return `${text.slice(0, Math.max(0, maxLength - 3)).trim()}...`;
+}
+
+function setBusy(button, busy) {
+    if (!button) {
+        return;
+    }
+    button.disabled = Boolean(busy);
 }
 
 function setStatus(message, isError = false) {
