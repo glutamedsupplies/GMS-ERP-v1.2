@@ -1,4 +1,4 @@
-const STATIC_CACHE = 'attendance-static-v6';
+const STATIC_CACHE = 'attendance-static-v7';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -9,6 +9,7 @@ const STATIC_ASSETS = [
     '/assets/icons/icon-192.png',
     '/assets/icons/icon-512.png',
     '/shared/app-client.js',
+    '/shared/ai-assistant.js',
     '/shared/pwa.js',
     '/renderer/login.js',
     '/renderer/forgot_password.html',

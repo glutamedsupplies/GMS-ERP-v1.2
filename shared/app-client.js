@@ -1488,3 +1488,33 @@
         })
     };
 })();
+
+(function loadAiAssistantWidget() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+        return;
+    }
+    if (window.top && window.top !== window.self) {
+        return;
+    }
+    if (window.GMS_DISABLE_AI_ASSISTANT) {
+        return;
+    }
+
+    const scriptId = 'gmsAiAssistantScript';
+    const loadScript = () => {
+        if (document.getElementById(scriptId)) {
+            return;
+        }
+        const script = document.createElement('script');
+        script.id = scriptId;
+        script.src = '/shared/ai-assistant.js';
+        script.defer = true;
+        (document.body || document.head).appendChild(script);
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadScript);
+    } else {
+        loadScript();
+    }
+})();

@@ -107,7 +107,7 @@ textarea:focus-visible {
 .employee-shell {
   width: min(calc(100% - 28px), var(--page-max-width));
   margin: 0 auto;
-  padding: 24px 0 40px;
+  padding: 24px 0 96px;
   position: relative;
   z-index: 1;
 }
@@ -187,6 +187,10 @@ textarea:focus-visible {
   align-items: stretch;
   position: relative;
   z-index: 1;
+}
+
+.hero-grid > * {
+  min-width: 0;
 }
 
 .eyebrow,
@@ -334,6 +338,10 @@ textarea:focus-visible {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 18px;
+}
+
+.card-grid > * {
+  min-width: 0;
 }
 
 .action-card {
@@ -1061,7 +1069,7 @@ tbody tr:hover {
   .employee-shell--narrow {
     width: min(calc(100% - 20px), var(--page-max-width));
     padding-top: 16px;
-    padding-bottom: 28px;
+    padding-bottom: 72px;
   }
 
   .hero-card,
