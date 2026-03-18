@@ -124,10 +124,10 @@ async function initialize() {
     }
 
     await loadReceiptConfig();
-    await hydrateReceiptSignatureAsset();
     applyWorkspaceConfigToView();
     bindEvents();
     setupSalesTableScrollHelper();
+    void hydrateReceiptSignatureAsset();
     await loadReferenceData();
     applyPeriodPreset(periodFilter.value || 'this_month', { load: false });
     await loadSalesReport();

@@ -22,25 +22,24 @@
   --tenant-ring: rgba(37, 117, 252, 0.16);
   --tenant-success: #0f766e;
   --tenant-danger: #dc2626;
-  --tenant-surface-text-strong: rgba(248, 250, 252, 0.96);
-  --tenant-surface-text: rgba(226, 232, 240, 0.92);
-  --tenant-surface-muted: rgba(203, 213, 225, 0.78);
-  --tenant-surface-border: rgba(255, 255, 255, 0.18);
-  --tenant-surface-border-strong: rgba(255, 255, 255, 0.28);
+  --tenant-surface-text-strong: var(--tenant-text-strong, #0f172a);
+  --tenant-surface-text: var(--tenant-text, #334155);
+  --tenant-surface-muted: var(--tenant-muted, #64748b);
+  --tenant-surface-border: rgba(148, 163, 184, 0.22);
+  --tenant-surface-border-strong: rgba(var(--tenant-primary-rgb), 0.22);
   --tenant-surface-card:
-    radial-gradient(circle at top right, rgba(var(--tenant-primary-rgb), 0.24) 0%, transparent 34%),
-    linear-gradient(165deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.06) 34%, rgba(255, 255, 255, 0.02) 100%),
-    linear-gradient(180deg, rgba(4, 11, 21, 0.18), rgba(4, 11, 21, 0.42)),
-    rgba(4, 11, 21, 0.34);
+    radial-gradient(circle at top right, rgba(var(--tenant-primary-rgb), 0.14) 0%, transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.86)),
+    rgba(255, 255, 255, 0.84);
   --tenant-surface-card-soft:
-    linear-gradient(165deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.05) 100%),
-    rgba(4, 11, 21, 0.22);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 248, 255, 0.84)),
+    rgba(var(--tenant-primary-rgb), 0.04);
   --tenant-surface-pill:
-    linear-gradient(165deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05)),
-    rgba(4, 11, 21, 0.18);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 247, 255, 0.86)),
+    rgba(var(--tenant-primary-rgb), 0.04);
   --tenant-surface-icon:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.14) 0%, rgba(var(--tenant-primary-rgb), 0.2) 58%, rgba(4, 11, 21, 0.2) 100%),
-    rgba(255, 255, 255, 0.04);
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(var(--tenant-primary-rgb), 0.16) 100%),
+    rgba(255, 255, 255, 0.92);
   --tenant-page-gradient:
     radial-gradient(circle at 10% 16%, rgba(176, 212, 255, 0.34) 0%, transparent 25%),
     radial-gradient(circle at 92% 12%, rgba(37, 117, 252, 0.16) 0%, transparent 24%),
@@ -66,7 +65,7 @@ body.employee-page {
   margin: 0;
   min-height: 100vh;
   font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
-  color: var(--tenant-surface-text-strong);
+  color: var(--tenant-text-strong);
   background: var(--tenant-page-gradient);
   position: relative;
   overflow-x: hidden;
@@ -154,11 +153,11 @@ textarea:focus-visible {
   border-radius: 999px;
   border: 1px solid var(--tenant-surface-border);
   background: var(--tenant-surface-pill);
-  color: var(--tenant-surface-text-strong);
+  color: var(--tenant-text-strong);
   cursor: pointer;
   text-decoration: none;
   box-shadow:
-    0 18px 36px rgba(var(--tenant-primary-rgb), 0.16),
+    0 14px 28px rgba(var(--tenant-primary-rgb), 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.26);
   backdrop-filter: blur(18px) saturate(1.12);
 }
@@ -167,6 +166,12 @@ textarea:focus-visible {
 .secondary-button:hover {
   transform: translateY(-2px);
   border-color: var(--tenant-line-strong);
+}
+
+.secondary-button.is-danger {
+  border-color: rgba(220, 38, 38, 0.28);
+  background: rgba(254, 242, 242, 0.92);
+  color: var(--tenant-danger);
 }
 
 .hero-card,
@@ -220,7 +225,7 @@ textarea:focus-visible {
 .eyebrow,
 .hero-kicker {
   margin: 0 0 10px;
-  color: rgba(226, 232, 240, 0.72);
+  color: var(--tenant-primary-strong);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.16em;
@@ -438,12 +443,12 @@ textarea:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(var(--tenant-primary-rgb), 0.14);
   background: var(--tenant-surface-icon);
   color: var(--tenant-surface-text-strong);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 14px 28px rgba(2, 6, 23, 0.22);
+    0 14px 28px rgba(var(--tenant-primary-rgb), 0.08);
 }
 
 .action-icon i {
@@ -911,13 +916,14 @@ tbody tr:hover td {
   justify-content: center;
   gap: 10px;
   min-height: 48px;
-  border: 1px solid rgba(15, 23, 42, 0.14);
+  border: 1px solid rgba(var(--tenant-primary-rgb), 0.16);
   border-radius: 14px;
-  background: #111827;
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--tenant-text-strong);
   font-weight: 800;
   cursor: pointer;
   letter-spacing: 0.03em;
+  box-shadow: 0 12px 24px rgba(var(--tenant-primary-rgb), 0.06);
 }
 
 .button-with-badge {
@@ -940,8 +946,8 @@ tbody tr:hover td {
   place-items: center;
   flex: 0 0 28px;
   line-height: 0;
-  background: #ffffff;
-  color: #111827;
+  background: rgba(var(--tenant-primary-rgb), 0.12);
+  color: var(--tenant-text-strong);
   font-weight: 900;
 }
 
@@ -969,7 +975,7 @@ tbody tr:hover td {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(6, 10, 20, 0.6);
+  background: rgba(15, 23, 42, 0.14);
   backdrop-filter: blur(4px);
   z-index: 50;
 }
@@ -980,12 +986,14 @@ tbody tr:hover td {
 
 .modal-card {
   width: min(520px, 94vw);
-  background: linear-gradient(160deg, rgba(15, 23, 42, 0.96), rgba(7, 12, 24, 0.98));
+  background:
+    radial-gradient(circle at top right, rgba(var(--tenant-primary-rgb), 0.12) 0%, transparent 32%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(242, 247, 255, 0.9));
   border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.22);
   padding: 20px;
-  box-shadow: 0 26px 60px rgba(2, 6, 23, 0.55);
-  color: #f8fafc;
+  box-shadow: 0 22px 48px rgba(15, 23, 42, 0.12);
+  color: var(--tenant-text-strong);
   backdrop-filter: blur(12px);
 }
 
@@ -1001,7 +1009,7 @@ tbody tr:hover td {
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.6);
+  color: var(--tenant-muted);
   font-weight: 700;
 }
 
@@ -1014,7 +1022,7 @@ tbody tr:hover td {
 .modal-copy {
   margin: 0 0 12px;
   font-size: 13px;
-  color: rgba(226, 232, 240, 0.8);
+  color: var(--tenant-muted);
 }
 
 .modal-grid {
@@ -1029,28 +1037,36 @@ tbody tr:hover td {
   margin-top: 6px;
 }
 
+.modal-secondary-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .modal-grid label {
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.7);
+  color: var(--tenant-text);
   font-weight: 700;
 }
 
 .modal-grid input {
   min-height: 46px;
   border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(255, 255, 255, 0.12);
-  color: #f8fafc;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--tenant-text-strong);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.64),
+    0 10px 20px rgba(var(--tenant-primary-rgb), 0.04);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .modal-grid input:focus {
   outline: none;
-  border-color: rgba(83, 215, 105, 0.6);
-  box-shadow: 0 0 0 4px rgba(83, 215, 105, 0.18);
+  border-color: rgba(var(--tenant-primary-rgb), 0.3);
+  box-shadow: 0 0 0 4px rgba(var(--tenant-primary-rgb), 0.12);
 }
 
 .modal-grid button {
@@ -1060,8 +1076,8 @@ tbody tr:hover td {
 .modal-status {
   min-height: 18px;
   font-size: 12px;
-  color: rgba(226, 232, 240, 0.84);
-  background: rgba(15, 23, 42, 0.6);
+  color: var(--tenant-text);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 10px;
   padding: 6px 10px;
@@ -1072,9 +1088,9 @@ tbody tr:hover td {
 }
 
 .modal-status.is-error {
-  color: #ffb0b0;
-  border-color: rgba(255, 176, 176, 0.28);
-  background: rgba(127, 29, 29, 0.25);
+  color: #b91c1c;
+  border-color: rgba(220, 38, 38, 0.22);
+  background: rgba(254, 242, 242, 0.96);
 }
 
 .modal-actions .primary-button {
@@ -1086,10 +1102,11 @@ tbody tr:hover td {
   height: 36px;
   border-radius: 10px;
   border: none;
-  background: rgba(255, 255, 255, 0.08);
-  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--tenant-text);
   font-size: 22px;
   cursor: pointer;
+  border: 1px solid rgba(148, 163, 184, 0.18);
 }
 
 .field label {

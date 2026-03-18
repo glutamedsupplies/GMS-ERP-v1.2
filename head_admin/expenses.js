@@ -61,7 +61,6 @@ async function initialize() {
     }
     appClient.attachEmployeeBackButton(session);
     state.session = session;
-    await applyWorkspaceConfig();
 
     Object.values(MODULES).forEach((module) => {
         state.modules[module.key] = {
@@ -74,7 +73,10 @@ async function initialize() {
     });
 
     bindEvents();
-    await loadReferences();
+    await Promise.all([
+        applyWorkspaceConfig(),
+        loadReferences()
+    ]);
 
     Object.values(MODULES).forEach((module) => {
         resetForm(module.key);

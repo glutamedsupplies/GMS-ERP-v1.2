@@ -103,11 +103,11 @@
       <div class="modal-header">
         <div>
           <div class="modal-kicker">Security Confirmation</div>
-          <h3>Connect Google</h3>
+          <h3>Manage Gmail or Google</h3>
         </div>
         <button class="icon-btn" id="closeGoogleModalBtn" type="button" aria-label="Close Google connect modal">&times;</button>
       </div>
-      <p class="modal-copy">Send a code to your email, verify it, then connect Google if you want one-tap access.</p>
+      <p class="modal-copy">Verify an email for email login, connect Google for one-tap access, or send an unlink code to the currently linked address before removing email or Google access.</p>
       <div class="modal-grid">
         <label for="loginEmailInput">Email</label>
         <input type="email" id="loginEmailInput" placeholder="you@email.com" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
@@ -125,12 +125,16 @@
           </span>
           Connect Google
         </button>
+        <div class="modal-secondary-actions">
+          <button class="secondary-button" id="unlinkEmailBtn" type="button">Unbind Email</button>
+          <button class="secondary-button is-danger" id="unlinkGoogleBtn" type="button">Unbind Google</button>
+        </div>
       </div>
       <div class="modal-status" id="googleModalStatus" aria-live="polite" hidden></div>
     </div>
   </div>
 
-  <script src="../shared/app-client.js"></script>
-  <script src="settings.js?v=20260317-google-connect-email"></script>
+  <script src="../shared/app-client.js?v=20260318-unlink-verify"></script>
+  <script src="settings.js?v=20260318-unlink-verify"></script>
 </body>
 </html>

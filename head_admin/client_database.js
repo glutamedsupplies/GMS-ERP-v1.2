@@ -20,7 +20,8 @@ const pageSubtitle = document.getElementById('pageSubtitle');
 const state = {
     clients: [],
     filter: '',
-    editingClientId: null
+    editingClientId: null,
+    loadRequestToken: 0
 };
 
 initialize();
@@ -31,14 +32,18 @@ async function initialize() {
         return;
     }
 
-    await applyCompanySubtitle();
+    const debouncedLoadClients = debounce(() => {
+        void loadClients(state.filter);
+    }, 180);
 
     searchInput.addEventListener('input', (event) => {
         state.filter = event.target.value.trim();
-        loadClients(state.filter);
+        debouncedLoadClients();
     });
 
-    refreshBtn.addEventListener('click', () => loadClients(state.filter));
+    refreshBtn.addEventListener('click', () => {
+        void loadClients(state.filter);
+    });
     openModalBtn.addEventListener('click', openModal);
     closeModalBtn.addEventListener('click', closeModal);
     saveClientBtn.addEventListener('click', saveClient);
@@ -62,7 +67,10 @@ async function initialize() {
         });
     });
 
-    await loadClients();
+    await Promise.all([
+        applyCompanySubtitle(),
+        loadClients()
+    ]);
 }
 
 async function applyCompanySubtitle() {
@@ -85,23 +93,32 @@ async function applyCompanySubtitle() {
 }
 
 async function loadClients(filter = '') {
+    const requestToken = ++state.loadRequestToken;
     refreshBtn.disabled = true;
     setStatus('Loading client records...', false);
 
     try {
         const payload = await appClient.listClients(filter);
+        if (requestToken !== state.loadRequestToken) {
+            return;
+        }
         state.clients = Array.isArray(payload.items) ? payload.items : [];
         renderClients(state.clients);
         updateSummary(filter, state.clients);
         setStatus(`Loaded ${state.clients.length} client record(s).`, false);
     } catch (error) {
+        if (requestToken !== state.loadRequestToken) {
+            return;
+        }
         console.error('Failed to load clients:', error);
         state.clients = [];
         renderClients([]);
         updateSummary(filter, []);
         setStatus(error.message || 'Unable to load client records.', true);
     } finally {
-        refreshBtn.disabled = false;
+        if (requestToken === state.loadRequestToken) {
+            refreshBtn.disabled = false;
+        }
     }
 }
 
@@ -301,4 +318,15 @@ function formatCreatedAt(value) {
 function setStatus(message, isError) {
     statusText.textContent = message;
     statusText.classList.toggle('error', Boolean(isError));
+}
+
+function debounce(callback, delay) {
+    let timerId = 0;
+
+    return function debouncedCallback(...args) {
+        window.clearTimeout(timerId);
+        timerId = window.setTimeout(() => {
+            callback(...args);
+        }, delay);
+    };
 }

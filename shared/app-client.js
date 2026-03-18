@@ -16,6 +16,7 @@
     const BRAND_THEME_STORAGE_KEY = 'appBrandThemeV1';
     const SUPPORT_SESSION_BANNER_ID = 'appSupportSessionBanner';
     const REQUEST_CACHE_STORAGE_PREFIX = 'appRequestCacheV1';
+    const CURRENT_SESSION_CACHE_KEY = 'current-session';
     const inFlightRequestCache = new Map();
 
     ensureResponsiveDocumentSetup();
@@ -745,6 +746,43 @@
         return pendingRequest;
     }
 
+    function invalidateRequestCacheByPrefix(cacheKeyPrefix = '') {
+        const scopedPrefix = buildScopedRequestCacheKey(cacheKeyPrefix);
+        const exactOrNestedMatch = (key = '') => key === scopedPrefix || key.startsWith(`${scopedPrefix}:`);
+
+        try {
+            const keysToRemove = [];
+            for (let index = 0; index < sessionStorage.length; index += 1) {
+                const key = sessionStorage.key(index);
+                if (key && exactOrNestedMatch(key)) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach((key) => sessionStorage.removeItem(key));
+        } catch (_error) {
+            // Ignore storage enumeration issues.
+        }
+
+        Array.from(inFlightRequestCache.keys()).forEach((key) => {
+            if (exactOrNestedMatch(key)) {
+                inFlightRequestCache.delete(key);
+            }
+        });
+    }
+
+    function shouldUseDefaultQueryCache(filters = {}) {
+        return Object.values(filters).every((value) => {
+            if (typeof value === 'number') {
+                return Number(value || 0) === 0;
+            }
+            return String(value || '').trim() === '';
+        });
+    }
+
+    function invalidateReferenceCaches(cacheKeyPrefixes = []) {
+        cacheKeyPrefixes.forEach((cacheKeyPrefix) => invalidateRequestCacheByPrefix(cacheKeyPrefix));
+    }
+
     function setSessionUser(user) {
         if (!user || !user.id) {
             clearStoredSession();
@@ -764,6 +802,7 @@
             localStorage.removeItem(key);
         });
         sessionStorage.clear();
+        inFlightRequestCache.clear();
     }
 
     async function clearSession() {
@@ -1213,9 +1252,25 @@
     }
 
     async function getCurrentSession() {
-        const user = await request('/api/session', {
-            skipAuthRedirect: true
-        });
+        const cachedUser = readRequestCache(CURRENT_SESSION_CACHE_KEY, 15000);
+        if (cachedUser && cachedUser.id) {
+            setSessionUser(cachedUser);
+            syncSupportSessionBanner(cachedUser.support_session || cachedUser.supportSession || null);
+            return cachedUser;
+        }
+
+        let user = null;
+        try {
+            user = await requestWithSessionCache(CURRENT_SESSION_CACHE_KEY, 15000, () => request('/api/session', {
+                skipAuthRedirect: true
+            }));
+        } catch (error) {
+            if (error?.code === 'HTTP_401') {
+                clearStoredSession();
+                return null;
+            }
+            throw error;
+        }
 
         if (user && user.id) {
             setSessionUser(user);
@@ -1408,7 +1463,7 @@
             },
             skipAuthRedirect: true
         }),
-        getBootstrap: () => requestWithSessionCache('bootstrap', 5000, () => request('/api/bootstrap')).then((payload) => {
+        getBootstrap: () => requestWithSessionCache('bootstrap', 30000, () => request('/api/bootstrap')).then((payload) => {
             syncSupportSessionBanner(payload?.support_session || payload?.user?.support_session || payload?.user?.supportSession || null);
             return payload;
         }),
@@ -1416,17 +1471,43 @@
             method: 'POST',
             body: payload
         }),
-        listClients: (filter = '', limit = 500, offset = 0) => request(`/api/clients?filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`),
+        listClients: (filter = '', limit = 500, offset = 0) => {
+            const normalizedFilter = String(filter || '').trim();
+            const normalizedLimit = Math.max(1, Number(limit) || 500);
+            const normalizedOffset = Math.max(0, Number(offset) || 0);
+            const requestFactory = () => request(
+                `/api/clients?filter=${encodeURIComponent(normalizedFilter)}&limit=${encodeURIComponent(normalizedLimit)}&offset=${encodeURIComponent(normalizedOffset)}`
+            );
+
+            if (shouldUseDefaultQueryCache({ filter: normalizedFilter, offset: normalizedOffset })) {
+                return requestWithSessionCache(
+                    `clients:filter=${normalizedFilter}:limit=${normalizedLimit}:offset=${normalizedOffset}`,
+                    30000,
+                    requestFactory
+                );
+            }
+
+            return requestFactory();
+        },
         addClient: (payload) => request('/api/clients', {
             method: 'POST',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['clients']);
+            return result;
         }),
         updateClient: (id, payload) => request(`/api/clients/${encodeURIComponent(id)}`, {
             method: 'PUT',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['clients']);
+            return result;
         }),
         deleteClient: (id) => request(`/api/clients/${encodeURIComponent(id)}`, {
             method: 'DELETE'
+        }).then((result) => {
+            invalidateReferenceCaches(['clients']);
+            return result;
         }),
         listCustomerRequests: ({ filter = '', status = '', limit = 200 } = {}) => request(
             `/api/customer-requests?filter=${encodeURIComponent(filter)}&status=${encodeURIComponent(status)}&limit=${encodeURIComponent(limit)}`
@@ -1440,26 +1521,68 @@
             method: 'POST',
             body: payload
         }),
-        getSalesReferences: () => requestWithSessionCache('sales-references', 5000, () => request('/api/sales/references')),
+        getSalesReferences: () => requestWithSessionCache('sales-references', 30000, () => request('/api/sales/references')),
         listProducts: (filter = '') => request(`/api/products?filter=${encodeURIComponent(filter)}`),
-        listInventoryVariants: ({ productName = '', setName = '', search = '', limit = 500, offset = 0 } = {}) => callElectronOrHttp(
-            () => window.electronAPI?.inventoryVariants?.list({ productName, setName, search, limit, offset }),
-            () => request(`/api/inventory-variants?productName=${encodeURIComponent(productName)}&setName=${encodeURIComponent(setName)}&search=${encodeURIComponent(search)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`)
-        ),
+        listInventoryVariants: ({ productName = '', setName = '', search = '', limit = 500, offset = 0 } = {}) => {
+            const normalizedProductName = String(productName || '').trim();
+            const normalizedSetName = String(setName || '').trim();
+            const normalizedSearch = String(search || '').trim();
+            const normalizedLimit = Math.max(1, Number(limit) || 500);
+            const normalizedOffset = Math.max(0, Number(offset) || 0);
+            const requestFactory = () => callElectronOrHttp(
+                () => window.electronAPI?.inventoryVariants?.list({
+                    productName: normalizedProductName,
+                    setName: normalizedSetName,
+                    search: normalizedSearch,
+                    limit: normalizedLimit,
+                    offset: normalizedOffset
+                }),
+                () => request(
+                    `/api/inventory-variants?productName=${encodeURIComponent(normalizedProductName)}&setName=${encodeURIComponent(normalizedSetName)}&search=${encodeURIComponent(normalizedSearch)}&limit=${encodeURIComponent(normalizedLimit)}&offset=${encodeURIComponent(normalizedOffset)}`
+                )
+            );
+
+            if (shouldUseDefaultQueryCache({
+                productName: normalizedProductName,
+                setName: normalizedSetName,
+                search: normalizedSearch,
+                offset: normalizedOffset
+            })) {
+                return requestWithSessionCache(
+                    `inventory-variants:product=${normalizedProductName}:set=${normalizedSetName}:search=${normalizedSearch}:limit=${normalizedLimit}:offset=${normalizedOffset}`,
+                    30000,
+                    requestFactory
+                );
+            }
+
+            return requestFactory();
+        },
         createInventoryVariant: (payload) => request('/api/inventory-variants', {
             method: 'POST',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['inventory-variants']);
+            return result;
         }),
         updateInventoryVariant: (id, payload) => request(`/api/inventory-variants/${encodeURIComponent(id)}`, {
             method: 'PUT',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['inventory-variants']);
+            return result;
         }),
         deleteInventoryVariant: (id) => request(`/api/inventory-variants/${encodeURIComponent(id)}`, {
             method: 'DELETE'
+        }).then((result) => {
+            invalidateReferenceCaches(['inventory-variants']);
+            return result;
         }),
         importInventoryVariants: (payload = {}) => request('/api/inventory-variants/import', {
             method: 'POST',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['inventory-variants']);
+            return result;
         }),
         listInventoryVariantProducts: () => callElectronOrHttp(
             () => window.electronAPI?.inventoryVariants?.listProducts(),
@@ -1638,6 +1761,24 @@
                 email: String(email || '').trim()
             }
         }),
+        requestEmailUnlinkCode: () => request('/api/account/connect/email/unlink/request', {
+            method: 'POST'
+        }),
+        unlinkEmailConnection: async ({ code = '' } = {}) => request('/api/account/connect/email/unlink', {
+            method: 'POST',
+            body: {
+                code: String(code || '').trim()
+            }
+        }),
+        requestGoogleUnlinkCode: () => request('/api/account/connect/google/unlink/request', {
+            method: 'POST'
+        }),
+        unlinkGoogleAccount: async ({ code = '' } = {}) => request('/api/account/connect/google/unlink', {
+            method: 'POST',
+            body: {
+                code: String(code || '').trim()
+            }
+        }),
         listSignupRequests: ({ status = 'open', filter = '', limit = 200 } = {}) => request(
             `/api/signup-requests?status=${encodeURIComponent(status)}&filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}`
         ),
@@ -1659,28 +1800,62 @@
         updateCompanySettings: (payload) => request('/api/company/settings', {
             method: 'PUT',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['bootstrap']);
+            return result;
         }),
         getCompanyWorkspaceConfig: () => request('/api/company/workspace-config'),
         updateCompanyWorkspaceConfig: (payload) => request('/api/company/workspace-config', {
             method: 'PUT',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['bootstrap', 'sales-references']);
+            return result;
         }),
         getCompanyInvoiceTemplate: () => request('/api/company/invoice-template'),
         updateCompanyInvoiceTemplate: (payload) => request('/api/company/invoice-template', {
             method: 'PUT',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['bootstrap']);
+            return result;
         }),
-        listBranches: (limit = 500, offset = 0) => request(`/api/branches?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`),
+        listBranches: (limit = 500, offset = 0) => {
+            const normalizedLimit = Math.max(1, Number(limit) || 500);
+            const normalizedOffset = Math.max(0, Number(offset) || 0);
+            const requestFactory = () => request(
+                `/api/branches?limit=${encodeURIComponent(normalizedLimit)}&offset=${encodeURIComponent(normalizedOffset)}`
+            );
+
+            if (shouldUseDefaultQueryCache({ offset: normalizedOffset })) {
+                return requestWithSessionCache(
+                    `branches:limit=${normalizedLimit}:offset=${normalizedOffset}`,
+                    30000,
+                    requestFactory
+                );
+            }
+
+            return requestFactory();
+        },
         createBranch: (payload) => request('/api/branches', {
             method: 'POST',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['branches', 'bootstrap', 'sales-references']);
+            return result;
         }),
         updateBranch: (branchId, payload) => request(`/api/branches/${encodeURIComponent(branchId)}`, {
             method: 'PUT',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['branches', 'bootstrap', 'sales-references']);
+            return result;
         }),
         deleteBranch: (branchId) => request(`/api/branches/${encodeURIComponent(branchId)}`, {
             method: 'DELETE'
+        }).then((result) => {
+            invalidateReferenceCaches(['branches', 'bootstrap', 'sales-references']);
+            return result;
         }),
         listUsers: ({ role = '', filter = '', limit = 500, offset = 0 } = {}) => request(`/api/users?role=${encodeURIComponent(role)}&filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`),
         createUser: (payload) => request('/api/users', {

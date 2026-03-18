@@ -19,6 +19,8 @@ const googleConnectModal = document.getElementById('googleConnectModal');
 const closeGoogleModalBtn = document.getElementById('closeGoogleModalBtn');
 const googleModalStatus = document.getElementById('googleModalStatus');
 const connectGoogleBtn = document.getElementById('connectGoogleBtn');
+const unlinkEmailBtn = document.getElementById('unlinkEmailBtn');
+const unlinkGoogleBtn = document.getElementById('unlinkGoogleBtn');
 
 let session = null;
 let connectionState = {
@@ -27,9 +29,14 @@ let connectionState = {
     google_email: '',
     google_email_verified: false
 };
+let unlinkFlowState = {
+    emailAwaitingCode: false,
+    googleAwaitingCode: false
+};
 
 setupPasswordToggle('toggleNewPass', 'password');
 setupPasswordToggle('toggleConfirmPass', 'confirmPassword');
+syncUnlinkButtonLabels();
 initialize();
 
 async function initialize() {
@@ -61,6 +68,8 @@ async function initialize() {
         }
     });
     connectGoogleBtn?.addEventListener('click', confirmGoogleConnect);
+    unlinkEmailBtn?.addEventListener('click', unlinkEmailConnection);
+    unlinkGoogleBtn?.addEventListener('click', unlinkGoogleConnection);
     await loadProfile();
 }
 
@@ -155,9 +164,10 @@ function applyConnectionState(user = {}) {
         google_email: String(user.google_email || '').trim(),
         google_email_verified: Boolean(user.google_email_verified)
     };
+    resetUnlinkFlowState();
 
-    if (loginEmailInput && connectionState.login_email) {
-        loginEmailInput.value = connectionState.login_email;
+    if (loginEmailInput) {
+        loginEmailInput.value = connectionState.login_email || '';
     }
 
     if (connectionState.login_email_verified) {
@@ -185,6 +195,12 @@ function applyConnectionState(user = {}) {
     }
     if (connectGoogleBtn) {
         connectGoogleBtn.disabled = connectionState.google_email_verified;
+    }
+    if (unlinkEmailBtn) {
+        unlinkEmailBtn.disabled = !connectionState.login_email;
+    }
+    if (unlinkGoogleBtn) {
+        unlinkGoogleBtn.disabled = !connectionState.google_email_verified;
     }
 }
 
@@ -250,7 +266,7 @@ async function verifyEmailCode() {
         setGoogleModalStatus(error.message || 'Unable to verify code.', true);
     } finally {
         verifyEmailCodeBtn.disabled = false;
-        verifyEmailCodeBtn.textContent = originalLabel || 'Verify';
+        verifyEmailCodeBtn.textContent = originalLabel || 'Verify Email';
     }
 }
 
@@ -261,11 +277,12 @@ function openGoogleModal() {
     googleConnectModal.classList.add('is-open');
     googleConnectModal.setAttribute('aria-hidden', 'false');
     if (loginEmailInput) {
-        loginEmailInput.value = loginEmailInput.value || connectionState.login_email || '';
+        loginEmailInput.value = connectionState.login_email || '';
     }
     if (loginEmailCodeInput) {
         loginEmailCodeInput.value = '';
     }
+    resetUnlinkFlowState();
     setGoogleModalStatus('', false);
 }
 
@@ -275,6 +292,7 @@ function closeGoogleModal() {
     }
     googleConnectModal.classList.remove('is-open');
     googleConnectModal.setAttribute('aria-hidden', 'true');
+    resetUnlinkFlowState();
 }
 
 async function confirmGoogleConnect() {
@@ -310,6 +328,110 @@ async function confirmGoogleConnect() {
     }
 
     await connectGoogleAccountWithModal(email);
+}
+
+async function unlinkEmailConnection() {
+    if (!connectionState.login_email) {
+        setGoogleModalStatus('No linked email to unbind.', true);
+        return;
+    }
+
+    const code = String(loginEmailCodeInput?.value || '').trim();
+    if (!unlinkFlowState.emailAwaitingCode || !code) {
+        unlinkEmailBtn.disabled = true;
+        unlinkGoogleBtn && (unlinkGoogleBtn.disabled = true);
+        setGoogleModalStatus(`Sending unlink code to ${connectionState.login_email}...`, false);
+
+        try {
+            const payload = await appClient.requestEmailUnlinkCode();
+            unlinkFlowState = {
+                emailAwaitingCode: true,
+                googleAwaitingCode: false
+            };
+            syncUnlinkButtonLabels();
+            setGoogleModalStatus(`Unlink code sent to ${payload?.email || connectionState.login_email}. Enter it above, then click Confirm Unbind Email.`, false);
+            loginEmailCodeInput?.focus?.();
+        } catch (error) {
+            console.error('Failed to send email unlink code:', error);
+            setGoogleModalStatus(error.message || 'Unable to send unlink code.', true);
+        } finally {
+            unlinkEmailBtn.disabled = !connectionState.login_email;
+            if (unlinkGoogleBtn) {
+                unlinkGoogleBtn.disabled = !connectionState.google_email_verified;
+            }
+        }
+        return;
+    }
+
+    unlinkEmailBtn.disabled = true;
+    setGoogleModalStatus('Checking unlink verification code...', false);
+
+    try {
+        const user = await appClient.unlinkEmailConnection({ code });
+        if (loginEmailCodeInput) {
+            loginEmailCodeInput.value = '';
+        }
+        applyConnectionState(user);
+        setGoogleModalStatus('Email connection removed after verification.', false);
+    } catch (error) {
+        console.error('Failed to unlink email connection:', error);
+        setGoogleModalStatus(error.message || 'Unable to remove email connection.', true);
+    } finally {
+        unlinkEmailBtn.disabled = !connectionState.login_email;
+        syncUnlinkButtonLabels();
+    }
+}
+
+async function unlinkGoogleConnection() {
+    if (!connectionState.google_email_verified) {
+        setGoogleModalStatus('No linked Google account to unbind.', true);
+        return;
+    }
+
+    const code = String(loginEmailCodeInput?.value || '').trim();
+    if (!unlinkFlowState.googleAwaitingCode || !code) {
+        unlinkGoogleBtn.disabled = true;
+        unlinkEmailBtn && (unlinkEmailBtn.disabled = true);
+        setGoogleModalStatus(`Sending unlink code to ${connectionState.google_email}...`, false);
+
+        try {
+            const payload = await appClient.requestGoogleUnlinkCode();
+            unlinkFlowState = {
+                emailAwaitingCode: false,
+                googleAwaitingCode: true
+            };
+            syncUnlinkButtonLabels();
+            setGoogleModalStatus(`Unlink code sent to ${payload?.email || connectionState.google_email}. Enter it above, then click Confirm Unbind Google.`, false);
+            loginEmailCodeInput?.focus?.();
+        } catch (error) {
+            console.error('Failed to send Google unlink code:', error);
+            setGoogleModalStatus(error.message || 'Unable to send unlink code.', true);
+        } finally {
+            if (unlinkEmailBtn) {
+                unlinkEmailBtn.disabled = !connectionState.login_email;
+            }
+            unlinkGoogleBtn.disabled = !connectionState.google_email_verified;
+        }
+        return;
+    }
+
+    unlinkGoogleBtn.disabled = true;
+    setGoogleModalStatus('Checking unlink verification code...', false);
+
+    try {
+        const user = await appClient.unlinkGoogleAccount({ code });
+        if (loginEmailCodeInput) {
+            loginEmailCodeInput.value = '';
+        }
+        applyConnectionState(user);
+        setGoogleModalStatus('Google connection removed after verification.', false);
+    } catch (error) {
+        console.error('Failed to unlink Google connection:', error);
+        setGoogleModalStatus(error.message || 'Unable to remove Google connection.', true);
+    } finally {
+        unlinkGoogleBtn.disabled = !connectionState.google_email_verified;
+        syncUnlinkButtonLabels();
+    }
 }
 
 async function connectGoogleAccountWithModal(email) {
@@ -352,6 +474,27 @@ function setGoogleModalStatus(message, isError) {
     googleModalStatus.textContent = text;
     googleModalStatus.hidden = !text;
     googleModalStatus.classList.toggle('is-error', Boolean(isError));
+}
+
+function resetUnlinkFlowState() {
+    unlinkFlowState = {
+        emailAwaitingCode: false,
+        googleAwaitingCode: false
+    };
+    syncUnlinkButtonLabels();
+}
+
+function syncUnlinkButtonLabels() {
+    if (unlinkEmailBtn) {
+        unlinkEmailBtn.textContent = unlinkFlowState.emailAwaitingCode
+            ? 'Confirm Unbind Email'
+            : 'Unbind Email';
+    }
+    if (unlinkGoogleBtn) {
+        unlinkGoogleBtn.textContent = unlinkFlowState.googleAwaitingCode
+            ? 'Confirm Unbind Google'
+            : 'Unbind Google';
+    }
 }
 
 function setupPasswordToggle(toggleId, inputId) {

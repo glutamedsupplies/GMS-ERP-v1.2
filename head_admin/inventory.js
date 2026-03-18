@@ -39,9 +39,11 @@ async function initialize() {
     }
     appClient.attachEmployeeBackButton(session);
 
-    await applyWorkspaceConfig();
     bindEvents();
-    await loadVariants();
+    await Promise.all([
+        applyWorkspaceConfig(),
+        loadVariants()
+    ]);
 }
 
 async function applyWorkspaceConfig() {

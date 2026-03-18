@@ -51,6 +51,7 @@ if (!process.versions?.electron) {
     const store = require('./lib/sqlite');
     const salesStore = require('./lib/sales-store');
     const inventoryVariantStore = require('./lib/inventory-variants-store');
+    const { getServerBuildToken } = require('./lib/build-info');
     const { startServer, SERVER_CONFIG } = require('./lib/http-server');
 
     let mainWindow = null;
@@ -79,6 +80,7 @@ if (!process.versions?.electron) {
     async function connectToExistingServer() {
         const { localUrl, lanUrl } = getServerUrls();
         const expectedDataRoot = path.resolve(process.env.ATTENDANCE_DATA_DIR || '');
+        const expectedBuildToken = getServerBuildToken();
         const response = await fetch(`http://127.0.0.1:${SERVER_CONFIG.port}/api/server-info`, {
             cache: 'no-store',
             signal: AbortSignal.timeout(3000)
@@ -100,6 +102,14 @@ if (!process.versions?.electron) {
                 + `Current app data: ${expectedDataRoot}\n`
                 + `Existing server data: ${existingDataRoot}\n`
                 + 'Close the old server/app first so this app reads the correct attendance database.'
+            );
+        }
+
+        const existingBuildToken = String(payload.data?.buildToken || '').trim();
+        if (!existingBuildToken || existingBuildToken !== expectedBuildToken) {
+            throw new Error(
+                `Attendance server on port ${SERVER_CONFIG.port} is running an older app build.\n`
+                + 'Close the old GMS server/app first, then reopen this app so the latest API routes are loaded.'
             );
         }
 
