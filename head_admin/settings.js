@@ -46,6 +46,13 @@ async function initialize() {
         return;
     }
 
+    try {
+        const bootstrap = await appClient.getBootstrap();
+        appClient.applyBootstrapBrandTheme(bootstrap);
+    } catch (error) {
+        console.error('Failed to apply head admin settings theme:', error);
+    }
+
     fileInput.addEventListener('change', loadImage);
     saveBtn.addEventListener('click', saveSettings);
     logoutBtn.addEventListener('click', logout);
@@ -69,7 +76,7 @@ async function loadProfile() {
         const user = await appClient.getUser(session.userId);
         adminIdDisplay.value = user.id || '';
         adminName.value = user.name || '';
-        profilePic.src = user.profile_picture || appClient.buildAvatarUrl(user.name || 'Head Admin', 'dbeafe', '1e3a8a');
+        profilePic.src = user.profile_picture || buildThemeAvatarUrl(user.name || 'Head Admin');
         fileName.textContent = 'No new photo selected';
         applyConnectionState(user);
         setStatus('Ready for changes.', false, false);
@@ -515,6 +522,18 @@ function setupPasswordToggle(toggleId, inputId) {
         toggleIcon.classList.toggle('fa-eye', !showText);
         toggleIcon.classList.toggle('fa-eye-slash', showText);
     });
+}
+
+function buildThemeAvatarUrl(name) {
+    const rootStyles = window.getComputedStyle(document.documentElement);
+    const background = normalizeAvatarColor(rootStyles.getPropertyValue('--tenant-primary-soft'), 'dff3e3');
+    const color = normalizeAvatarColor(rootStyles.getPropertyValue('--tenant-primary-strong'), '1f6b47');
+    return appClient.buildAvatarUrl(name, background, color);
+}
+
+function normalizeAvatarColor(value, fallback) {
+    const match = String(value || '').trim().match(/#?([0-9a-f]{6})$/i);
+    return match ? match[1].toLowerCase() : fallback;
 }
 
 function setStatus(message, isError, isSuccess = false) {
