@@ -103,6 +103,7 @@ function bindCoreCards() {
             window.location.href = '/employee/settings.html';
         });
     }
+
 }
 
 function renderWorkspaceOverview(session, bootstrap) {

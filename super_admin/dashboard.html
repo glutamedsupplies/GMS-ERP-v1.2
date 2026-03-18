@@ -7,7 +7,7 @@
   <title>Super Admin Console</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Sora:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="./dashboard.css">
 </head>
 <body>
@@ -116,12 +116,29 @@
     </div>
 
     <div class="grid grid--support">
-      <section class="card">
-        <div class="card-head">
-          <h2>Customer Service Contacts</h2>
+      <section class="card card--support">
+        <div class="card-head card-head--support">
+          <div>
+            <p class="support-kicker">Human Handoff Setup</p>
+            <h2>Customer Service Contacts</h2>
+          </div>
           <p class="section-hint">Ito ang details na ibibigay ng AI kapag kailangan ng human handoff.</p>
         </div>
-        <div class="form">
+        <div class="support-summary" aria-hidden="true">
+          <div class="support-summary-item">
+            <span class="support-summary-label">AI handoff</span>
+            <strong class="support-summary-value">Escalation-ready message</strong>
+          </div>
+          <div class="support-summary-item">
+            <span class="support-summary-label">Shared inbox</span>
+            <strong class="support-summary-value">Two email contacts</strong>
+          </div>
+          <div class="support-summary-item">
+            <span class="support-summary-label">Direct line</span>
+            <strong class="support-summary-value">Primary phone support</strong>
+          </div>
+        </div>
+        <div class="form form--support">
           <div class="full">
             <label>Handoff Message</label>
             <textarea id="customerServiceHandoffMessage" placeholder="Mukhang mas okay ito i-handoff sa Customer Service para may actual tao kang makausap."></textarea>
@@ -129,39 +146,73 @@
           <div><label>Email 1</label><input id="customerServiceEmail1" type="email"></div>
           <div><label>Email 2</label><input id="customerServiceEmail2" type="email"></div>
           <div><label>Phone</label><input id="customerServicePhone1" type="text"></div>
-          <div class="full">
+          <div class="full support-actions">
             <button id="saveCustomerServiceConfigBtn" type="button" class="btn-success">Save Customer Service Contacts</button>
           </div>
         </div>
       </section>
 
-      <section class="card">
-        <div class="card-head">
-          <h2>Create Customer Service Account</h2>
+      <section class="card card--support">
+        <div class="card-head card-head--support">
+          <div>
+            <p class="support-kicker">Desk Access Provisioning</p>
+            <h2>Create Customer Service Account</h2>
+          </div>
           <p class="section-hint">These logins use Super Admin access para makasagot sa customer chat inbox.</p>
         </div>
-        <div class="form">
+        <div class="support-summary" aria-hidden="true">
+          <div class="support-summary-item">
+            <span class="support-summary-label">Access level</span>
+            <strong class="support-summary-value">Super Admin scope</strong>
+          </div>
+          <div class="support-summary-item">
+            <span class="support-summary-label">Main task</span>
+            <strong class="support-summary-value">Request Desk replies</strong>
+          </div>
+          <div class="support-summary-item">
+            <span class="support-summary-label">Recommended</span>
+            <strong class="support-summary-value">One login per agent</strong>
+          </div>
+        </div>
+        <div class="form form--support">
           <div><label>Name</label><input id="customerServiceName" type="text"></div>
           <div><label>Username</label><input id="customerServiceUsername" type="text"></div>
           <div><label>Email</label><input id="customerServiceEmail" type="email"></div>
           <div><label>Password</label><input id="customerServicePassword" type="password"></div>
-          <div class="full">
+          <div class="full support-actions">
             <button id="createCustomerServiceBtn" type="button">Create Customer Service Account</button>
           </div>
         </div>
       </section>
     </div>
 
-    <section class="card" style="margin-top:14px;">
-      <div class="card-head">
-        <h2>Customer Service Accounts</h2>
-        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-          <p class="section-hint" style="margin:0;">Manage the logins who will receive escalated AI concerns.</p>
+    <section class="card card--support card--support-list" style="margin-top:14px;">
+      <div class="card-head card-head--support">
+        <div>
+          <p class="support-kicker">Desk Coverage</p>
+          <h2>Customer Service Accounts</h2>
+        </div>
+        <div class="support-head-actions">
+          <p class="section-hint">Manage the logins who will receive escalated AI concerns.</p>
           <button id="openCustomerChatDeskBtn" type="button" class="btn-soft">Open Request Desk</button>
         </div>
       </div>
-      <p class="muted" style="margin:0 0 10px;">Dito pumapasok ang customer chats pati Company ID or subscription requests. Puwede nilang buksan ang hiwalay na Request Desk page kung gusto nila ng mas focused view.</p>
-      <div id="customerServiceAccountsList" class="list"></div>
+      <div class="support-summary support-summary--wide" aria-hidden="true">
+        <div class="support-summary-item">
+          <span class="support-summary-label">Inbox flow</span>
+          <strong class="support-summary-value">Escalated AI concerns</strong>
+        </div>
+        <div class="support-summary-item">
+          <span class="support-summary-label">Requests</span>
+          <strong class="support-summary-value">Company ID and subscription help</strong>
+        </div>
+        <div class="support-summary-item">
+          <span class="support-summary-label">View option</span>
+          <strong class="support-summary-value">Standalone Request Desk</strong>
+        </div>
+      </div>
+      <p class="muted support-section-note">Dito pumapasok ang customer chats pati Company ID or subscription requests. Puwede nilang buksan ang hiwalay na Request Desk page kung gusto nila ng mas focused view.</p>
+      <div id="customerServiceAccountsList" class="list support-account-list"></div>
     </section>
 
     <div class="grid grid--lists">

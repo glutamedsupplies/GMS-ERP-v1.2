@@ -100,6 +100,7 @@ const COLLECTION_FILTER_LABELS = Object.freeze({
 
 const state = {
     session: null,
+    assignedBranch: '',
     bootstrap: null,
     items: [],
     summary: {
@@ -160,6 +161,7 @@ async function initialize() {
     }
 
     state.session = session;
+    state.assignedBranch = normalizeBranchName(session.branchName || '');
     appClient.attachEmployeeBackButton(session);
 
     try {
@@ -366,6 +368,9 @@ function bindEvents() {
         if (state.locked) {
             return;
         }
+        if (!canUseTrackingWriteActions()) {
+            return;
+        }
 
         if (event.key === 'Enter' && !isTypingTarget(event.target) && normalizeText(trackingScanInput?.value)) {
             event.preventDefault();
@@ -429,6 +434,52 @@ function normalizeCollectionFilter(value) {
 
 function normalizeText(value) {
     return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeBranchName(value = '') {
+    return normalizeText(value);
+}
+
+function sameBranch(left = '', right = '') {
+    return normalizeBranchName(left).toLowerCase() === normalizeBranchName(right).toLowerCase();
+}
+
+function isEmployeeLikeRole(role = '') {
+    const normalized = normalizeText(role).toLowerCase();
+    return normalized === 'employee' || normalized === 'staff';
+}
+
+function canEditTrackingRow(row = {}) {
+    const role = normalizeText(state.session?.role).toLowerCase();
+    if (role === 'head_admin' || role === 'company_admin' || role === 'super_admin') {
+        return true;
+    }
+    if (!isEmployeeLikeRole(role)) {
+        return false;
+    }
+    return sameBranch(row.branch, state.assignedBranch);
+}
+
+function canUseTrackingWriteActions() {
+    const role = normalizeText(state.session?.role).toLowerCase();
+    if (role === 'head_admin' || role === 'company_admin' || role === 'super_admin') {
+        return true;
+    }
+    if (!isEmployeeLikeRole(role)) {
+        return false;
+    }
+    const selectedBranch = normalizeText(state.filters.branch);
+    return !selectedBranch || sameBranch(selectedBranch, state.assignedBranch);
+}
+
+function getLbcEditRestrictionMessage(branch = '') {
+    if (!isEmployeeLikeRole(state.session?.role)) {
+        return 'LBC editing is not available for this account.';
+    }
+    if (!sameBranch(branch, state.assignedBranch)) {
+        return `You can edit LBC records only in ${state.assignedBranch || 'your assigned branch'}.`;
+    }
+    return 'LBC editing is not available for this branch.';
 }
 
 function decodeOrderLookup(value) {
@@ -588,10 +639,13 @@ async function loadRows({ keepStatus = false } = {}) {
 
         const visibleCount = Number(state.summary?.total || state.items.length || 0);
         const baseCount = Number(state.summary?.baseTotal || visibleCount || 0);
+        const modeLabel = canUseTrackingWriteActions()
+            ? 'edit enabled'
+            : (isEmployeeLikeRole(state.session?.role) ? 'read-only for other branch' : 'read only');
         if (!state.items.length) {
-            setStatus(`No orders found for "${QUICK_FILTER_LABELS[normalizeQuickFilter(state.filters.quickFilter)]}".`);
+            setStatus(`No orders found for "${QUICK_FILTER_LABELS[normalizeQuickFilter(state.filters.quickFilter)]}" (${modeLabel}).`);
         } else {
-            setStatus(`Showing ${visibleCount} of ${baseCount} LBC order(s).`);
+            setStatus(`Showing ${visibleCount} of ${baseCount} LBC order(s) (${modeLabel}).`);
         }
     } catch (error) {
         console.error('Failed to load LBC tracking rows:', error);
@@ -602,6 +656,7 @@ async function loadRows({ keepStatus = false } = {}) {
         setStatus(error.message || 'Failed to load LBC tracking rows.', true);
     } finally {
         state.loading = false;
+        setActionLoading(false);
     }
 }
 
@@ -654,7 +709,7 @@ function renderRows() {
         const trackingNumber = normalizeText(row.trackingNumber);
         const orderNumber = normalizeText(row.orderNumber || row.receiptNumber || row.orderKey || '-');
         const missingTrackingRow = Boolean(row.missingTrackingAfterShipment);
-        const canEditRow = Boolean(orderLookup);
+        const canEditRow = Boolean(orderLookup) && canEditTrackingRow(row);
         const isEditing = canEditRow && state.editingOrderKey === orderLookup;
         const isSaving = canEditRow && state.savingOrderKey === orderLookup;
         const deliveryStatus = normalizeDeliveryStatus(row.deliveryStatus, 'In Transit');
@@ -674,8 +729,10 @@ function renderRows() {
         const deliveryCell = isEditing
             ? `<select class="field field-inline field-status status-${deliveryClass}" data-field="delivery-status">${deliveryStatusOptions}</select>`
             : `<span class="pill ${deliveryClass}">${appClient.escapeHtml(deliveryStatus)}</span>`;
-        const actionCell = !canEditRow
+        const actionCell = !orderLookup
             ? '<span class="collection-note">No order key</span>'
+            : !canEditRow
+            ? '<span class="collection-note">Read only</span>'
             : (isEditing
             ? `
                 <div class="row-action-group">
@@ -900,6 +957,12 @@ function startTrackingRowEdit(orderLookup = '') {
         return;
     }
 
+    const targetRow = state.items.find((item) => resolveOrderLookup(item) === normalizedOrderLookup);
+    if (targetRow && !canEditTrackingRow(targetRow)) {
+        setStatus(getLbcEditRestrictionMessage(targetRow.branch), true);
+        return;
+    }
+
     state.editingOrderKey = normalizedOrderLookup;
     state.savingOrderKey = '';
     renderRows();
@@ -938,6 +1001,10 @@ async function handleTrackingRowEditSave(orderLookup = '', rowElement = null) {
     const currentRow = state.items.find((item) => resolveOrderLookup(item) === normalizedOrderLookup);
     if (!currentRow) {
         setStatus('Tracking row is no longer visible. Reload and try again.', true);
+        return;
+    }
+    if (!canEditTrackingRow(currentRow)) {
+        setStatus(getLbcEditRestrictionMessage(currentRow.branch), true);
         return;
     }
 
@@ -1020,7 +1087,7 @@ function resolveAutoDetectedOrder(orderLookup = '') {
                 item.receiptNumber,
                 item.orderKey
             ].map((value) => normalizeText(value).toLowerCase()).filter(Boolean);
-            return values.includes(lookup);
+            return values.includes(lookup) && canEditTrackingRow(item);
         });
         if (exact) {
             return exact;
@@ -1032,7 +1099,7 @@ function resolveAutoDetectedOrder(orderLookup = '') {
                 item.receiptNumber,
                 item.orderKey
             ].map((value) => normalizeText(value).toLowerCase()).filter(Boolean);
-            return values.some((value) => value.includes(lookup));
+            return values.some((value) => value.includes(lookup)) && canEditTrackingRow(item);
         });
         if (partial) {
             return partial;
@@ -1041,6 +1108,7 @@ function resolveAutoDetectedOrder(orderLookup = '') {
 
     const queue = [...state.items]
         .filter((item) => !normalizeText(item.trackingNumber))
+        .filter((item) => canEditTrackingRow(item))
         .sort((left, right) => {
             const leftDate = Date.parse(normalizeText(left.saleDate)) || 0;
             const rightDate = Date.parse(normalizeText(right.saleDate)) || 0;
@@ -1090,6 +1158,19 @@ async function handleSingleTrackingSave() {
 
     if (!TRACKING_NUMBER_REGEX.test(trackingNumber)) {
         setStatus('Tracking number must be alphanumeric and up to 12 characters.', true);
+        focusTrackingInput({ select: true });
+        return;
+    }
+
+    if (orderLookup) {
+        const targetRow = state.items.find((item) => resolveOrderLookup(item) === orderLookup);
+        if (targetRow && !canEditTrackingRow(targetRow)) {
+            setStatus(getLbcEditRestrictionMessage(targetRow.branch), true);
+            focusTrackingInput({ select: true });
+            return;
+        }
+    } else if (!canUseTrackingWriteActions()) {
+        setStatus(getLbcEditRestrictionMessage(state.filters.branch), true);
         focusTrackingInput({ select: true });
         return;
     }
@@ -1195,6 +1276,10 @@ async function handleBulkTrackingSave() {
     const entries = parseBulkTrackingEntries(bulkTrackingInput?.value);
     if (!entries.length) {
         setStatus('Add at least one tracking number for bulk input.', true);
+        return;
+    }
+    if (!canUseTrackingWriteActions()) {
+        setStatus(getLbcEditRestrictionMessage(state.filters.branch), true);
         return;
     }
 
@@ -1361,23 +1446,31 @@ async function handleCollectionReturnToTransit(orderKey = '') {
 }
 
 function setActionLoading(isLoading) {
-    const disabled = Boolean(isLoading || state.locked);
+    const disabled = Boolean(isLoading || state.locked || state.loading);
+    const writeDisabled = Boolean(disabled || !canUseTrackingWriteActions());
     [
         ...branchButtons,
         ...quickFilterButtons,
         ...collectionFilterButtons,
+        searchBtn,
+        reloadBtn,
+        refreshTrackingBtn
+    ].forEach((button) => {
+        if (button) {
+            button.disabled = disabled;
+        }
+    });
+
+    [
         trackingScanInput,
         orderLookupInput,
         bulkTrackingInput,
-        searchBtn,
-        reloadBtn,
-        refreshTrackingBtn,
         autoDetectBtn,
         saveTrackingBtn,
         saveBulkBtn
     ].forEach((button) => {
         if (button) {
-            button.disabled = disabled;
+            button.disabled = writeDisabled;
         }
     });
 

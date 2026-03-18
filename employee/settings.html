@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<script src="../shared/theme-preload.js"></script>
 <link rel="stylesheet" href="./portal.css">
 </head>
 <body class="employee-page">
@@ -78,7 +79,7 @@
               <div class="connect-status" id="emailConnectStatus">Email not connected</div>
               <div class="connect-status" id="googleConnectStatus">Google not connected</div>
             </div>
-            <button class="google-button" id="openGoogleModalBtn" type="button">
+            <button class="google-button button-with-badge" id="openGoogleModalBtn" type="button">
               <span class="google-badge" aria-hidden="true">
                 <img src="/assets/google-g.svg" alt="">
               </span>
@@ -91,7 +92,7 @@
 
       <div class="settings-actions">
         <button class="primary-button" id="saveBtn" type="button">Save Changes</button>
-        <div class="status-banner" id="statusText"></div>
+        <div class="status-banner" id="statusText" aria-live="polite" hidden></div>
         <button class="danger-button" id="logoutBtn" type="button">Log Out</button>
       </div>
     </section>
@@ -118,14 +119,14 @@
         <button class="secondary-button" id="verifyEmailCodeBtn" type="button">Verify Email</button>
       </div>
       <div class="modal-actions">
-        <button class="primary-button" id="connectGoogleBtn" type="button">
+        <button class="primary-button button-with-badge" id="connectGoogleBtn" type="button">
           <span class="google-badge" aria-hidden="true">
             <img src="/assets/google-g.svg" alt="">
           </span>
           Connect Google
         </button>
       </div>
-      <div class="modal-status" id="googleModalStatus"></div>
+      <div class="modal-status" id="googleModalStatus" aria-live="polite" hidden></div>
     </div>
   </div>
 

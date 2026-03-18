@@ -18,7 +18,10 @@ const ADJUSTMENT_TYPES = ['add', 'minus', 'damage', 'set'];
 const state = {
     rows: [],
     branches: [],
-    canEditInventory: false
+    session: null,
+    assignedBranch: '',
+    canEditInventory: false,
+    canDeleteInventory: false
 };
 
 initialize();
@@ -31,7 +34,10 @@ async function initialize() {
     if (!session) {
         return;
     }
+    state.session = session;
+    state.assignedBranch = normalizeBranchName(session.branchName || '');
     state.canEditInventory = canRoleEditInventory(session.role);
+    state.canDeleteInventory = canRoleDeleteInventory(session.role);
     appClient.attachEmployeeBackButton(session);
 
     await applyWorkspaceConfig();
@@ -61,7 +67,7 @@ function bindEvents() {
     inventoryBody.addEventListener('input', handleTableInput);
     inventoryBody.addEventListener('change', handleTableChange);
     inventoryBody.addEventListener('keydown', (event) => {
-        if (!state.canEditInventory || event.key !== 'Enter') {
+        if (!canEditSelectedBranch() || event.key !== 'Enter') {
             return;
         }
 
@@ -168,12 +174,14 @@ function renderRows() {
     inventoryBody.innerHTML = rows.map((row) => {
         const quantity = Number(row.quantity ?? 0);
         const statusMeta = getInventoryStatusMeta(row);
+        const canEditBranch = canEditSelectedBranch(row.branch || branchFilter?.value || '');
+        const canDeleteBranch = canDeleteSelectedBranch(row.branch || branchFilter?.value || '');
         const readOnlyTag = '<span class="status-tag status-readonly">Read only</span>';
         const adjustmentType = normalizeAdjustmentType(row.draftAdjustmentType);
         const adjustmentQuantity = row.draftAdjustmentQuantity ?? '';
         const adjustmentMin = adjustmentType === 'set' ? '' : '0.01';
 
-        const adjustmentCell = state.canEditInventory
+        const adjustmentCell = canEditBranch
             ? `
                     <div class="adjust-controls">
                         <select
@@ -198,7 +206,7 @@ function renderRows() {
                 `
             : readOnlyTag;
 
-        const expirationCell = state.canEditInventory
+        const expirationCell = canEditBranch
             ? `
                     <input
                         type="date"
@@ -209,11 +217,13 @@ function renderRows() {
                 `
             : `<span class="expiration-text">${appClient.escapeHtml(formatDateOnly(row.expiration_date))}</span>`;
 
-        const actionCell = state.canEditInventory
+        const actionCell = canEditBranch
             ? `
                 <div class="row-actions">
                     <button type="button" class="primary-btn small-btn" data-action="apply" data-inventory-id="${appClient.escapeHtml(row.inventory_id)}">Apply</button>
-                    <button type="button" class="danger-btn small-btn" data-action="delete" data-inventory-id="${appClient.escapeHtml(row.inventory_id)}">Delete</button>
+                    ${canDeleteBranch
+                        ? `<button type="button" class="danger-btn small-btn" data-action="delete" data-inventory-id="${appClient.escapeHtml(row.inventory_id)}">Delete</button>`
+                        : ''}
                 </div>
             `
             : readOnlyTag;
@@ -248,7 +258,9 @@ function renderSummary() {
 }
 
 function updateLoadedStatus() {
-    const modeLabel = state.canEditInventory ? 'edit mode' : 'read-only mode';
+    const modeLabel = canEditSelectedBranch()
+        ? 'edit mode'
+        : (state.canEditInventory ? 'read-only mode for other branch' : 'read-only mode');
     const visibleRows = getVisibleRows().length;
     const totalRows = state.rows.length;
     if ((statusFilter?.value || 'all') === 'all') {
@@ -259,7 +271,7 @@ function updateLoadedStatus() {
 }
 
 function handleTableClick(event) {
-    if (!state.canEditInventory) {
+    if (!canEditSelectedBranch()) {
         return;
     }
     const button = event.target.closest('button[data-action]');
@@ -279,7 +291,7 @@ function handleTableClick(event) {
 }
 
 function handleTableInput(event) {
-    if (!state.canEditInventory) {
+    if (!canEditSelectedBranch()) {
         return;
     }
 
@@ -305,7 +317,7 @@ function handleTableInput(event) {
 }
 
 function handleTableChange(event) {
-    if (!state.canEditInventory) {
+    if (!canEditSelectedBranch()) {
         return;
     }
     const select = event.target.closest('select[data-field="adjustmentType"]');
@@ -341,11 +353,11 @@ function handleTableChange(event) {
 }
 
 async function applyAdjustment(inventoryId) {
-    if (!state.canEditInventory) {
-        setStatus('Inventory editing is allowed for staff and company admins only.', true);
+    const branch = String(branchFilter.value || '').trim();
+    if (!canEditSelectedBranch(branch)) {
+        setStatus(getInventoryEditRestrictionMessage(branch), true);
         return;
     }
-    const branch = String(branchFilter.value || '').trim();
     const input = Array.from(inventoryBody.querySelectorAll('input[data-field="adjustmentQuantity"]'))
         .find((entry) => String(entry.dataset.inventoryId || '') === String(inventoryId || ''));
     const select = Array.from(inventoryBody.querySelectorAll('select[data-field="adjustmentType"]'))
@@ -450,12 +462,11 @@ async function applyAdjustment(inventoryId) {
 }
 
 async function deleteInventoryItem(inventoryId, triggerButton = null) {
-    if (!state.canEditInventory) {
-        setStatus('Inventory editing is allowed for staff and company admins only.', true);
+    const branch = String(branchFilter.value || '').trim();
+    if (!canDeleteSelectedBranch(branch)) {
+        setStatus(getInventoryDeleteRestrictionMessage(branch), true);
         return;
     }
-
-    const branch = String(branchFilter.value || '').trim();
     const row = state.rows.find((entry) => String(entry.inventory_id) === String(inventoryId || ''));
     if (!branch || !row) {
         return;
@@ -683,6 +694,59 @@ function canRoleEditInventory(role) {
         || normalizedRole === 'head_admin'
         || normalizedRole === 'company_admin'
         || normalizedRole === 'super_admin';
+}
+
+function canRoleDeleteInventory(role) {
+    const normalizedRole = String(role || '').trim().toLowerCase();
+    return normalizedRole === 'head_admin'
+        || normalizedRole === 'company_admin'
+        || normalizedRole === 'super_admin';
+}
+
+function isStaffRole(role) {
+    return String(role || '').trim().toLowerCase() === 'staff';
+}
+
+function normalizeBranchName(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function sameBranch(left, right) {
+    return normalizeBranchName(left).toLowerCase() === normalizeBranchName(right).toLowerCase();
+}
+
+function canEditSelectedBranch(branchName = '') {
+    if (!state.canEditInventory) {
+        return false;
+    }
+    if (!isStaffRole(state.session?.role)) {
+        return true;
+    }
+    return sameBranch(branchName, state.assignedBranch);
+}
+
+function canDeleteSelectedBranch(branchName = '') {
+    return state.canDeleteInventory && canEditSelectedBranch(branchName);
+}
+
+function getInventoryEditRestrictionMessage(branchName = '') {
+    if (!state.canEditInventory) {
+        return 'Inventory editing is allowed for staff and company admins only.';
+    }
+    if (isStaffRole(state.session?.role) && !sameBranch(branchName, state.assignedBranch)) {
+        return `Staff can edit inventory only in ${state.assignedBranch || 'their assigned branch'}.`;
+    }
+    return 'Inventory editing is not available for this branch.';
+}
+
+function getInventoryDeleteRestrictionMessage(branchName = '') {
+    if (!state.canDeleteInventory) {
+        return 'Only company admins can delete inventory items.';
+    }
+    if (isStaffRole(state.session?.role) && !sameBranch(branchName, state.assignedBranch)) {
+        return `Staff can delete inventory only in ${state.assignedBranch || 'their assigned branch'}.`;
+    }
+    return 'Inventory deletion is not available for this branch.';
 }
 
 function debounce(callback, delay) {

@@ -50,6 +50,10 @@
         document.head?.appendChild(viewportMeta);
     }
 
+    function isCachedBrandThemeDisabled() {
+        return document.querySelector('meta[name="gms-disable-cached-brand-theme"][content="true"]') !== null;
+    }
+
     function applyAppDataAttributes(metadata) {
         document.documentElement.dataset.appPage = metadata.page;
         document.documentElement.dataset.appSection = metadata.section;
@@ -105,6 +109,10 @@
 
     function applyCachedBrandTheme(metadata) {
         if (!shouldApplyCachedBrandTheme(metadata?.section)) {
+            return null;
+        }
+
+        if (isCachedBrandThemeDisabled()) {
             return null;
         }
 
@@ -207,28 +215,29 @@
     function buildBrandTheme(primaryColor = DEFAULT_PRIMARY_COLOR) {
         const primary = normalizeHexColor(primaryColor, DEFAULT_PRIMARY_COLOR);
         const primaryRgb = rgbTupleToCss(hexToRgb(primary));
-        const primaryStrong = mixHexColors(primary, '#0f172a', 0.24);
-        const primaryDeep = mixHexColors(primary, '#020617', 0.44);
-        const primarySoft = mixHexColors(primary, '#ffffff', 0.78);
-        const primarySoftest = mixHexColors(primary, '#ffffff', 0.9);
-        const text = mixHexColors(primary, '#0f172a', 0.82);
-        const textStrong = mixHexColors(primary, '#020617', 0.9);
-        const muted = mixHexColors(primary, '#64748b', 0.7);
-        const line = mixHexColors(primary, '#d3dfef', 0.76);
-        const lineStrong = mixHexColors(primary, '#9eb2cc', 0.62);
-        const bg = mixHexColors(primary, '#f8fbff', 0.93);
-        const bgAlt = mixHexColors(primary, '#eef4ff', 0.84);
-        const panelStrong = '#ffffff';
-        const panel = hexToRgba(primarySoftest, 0.8);
-        const panelAlt = hexToRgba(primarySoft, 0.66);
-        const sidebarA = mixHexColors(primary, '#11253f', 0.58);
-        const sidebarB = mixHexColors(primary, '#020617', 0.76);
-        const onPrimary = getReadableTextColor(primary);
+        const primaryStrong = mixHexColors(primary, '#ffffff', 0.12);
+        const primaryDeep = mixHexColors(primary, '#020617', 0.78);
+        const buttonStrong = mixHexColors(primary, '#08111d', 0.32);
+        const primarySoft = mixHexColors(primary, '#cbd5e1', 0.36);
+        const primarySoftest = mixHexColors(primary, '#e2e8f0', 0.22);
+        const text = mixHexColors(primary, '#cbd5e1', 0.82);
+        const textStrong = mixHexColors(primary, '#f8fafc', 0.9);
+        const muted = mixHexColors(primary, '#94a3b8', 0.78);
+        const line = hexToRgba(primarySoftest, 0.18);
+        const lineStrong = hexToRgba(primarySoft, 0.3);
+        const bg = mixHexColors(primary, '#0b1220', 0.78);
+        const bgAlt = mixHexColors(primary, '#111c32', 0.68);
+        const panelStrong = hexToRgba(primaryDeep, 0.94);
+        const panel = hexToRgba(primaryDeep, 0.8);
+        const panelAlt = hexToRgba(primaryDeep, 0.66);
+        const sidebarA = mixHexColors(primary, '#11253f', 0.68);
+        const sidebarB = mixHexColors(primary, '#020617', 0.82);
+        const onPrimary = getReadableTextColor(buttonStrong);
         const success = mixHexColors(primary, '#0f766e', 0.38);
         const danger = '#dc2626';
         const warning = '#d97706';
-        const bgStart = mixHexColors(primary, '#08111d', 0.7);
-        const bgEnd = mixHexColors(primary, '#13253e', 0.58);
+        const bgStart = mixHexColors(primary, '#08111d', 0.78);
+        const bgEnd = mixHexColors(primary, '#13253e', 0.66);
 
         return {
             primary,
@@ -256,18 +265,18 @@
             bgStart,
             bgEnd,
             pageGradient: [
-                `radial-gradient(circle at 10% 14%, ${hexToRgba(primarySoft, 0.3)} 0%, transparent 26%)`,
-                `radial-gradient(circle at 92% 10%, ${hexToRgba(primary, 0.18)} 0%, transparent 24%)`,
-                `linear-gradient(155deg, ${bg} 0%, ${bgAlt} 56%, ${mixHexColors(bgAlt, '#ffffff', 0.28)} 100%)`
+                `radial-gradient(circle at 12% 18%, ${hexToRgba(primary, 0.28)} 0%, transparent 36%)`,
+                `radial-gradient(circle at 88% 10%, rgba(251, 191, 36, 0.2) 0%, transparent 34%)`,
+                `linear-gradient(140deg, ${bgStart} 0%, ${bgEnd} 56%, ${mixHexColors(bgEnd, '#020617', 0.16)} 100%)`
             ].join(', '),
             darkGradient: `linear-gradient(145deg, ${bgStart} 0%, ${bgEnd} 100%)`,
-            buttonGradient: `linear-gradient(135deg, ${mixHexColors(primary, '#ffffff', 0.14)} 0%, ${primary} 58%, ${primaryStrong} 100%)`,
-            ring: hexToRgba(primary, 0.16),
-            glow: hexToRgba(primary, 0.2),
-            shadowSoft: `0 18px 40px ${hexToRgba(primary, 0.12)}`,
-            shadow: `0 28px 64px ${hexToRgba(primary, 0.18)}`,
-            successBg: hexToRgba(success, 0.12),
-            dangerBg: hexToRgba(danger, 0.12)
+            buttonGradient: `linear-gradient(135deg, ${mixHexColors(primary, '#ffffff', 0.16)} 0%, ${primary} 56%, ${buttonStrong} 100%)`,
+            ring: hexToRgba(primary, 0.26),
+            glow: hexToRgba(primary, 0.34),
+            shadowSoft: '0 22px 52px rgba(2, 6, 23, 0.42)',
+            shadow: '0 36px 90px rgba(2, 6, 23, 0.55)',
+            successBg: hexToRgba(success, 0.18),
+            dangerBg: hexToRgba(danger, 0.16)
         };
     }
 
@@ -315,15 +324,15 @@
         rootStyle.setProperty('--text', theme.textStrong);
         rootStyle.setProperty('--muted', theme.muted);
         rootStyle.setProperty('--line', theme.line);
-        rootStyle.setProperty('--panel', theme.panelStrong);
+        rootStyle.setProperty('--panel', theme.panel);
         rootStyle.setProperty('--bg', theme.bg);
         rootStyle.setProperty('--shadow', theme.shadowSoft);
         rootStyle.setProperty('--bg-start', theme.bgStart);
         rootStyle.setProperty('--bg-end', theme.bgEnd);
         rootStyle.setProperty('--card-bg', hexToRgba(theme.primaryDeep, 0.88));
-        rootStyle.setProperty('--card-border', hexToRgba(theme.primarySoft, 0.14));
-        rootStyle.setProperty('--input-bg', '#ffffff');
-        rootStyle.setProperty('--input-muted', hexToRgba(theme.primaryDeep, 0.18));
+        rootStyle.setProperty('--card-border', hexToRgba(theme.primarySoft, 0.18));
+        rootStyle.setProperty('--input-bg', hexToRgba(theme.primarySoftest, 0.1));
+        rootStyle.setProperty('--input-muted', hexToRgba(theme.primarySoftest, 0.08));
         rootStyle.setProperty('--success', theme.success);
         rootStyle.setProperty('--danger', theme.danger);
         rootStyle.setProperty('--success-bg', theme.successBg);
@@ -1308,6 +1317,15 @@
             },
             skipAuthRedirect: true
         }),
+        verifyPasswordResetCode: ({ companyCode = '', email = '', code = '' } = {}) => request('/api/public/password-reset/verify', {
+            method: 'POST',
+            body: {
+                companyCode,
+                email,
+                code
+            },
+            skipAuthRedirect: true
+        }),
         confirmPasswordReset: ({ companyCode = '', email = '', code = '', password = '' } = {}) => request('/api/public/password-reset/confirm', {
             method: 'POST',
             body: {
@@ -1326,7 +1344,7 @@
             method: 'POST',
             body: payload
         }),
-        listClients: (filter = '') => request(`/api/clients?filter=${encodeURIComponent(filter)}`),
+        listClients: (filter = '', limit = 500, offset = 0) => request(`/api/clients?filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`),
         addClient: (payload) => request('/api/clients', {
             method: 'POST',
             body: payload
@@ -1352,9 +1370,9 @@
         }),
         getSalesReferences: () => request('/api/sales/references'),
         listProducts: (filter = '') => request(`/api/products?filter=${encodeURIComponent(filter)}`),
-        listInventoryVariants: ({ productName = '', setName = '', search = '' } = {}) => callElectronOrHttp(
-            () => window.electronAPI?.inventoryVariants?.list({ productName, setName, search }),
-            () => request(`/api/inventory-variants?productName=${encodeURIComponent(productName)}&setName=${encodeURIComponent(setName)}&search=${encodeURIComponent(search)}`)
+        listInventoryVariants: ({ productName = '', setName = '', search = '', limit = 500, offset = 0 } = {}) => callElectronOrHttp(
+            () => window.electronAPI?.inventoryVariants?.list({ productName, setName, search, limit, offset }),
+            () => request(`/api/inventory-variants?productName=${encodeURIComponent(productName)}&setName=${encodeURIComponent(setName)}&search=${encodeURIComponent(search)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`)
         ),
         createInventoryVariant: (payload) => request('/api/inventory-variants', {
             method: 'POST',
@@ -1383,7 +1401,7 @@
             () => window.electronAPI?.inventoryVariants?.resolve({ productName, setName }),
             () => request(`/api/inventory-variants/resolve?productName=${encodeURIComponent(productName)}&setName=${encodeURIComponent(setName)}`)
         ),
-        listInventory: ({ branch = '', filter = '' } = {}) => request(`/api/inventory?branch=${encodeURIComponent(branch)}&filter=${encodeURIComponent(filter)}`),
+        listInventory: ({ branch = '', filter = '', limit = 500, offset = 0 } = {}) => request(`/api/inventory?branch=${encodeURIComponent(branch)}&filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`),
         updateInventoryQuantity: (helper, payload) => request(`/api/inventory/${encodeURIComponent(helper)}`, {
             method: 'PATCH',
             body: payload
@@ -1392,7 +1410,7 @@
             `/api/inventory/${encodeURIComponent(inventoryId)}?branch=${encodeURIComponent(branch)}`,
             { method: 'DELETE' }
         ),
-        listCompositeItems: (filter = '') => request(`/api/composite-items?filter=${encodeURIComponent(filter)}`),
+        listCompositeItems: (filter = '', limit = 500, offset = 0) => request(`/api/composite-items?filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`),
         upsertCompositeItem: (payload) => request('/api/composite-items', {
             method: 'POST',
             body: payload
@@ -1400,8 +1418,8 @@
         deleteCompositeItem: (compositeKey) => request(`/api/composite-items/${encodeURIComponent(compositeKey)}`, {
             method: 'DELETE'
         }),
-        listSales: ({ dateFrom = '', dateTo = '', branch = '', cashBranch = '', paymentOption = '', adminName = '', salesRepresentative = '', search = '' } = {}) => request(
-            `/api/sales?dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}&branch=${encodeURIComponent(branch)}&cashBranch=${encodeURIComponent(cashBranch)}&paymentOption=${encodeURIComponent(paymentOption)}&adminName=${encodeURIComponent(adminName)}&salesRepresentative=${encodeURIComponent(salesRepresentative)}&search=${encodeURIComponent(search)}`
+        listSales: ({ dateFrom = '', dateTo = '', branch = '', cashBranch = '', paymentOption = '', adminName = '', salesRepresentative = '', search = '', limit = 500, offset = 0 } = {}) => request(
+            `/api/sales?dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}&branch=${encodeURIComponent(branch)}&cashBranch=${encodeURIComponent(cashBranch)}&paymentOption=${encodeURIComponent(paymentOption)}&adminName=${encodeURIComponent(adminName)}&salesRepresentative=${encodeURIComponent(salesRepresentative)}&search=${encodeURIComponent(search)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`
         ),
         addSale: (payload) => request('/api/sales', {
             method: 'POST',
@@ -1580,7 +1598,7 @@
             method: 'PUT',
             body: payload
         }),
-        listBranches: () => request('/api/branches'),
+        listBranches: (limit = 500, offset = 0) => request(`/api/branches?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`),
         createBranch: (payload) => request('/api/branches', {
             method: 'POST',
             body: payload
@@ -1592,7 +1610,7 @@
         deleteBranch: (branchId) => request(`/api/branches/${encodeURIComponent(branchId)}`, {
             method: 'DELETE'
         }),
-        listUsers: ({ role = '', filter = '' } = {}) => request(`/api/users?role=${encodeURIComponent(role)}&filter=${encodeURIComponent(filter)}`),
+        listUsers: ({ role = '', filter = '', limit = 500, offset = 0 } = {}) => request(`/api/users?role=${encodeURIComponent(role)}&filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`),
         createUser: (payload) => request('/api/users', {
             method: 'POST',
             body: payload

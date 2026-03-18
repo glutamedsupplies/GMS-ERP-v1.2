@@ -22,6 +22,25 @@
   --tenant-ring: rgba(37, 117, 252, 0.16);
   --tenant-success: #0f766e;
   --tenant-danger: #dc2626;
+  --tenant-surface-text-strong: rgba(248, 250, 252, 0.96);
+  --tenant-surface-text: rgba(226, 232, 240, 0.92);
+  --tenant-surface-muted: rgba(203, 213, 225, 0.78);
+  --tenant-surface-border: rgba(255, 255, 255, 0.18);
+  --tenant-surface-border-strong: rgba(255, 255, 255, 0.28);
+  --tenant-surface-card:
+    radial-gradient(circle at top right, rgba(var(--tenant-primary-rgb), 0.24) 0%, transparent 34%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.06) 34%, rgba(255, 255, 255, 0.02) 100%),
+    linear-gradient(180deg, rgba(4, 11, 21, 0.18), rgba(4, 11, 21, 0.42)),
+    rgba(4, 11, 21, 0.34);
+  --tenant-surface-card-soft:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.05) 100%),
+    rgba(4, 11, 21, 0.22);
+  --tenant-surface-pill:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05)),
+    rgba(4, 11, 21, 0.18);
+  --tenant-surface-icon:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.14) 0%, rgba(var(--tenant-primary-rgb), 0.2) 58%, rgba(4, 11, 21, 0.2) 100%),
+    rgba(255, 255, 255, 0.04);
   --tenant-page-gradient:
     radial-gradient(circle at 10% 16%, rgba(176, 212, 255, 0.34) 0%, transparent 25%),
     radial-gradient(circle at 92% 12%, rgba(37, 117, 252, 0.16) 0%, transparent 24%),
@@ -47,7 +66,7 @@ body.employee-page {
   margin: 0;
   min-height: 100vh;
   font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
-  color: var(--tenant-text-strong);
+  color: var(--tenant-surface-text-strong);
   background: var(--tenant-page-gradient);
   position: relative;
   overflow-x: hidden;
@@ -133,13 +152,15 @@ textarea:focus-visible {
   min-height: 46px;
   padding: 0 18px;
   border-radius: 999px;
-  border: 1px solid var(--tenant-line);
-  background: rgba(255, 255, 255, 0.74);
-  color: var(--tenant-text-strong);
+  border: 1px solid var(--tenant-surface-border);
+  background: var(--tenant-surface-pill);
+  color: var(--tenant-surface-text-strong);
   cursor: pointer;
   text-decoration: none;
-  box-shadow: var(--tenant-shadow-soft);
-  backdrop-filter: blur(14px);
+  box-shadow:
+    0 18px 36px rgba(var(--tenant-primary-rgb), 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26);
+  backdrop-filter: blur(18px) saturate(1.12);
 }
 
 .back-link:hover,
@@ -154,10 +175,12 @@ textarea:focus-visible {
 .settings-card,
 .section-surface {
   border-radius: var(--radius-xl);
-  border: 1px solid rgba(255, 255, 255, 0.74);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), var(--tenant-panel));
-  box-shadow: var(--tenant-shadow);
-  backdrop-filter: blur(18px);
+  border: 1px solid var(--tenant-surface-border);
+  background: var(--tenant-surface-card);
+  box-shadow:
+    0 30px 72px rgba(var(--tenant-primary-rgb), 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(24px) saturate(1.14);
 }
 
 .hero-card {
@@ -175,8 +198,9 @@ textarea:focus-visible {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(135deg, rgba(var(--tenant-primary-rgb), 0.12), transparent 42%),
-    radial-gradient(circle at top right, rgba(var(--tenant-primary-rgb), 0.16) 0%, transparent 28%);
+    radial-gradient(circle at 14% 16%, rgba(255, 255, 255, 0.14) 0%, transparent 24%),
+    radial-gradient(circle at 86% 12%, rgba(var(--tenant-primary-rgb), 0.18) 0%, transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 44%);
   pointer-events: none;
 }
 
@@ -196,7 +220,7 @@ textarea:focus-visible {
 .eyebrow,
 .hero-kicker {
   margin: 0 0 10px;
-  color: var(--tenant-primary-strong);
+  color: rgba(226, 232, 240, 0.72);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.16em;
@@ -209,7 +233,8 @@ textarea:focus-visible {
   font-family: "Sora", "Segoe UI", sans-serif;
   font-size: clamp(30px, 4vw, 44px);
   line-height: 1.05;
-  color: var(--tenant-text-strong);
+  color: var(--tenant-surface-text-strong);
+  overflow-wrap: anywhere;
 }
 
 .hero-copy,
@@ -217,9 +242,10 @@ textarea:focus-visible {
 .panel-copy {
   margin: 14px 0 0;
   max-width: 720px;
-  color: var(--tenant-muted);
+  color: var(--tenant-surface-muted);
   font-size: 15px;
   line-height: 1.65;
+  overflow-wrap: anywhere;
 }
 
 .hero-pills,
@@ -242,26 +268,30 @@ textarea:focus-visible {
   min-height: 38px;
   padding: 0 14px;
   border-radius: 999px;
-  border: 1px solid rgba(var(--tenant-primary-rgb), 0.18);
-  background: rgba(var(--tenant-primary-rgb), 0.1);
-  color: var(--tenant-primary-strong);
+  max-width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--tenant-surface-pill);
+  color: var(--tenant-surface-text);
   font-size: 13px;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .pill-soft {
-  background: rgba(255, 255, 255, 0.8);
-  color: var(--tenant-text);
-  border-color: var(--tenant-line);
+  background: var(--tenant-surface-pill);
+  color: var(--tenant-surface-text);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .hero-side {
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(var(--tenant-primary-rgb), 0.16);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(247, 251, 255, 0.7));
+  border: 1px solid var(--tenant-surface-border);
+  background: var(--tenant-surface-card-soft);
   padding: 18px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.38);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 20px 40px rgba(var(--tenant-primary-rgb), 0.14);
+  backdrop-filter: blur(18px);
 }
 
 .hero-side-label {
@@ -269,19 +299,20 @@ textarea:focus-visible {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--tenant-muted);
+  color: var(--tenant-surface-muted);
 }
 
 .hero-side-value {
   margin-top: 6px;
   font-family: "Sora", "Segoe UI", sans-serif;
   font-size: clamp(20px, 3vw, 28px);
-  color: var(--tenant-text-strong);
+  color: var(--tenant-surface-text-strong);
+  overflow-wrap: anywhere;
 }
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(112px, 1fr));
   gap: 12px;
   margin-top: 18px;
 }
@@ -290,15 +321,20 @@ textarea:focus-visible {
   min-width: 0;
   padding: 14px;
   border-radius: 20px;
-  border: 1px solid rgba(var(--tenant-primary-rgb), 0.12);
-  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid var(--tenant-surface-border);
+  background: var(--tenant-surface-card-soft);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 18px 34px rgba(var(--tenant-primary-rgb), 0.12);
+  backdrop-filter: blur(16px);
 }
 
 .stat-label {
   display: block;
-  color: var(--tenant-muted);
+  color: var(--tenant-surface-muted);
   font-size: 12px;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .stat-value {
@@ -306,7 +342,15 @@ textarea:focus-visible {
   margin-top: 8px;
   font-family: "Sora", "Segoe UI", sans-serif;
   font-size: 24px;
-  color: var(--tenant-text-strong);
+  color: var(--tenant-surface-text-strong);
+  line-height: 1.1;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.hero-side .stat-value {
+  font-size: clamp(18px, 2.2vw, 24px);
+  white-space: nowrap;
 }
 
 .section-block {
@@ -315,21 +359,27 @@ textarea:focus-visible {
 
 .section-head {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 14px;
   margin-bottom: 14px;
+}
+
+.section-head > * {
+  min-width: 0;
 }
 
 .section-title {
   margin: 0;
   font-family: "Sora", "Segoe UI", sans-serif;
   font-size: clamp(22px, 3vw, 30px);
-  color: var(--tenant-text-strong);
+  color: var(--tenant-surface-text-strong);
+  overflow-wrap: anywhere;
 }
 
 .section-caption {
-  color: var(--tenant-muted);
+  color: var(--tenant-surface-muted);
   font-size: 13px;
   font-weight: 600;
 }
@@ -346,22 +396,27 @@ textarea:focus-visible {
 
 .action-card {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  min-height: 220px;
+  min-height: 236px;
   padding: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--tenant-surface-border);
   border-radius: 28px;
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.72));
-  box-shadow: var(--tenant-shadow-soft);
+  background: var(--tenant-surface-card);
+  box-shadow:
+    0 24px 52px rgba(var(--tenant-primary-rgb), 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
   color: inherit;
   text-align: left;
   cursor: pointer;
   overflow: hidden;
+  backdrop-filter: blur(20px) saturate(1.1);
 }
 
 .action-card:hover {
   transform: translateY(-6px);
-  border-color: rgba(var(--tenant-primary-rgb), 0.26);
+  border-color: var(--tenant-surface-border-strong);
   box-shadow: var(--tenant-shadow);
 }
 
@@ -383,9 +438,12 @@ textarea:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(145deg, rgba(var(--tenant-primary-rgb), 0.14), rgba(var(--tenant-primary-rgb), 0.28));
-  color: var(--tenant-primary-strong);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.36);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: var(--tenant-surface-icon);
+  color: var(--tenant-surface-text-strong);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 14px 28px rgba(2, 6, 23, 0.22);
 }
 
 .action-icon i {
@@ -396,14 +454,17 @@ textarea:focus-visible {
   margin: 18px 0 8px;
   font-family: "Sora", "Segoe UI", sans-serif;
   font-size: 21px;
-  color: var(--tenant-text-strong);
+  color: var(--tenant-surface-text-strong);
+  overflow-wrap: anywhere;
 }
 
 .action-copy {
   margin: 0;
-  color: var(--tenant-muted);
+  color: var(--tenant-surface-muted);
   line-height: 1.65;
   font-size: 14px;
+  flex: 1;
+  overflow-wrap: anywhere;
 }
 
 .action-footer {
@@ -412,13 +473,19 @@ textarea:focus-visible {
   justify-content: space-between;
   gap: 12px;
   margin-top: 20px;
-  color: var(--tenant-primary-strong);
+  color: var(--tenant-surface-text);
   font-size: 13px;
   font-weight: 700;
 }
 
+.action-footer span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .action-footer i {
   font-size: 14px;
+  color: var(--tenant-surface-text-strong);
 }
 
 .table-card {
@@ -437,15 +504,22 @@ textarea:focus-visible {
   margin: 0;
   font-family: "Sora", "Segoe UI", sans-serif;
   font-size: clamp(24px, 3vw, 32px);
+  color: var(--tenant-surface-text-strong);
+  overflow-wrap: anywhere;
 }
 
 .table-wrap {
-  border: 1px solid rgba(var(--tenant-primary-rgb), 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 24px;
   overflow-x: auto;
   overflow-y: hidden;
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06)),
+    rgba(var(--tenant-primary-rgb), 0.09);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 20px 44px rgba(var(--tenant-primary-rgb), 0.12);
+  backdrop-filter: blur(18px);
 }
 
 table {
@@ -455,8 +529,10 @@ table {
 
 thead th {
   padding: 16px 18px;
-  background: rgba(var(--tenant-primary-rgb), 0.1);
-  color: var(--tenant-primary-strong);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04)),
+    rgba(var(--tenant-primary-rgb), 0.14);
+  color: var(--tenant-surface-text);
   text-align: left;
   font-size: 12px;
   font-weight: 800;
@@ -467,8 +543,11 @@ thead th {
 tbody td {
   padding: 16px 18px;
   border-bottom: 1px solid rgba(var(--tenant-primary-rgb), 0.08);
-  color: var(--tenant-text);
+  color: var(--tenant-surface-text);
   font-size: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)),
+    rgba(255, 255, 255, 0.08);
 }
 
 tbody tr:last-child td {
@@ -476,7 +555,15 @@ tbody tr:last-child td {
 }
 
 tbody tr:hover {
-  background: rgba(var(--tenant-primary-rgb), 0.04);
+  background: rgba(var(--tenant-primary-rgb), 0.045);
+}
+
+tbody tr.selected,
+tbody tr.is-active,
+tbody tr:hover td {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)),
+    rgba(var(--tenant-primary-rgb), 0.045);
 }
 
 .status-on-time,
@@ -501,11 +588,11 @@ tbody tr:hover {
 }
 
 .status-excuse {
-  color: var(--tenant-primary-strong);
+  color: var(--tenant-surface-text);
 }
 
 .status-day-off {
-  color: var(--tenant-muted);
+  color: var(--tenant-surface-muted);
 }
 
 .status-suspended {
@@ -533,8 +620,9 @@ tbody tr:hover {
 
 .welcome-copy {
   margin: 10px 0 0;
-  color: var(--tenant-primary-strong);
+  color: var(--tenant-surface-text);
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .clock-display {
@@ -542,12 +630,12 @@ tbody tr:hover {
   font-family: "Sora", "Segoe UI", sans-serif;
   font-size: clamp(42px, 10vw, 64px);
   line-height: 1;
-  color: var(--tenant-text-strong);
+  color: var(--tenant-surface-text-strong);
   letter-spacing: 0.04em;
 }
 
 .date-label {
-  color: var(--tenant-muted);
+  color: var(--tenant-surface-muted);
   font-size: 14px;
 }
 
@@ -610,22 +698,34 @@ tbody tr:hover {
   margin-top: 18px;
   padding: 12px 14px;
   border-radius: 18px;
-  border: 1px solid rgba(var(--tenant-primary-rgb), 0.1);
-  background: rgba(255, 255, 255, 0.72);
-  color: var(--tenant-muted);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08)),
+    rgba(var(--tenant-primary-rgb), 0.08);
+  color: var(--tenant-surface-muted);
   font-size: 14px;
   line-height: 1.55;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(16px);
+}
+
+.status-banner[hidden] {
+  display: none;
 }
 
 .status-banner.is-error {
   border-color: rgba(220, 38, 38, 0.24);
-  background: rgba(254, 242, 242, 0.92);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06)),
+    rgba(220, 38, 38, 0.12);
   color: var(--tenant-danger);
 }
 
 .status-banner.is-success {
   border-color: rgba(15, 118, 110, 0.22);
-  background: rgba(236, 253, 245, 0.92);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06)),
+    rgba(15, 118, 110, 0.12);
   color: var(--tenant-success);
 }
 
@@ -648,7 +748,7 @@ tbody tr:hover {
 
 .settings-header p {
   margin: 10px 0 0;
-  color: var(--tenant-muted);
+  color: var(--tenant-surface-muted);
   line-height: 1.6;
 }
 
@@ -684,12 +784,16 @@ tbody tr:hover {
   min-height: 42px;
   padding: 0 16px;
   border-radius: 999px;
-  border: 1px solid var(--tenant-line);
-  background: rgba(255, 255, 255, 0.78);
-  color: var(--tenant-primary-strong);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.06)),
+    rgba(var(--tenant-primary-rgb), 0.1);
+  color: var(--tenant-surface-text);
   cursor: pointer;
   font-size: 13px;
   font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(16px);
 }
 
 .upload-label:hover {
@@ -705,9 +809,15 @@ tbody tr:hover {
   margin-top: 22px;
   padding: 18px;
   border-radius: 20px;
-  border: 1px solid rgba(var(--tenant-primary-rgb), 0.16);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.94), rgba(236, 245, 255, 0.78));
-  box-shadow: var(--tenant-shadow-soft);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background:
+    radial-gradient(circle at top right, rgba(var(--tenant-primary-rgb), 0.18) 0%, transparent 34%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.06)),
+    rgba(var(--tenant-primary-rgb), 0.08);
+  box-shadow:
+    0 24px 50px rgba(var(--tenant-primary-rgb), 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(18px);
 }
 
 .connect-header {
@@ -723,7 +833,7 @@ tbody tr:hover {
 
 .connect-header p {
   margin: 0;
-  color: var(--tenant-muted);
+  color: var(--tenant-surface-muted);
   font-size: 13px;
 }
 
@@ -736,22 +846,26 @@ tbody tr:hover {
 .connect-card {
   border-radius: 16px;
   padding: 14px;
-  border: 1px solid rgba(var(--tenant-primary-rgb), 0.12);
-  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06)),
+    rgba(var(--tenant-primary-rgb), 0.08);
   display: grid;
   gap: 10px;
   min-height: 220px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(16px);
 }
 
 .connect-title {
   font-weight: 800;
-  color: var(--tenant-text-strong);
+  color: var(--tenant-surface-text-strong);
   letter-spacing: 0.02em;
 }
 
 .connect-copy {
   margin: 0;
-  color: var(--tenant-muted);
+  color: var(--tenant-surface-muted);
   font-size: 12.5px;
   line-height: 1.5;
 }
@@ -759,7 +873,7 @@ tbody tr:hover {
 .connect-status {
   font-size: 12px;
   font-weight: 700;
-  color: var(--tenant-muted);
+  color: var(--tenant-surface-muted);
   padding: 6px 10px;
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.08);
@@ -806,6 +920,14 @@ tbody tr:hover {
   letter-spacing: 0.03em;
 }
 
+.button-with-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+}
+
 .google-button:hover {
   transform: translateY(-2px);
 }
@@ -814,8 +936,10 @@ tbody tr:hover {
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  display: grid;
+  display: inline-grid;
   place-items: center;
+  flex: 0 0 28px;
+  line-height: 0;
   background: #ffffff;
   color: #111827;
   font-weight: 900;
@@ -830,7 +954,7 @@ tbody tr:hover {
 .connect-footnote {
   margin: 12px 0 0;
   font-size: 12px;
-  color: var(--tenant-muted);
+  color: var(--tenant-surface-muted);
 }
 
 .field {
@@ -943,6 +1067,10 @@ tbody tr:hover {
   padding: 6px 10px;
 }
 
+.modal-status[hidden] {
+  display: none;
+}
+
 .modal-status.is-error {
   color: #ffb0b0;
   border-color: rgba(255, 176, 176, 0.28);
@@ -965,7 +1093,7 @@ tbody tr:hover {
 }
 
 .field label {
-  color: var(--tenant-text);
+  color: var(--tenant-surface-text);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -978,10 +1106,16 @@ tbody tr:hover {
   width: 100%;
   min-height: 50px;
   padding: 0 16px;
-  border: 1px solid var(--tenant-line);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.94);
-  color: var(--tenant-text-strong);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.06)),
+    rgba(255, 255, 255, 0.12);
+  color: var(--tenant-surface-text-strong);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 16px 30px rgba(var(--tenant-primary-rgb), 0.08);
+  backdrop-filter: blur(16px);
 }
 
 .field textarea {
@@ -991,8 +1125,10 @@ tbody tr:hover {
 }
 
 .field input[readonly] {
-  background: rgba(248, 250, 252, 0.86);
-  color: var(--tenant-muted);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06)),
+    rgba(var(--tenant-primary-rgb), 0.06);
+  color: var(--tenant-surface-muted);
 }
 
 .input-group {
@@ -1008,7 +1144,7 @@ tbody tr:hover {
   top: 50%;
   right: 16px;
   transform: translateY(-50%);
-  color: var(--tenant-muted);
+  color: var(--tenant-surface-muted);
   cursor: pointer;
 }
 
@@ -1034,22 +1170,28 @@ tbody tr:hover {
 }
 
 .muted-note {
-  color: var(--tenant-muted);
+  color: var(--tenant-surface-muted);
   font-size: 13px;
 }
 
 .surface-note {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  max-width: 100%;
   padding: 0 14px;
   min-height: 40px;
   border-radius: 999px;
-  border: 1px solid var(--tenant-line);
-  background: rgba(255, 255, 255, 0.74);
-  color: var(--tenant-text);
+  border: 1px solid var(--tenant-surface-border);
+  background: var(--tenant-surface-pill);
+  color: var(--tenant-surface-text);
   font-size: 13px;
   font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(16px);
+  overflow-wrap: anywhere;
+  text-align: left;
 }
 
 @keyframes fade-up {

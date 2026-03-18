@@ -19,7 +19,9 @@
       --text: var(--tenant-text, #334155);
       --muted: var(--tenant-muted, #64748b);
       --bg: var(--tenant-bg, #f8fbff);
-      --panel: rgba(255, 255, 255, 0.92);
+      --panel: var(--tenant-panel, rgba(255, 255, 255, 0.82));
+      --panel-soft: var(--tenant-panel-alt, rgba(255, 255, 255, 0.68));
+      --panel-strong: var(--tenant-panel-strong, #ffffff);
       --line: var(--tenant-line, #d8e2f0);
       --line-strong: var(--tenant-line-strong, #aac0dc);
       --shadow-soft: var(--tenant-shadow-soft, 0 18px 40px rgba(37, 117, 252, 0.12));
@@ -36,17 +38,55 @@
       padding: 18px;
       font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
       color: var(--dark);
-      background: var(--page-gradient, linear-gradient(155deg, #f8fbff 0%, #eef4ff 55%, #ffffff 100%));
+      background:
+        radial-gradient(circle at 18% 16%, rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.14) 0%, transparent 24%),
+        radial-gradient(circle at 86% 10%, rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.18) 0%, transparent 26%),
+        var(--page-gradient, linear-gradient(155deg, #f8fbff 0%, #eef4ff 55%, #ffffff 100%));
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      border-radius: 999px;
+      pointer-events: none;
+      filter: blur(24px);
+      z-index: 0;
+    }
+
+    body::before {
+      top: -80px;
+      right: -90px;
+      width: 280px;
+      height: 280px;
+      background: radial-gradient(circle, rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.22) 0%, transparent 68%);
+    }
+
+    body::after {
+      bottom: -100px;
+      left: -90px;
+      width: 320px;
+      height: 320px;
+      background: radial-gradient(circle, rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.16) 0%, transparent 68%);
     }
 
     .admin-header,
     .surface-card,
     .modal-content {
+      position: relative;
+      z-index: 1;
       border-radius: 28px;
-      border: 1px solid rgba(255, 255, 255, 0.82);
-      background: linear-gradient(165deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.78));
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      background:
+        radial-gradient(circle at top right, rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.22) 0%, transparent 34%),
+        linear-gradient(165deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.06)),
+        rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.08);
+      box-shadow:
+        0 30px 68px rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.24);
+      backdrop-filter: blur(24px) saturate(1.14);
     }
 
     .admin-header {
@@ -86,9 +126,13 @@
       min-width: 210px;
       padding: 14px 16px;
       border-radius: 22px;
-      border: 1px solid rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.18);
-      background: rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.06)),
+        rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.12);
       text-align: right;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      backdrop-filter: blur(18px);
     }
 
     .clock-card span {
@@ -122,15 +166,22 @@
 
     .search-input,
     .modal-content input[type="text"],
-    .modal-content input[type="password"] {
+    .modal-content input[type="password"],
+    .schedule-row input[type="time"] {
       width: 100%;
       min-height: 44px;
       padding: 0 16px;
       border-radius: 16px;
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.06)),
+        rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.08);
       color: var(--dark);
       font: inherit;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.16),
+        0 16px 30px rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.08);
+      backdrop-filter: blur(14px);
     }
 
     .search-input:focus,
@@ -138,8 +189,10 @@
     .modal-content input[type="password"]:focus,
     .time-field:focus {
       outline: none;
-      border-color: var(--line-strong);
-      box-shadow: 0 0 0 4px rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.12);
+      border-color: rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.34);
+      box-shadow:
+        0 0 0 4px rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
     }
 
     .add-btn,
@@ -166,11 +219,17 @@
     }
 
     .table-shell {
-      border: 1px solid rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.26);
       border-radius: 24px;
       overflow-x: auto;
       overflow-y: hidden;
-      background: rgba(255, 255, 255, 0.9);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04)),
+        rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.08);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 22px 46px rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.12);
+      backdrop-filter: blur(20px);
     }
 
     table {
@@ -182,7 +241,9 @@
 
     th {
       padding: 16px 18px;
-      background: rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.1);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.04)),
+        rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.16);
       color: var(--primary-strong);
       text-transform: uppercase;
       font-size: 12px;
@@ -195,6 +256,10 @@
       border-bottom: 1px solid rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.08);
       color: var(--text);
       font-size: 14px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)),
+        rgba(255, 255, 255, 0.1);
+      transition: background 160ms ease;
     }
 
     tr:last-child td {
@@ -202,7 +267,13 @@
     }
 
     tr:hover {
-      background: rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.04);
+      background: rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.08);
+    }
+
+    tbody tr:hover td {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06)),
+        rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.08);
     }
 
     .id-label {
@@ -211,20 +282,26 @@
       min-height: 32px;
       padding: 0 10px;
       border-radius: 999px;
-      background: rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.12);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06)),
+        rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.14);
       color: var(--primary-strong);
       font-size: 12px;
       font-weight: 800;
       letter-spacing: 0.04em;
+      border: 1px solid rgba(255, 255, 255, 0.22);
     }
 
     .time-field {
       min-height: 40px;
       padding: 0 10px;
-      border: 1px solid var(--line);
+      border: 1px solid rgba(255, 255, 255, 0.28);
       border-radius: 12px;
-      background: #ffffff;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.06)),
+        rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.08);
       color: var(--dark);
+      backdrop-filter: blur(12px);
     }
 
     .status-pill {
@@ -244,22 +321,32 @@
 
     .status-pill.active {
       color: var(--success);
-      background: rgba(15, 118, 110, 0.12);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)),
+        rgba(15, 118, 110, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     .status-pill.suspended {
       color: #475569;
-      background: rgba(100, 116, 139, 0.14);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)),
+        rgba(100, 116, 139, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     .action-btn {
       width: 40px;
       height: 40px;
-      border: none;
+      border: 1px solid rgba(255, 255, 255, 0.24);
       border-radius: 14px;
-      background: rgba(220, 38, 38, 0.12);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.04)),
+        rgba(220, 38, 38, 0.14);
       color: var(--danger);
       cursor: pointer;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(14px);
     }
 
     .action-btn:hover {
@@ -270,14 +357,18 @@
     .state-btn {
       min-height: 38px;
       padding: 0 14px;
-      border: 1px solid var(--line);
+      border: 1px solid rgba(255, 255, 255, 0.24);
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.92);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.04)),
+        rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.08);
       color: var(--text);
       font-size: 12px;
       font-weight: 800;
       cursor: pointer;
       white-space: nowrap;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(14px);
     }
 
     .state-btn:hover {
@@ -287,13 +378,17 @@
 
     .state-btn.suspend {
       color: #9a3412;
-      background: rgba(251, 146, 60, 0.12);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04)),
+        rgba(251, 146, 60, 0.14);
       border-color: rgba(251, 146, 60, 0.2);
     }
 
     .state-btn.reactivate {
       color: var(--success);
-      background: rgba(15, 118, 110, 0.1);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04)),
+        rgba(15, 118, 110, 0.12);
       border-color: rgba(15, 118, 110, 0.18);
     }
 
@@ -342,10 +437,14 @@
 
     .schedule-section {
       margin-top: 14px;
-      border: 1px solid var(--line);
+      border: 1px solid rgba(255, 255, 255, 0.24);
       border-radius: 18px;
       padding: 14px;
-      background: rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.05);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.04)),
+        rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.1);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(16px);
     }
 
     .schedule-title {
@@ -401,20 +500,8 @@
       flex: 0 0 18px;
     }
 
-    .schedule-row input[type="time"] {
-      width: 100%;
-      min-width: 0;
-      min-height: 40px;
-      padding: 0 12px;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.94);
-      color: var(--dark);
-      font: inherit;
-    }
-
     .schedule-row input[type="time"]:disabled {
-      background: #f8fafc;
+      background: rgba(248, 250, 252, 0.72);
       color: #94a3b8;
       cursor: not-allowed;
     }
@@ -434,13 +521,17 @@
     }
 
     #closeModal {
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.04)),
+        rgba(var(--tenant-primary-rgb, 37, 117, 252), 0.08);
       color: var(--text);
       min-height: 42px;
       border-radius: 16px;
       cursor: pointer;
       font-weight: 700;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(14px);
     }
 
     @media (max-width: 900px) {

@@ -64,8 +64,38 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    function applyFrameDarkThemeOverrides() {
+        const iframeDocument = panelFrame?.contentDocument;
+        if (!iframeDocument) {
+            return;
+        }
+        const existing = iframeDocument.getElementById('dark-theme-overrides');
+        if (existing) {
+            return;
+        }
+
+        const style = iframeDocument.createElement('style');
+        style.id = 'dark-theme-overrides';
+        style.textContent = `
+            :root { --force-bg: #061028; --force-panel: rgba(8, 15, 27, 0.96); --force-line: rgba(103, 128, 190, 0.35); --force-text: #e2e8f0; }
+            body { background: var(--force-bg) !important; color: var(--force-text) !important; }
+            .page, .panel, .card, .table-shell, .list-shell, .monitor-shell { background: var(--force-panel) !important; color: var(--force-text) !important; border-color: var(--force-line) !important; box-shadow: 0 6px 18px rgba(0,0,0,0.35) !important; }
+            table { background: transparent !important; color: var(--force-text) !important; }
+            th, td { border-color: var(--force-line) !important; color: var(--force-text) !important; }
+            th { background: rgba(37, 117, 252, 0.15) !important; color: #f8fafc !important; }
+            td { background: rgba(12, 21, 39, 0.75) !important; }
+            tbody tr:hover td, tr:hover td { background: rgba(37, 117, 252, 0.12) !important; }
+            input, textarea, select, button { background: rgba(10, 16, 30, 0.9) !important; color: var(--force-text) !important; border: 1px solid var(--force-line) !important; }
+            .modal, .modal-card { background: rgba(8, 14, 24, 0.97) !important; color: var(--force-text) !important; }
+            .empty { color: rgba(226,232,240,0.7) !important; }
+        `;
+
+        iframeDocument.head?.appendChild(style);
+    }
+
     panelFrame?.addEventListener('load', () => {
         setFrameLoading(false);
+        applyFrameDarkThemeOverrides();
         markDashboardReady();
     });
 

@@ -18,10 +18,23 @@ const backToLoginLink = document.getElementById('backToLoginLink');
 const brandLogo = document.getElementById('brandLogo');
 const backgroundPhoto = document.getElementById('backgroundPhoto');
 const resetSection = document.getElementById('resetSection');
+const resetSectionBadge = document.getElementById('resetSectionBadge');
+const resetSectionCopy = document.getElementById('resetSectionCopy');
 const newPasswordGroup = document.getElementById('newPasswordGroup');
 const confirmPasswordGroup = document.getElementById('confirmPasswordGroup');
 
+const RESET_CODE_LENGTH = 6;
+const RESET_SECTION_BADGE_DEFAULT = 'Verification required';
+const RESET_SECTION_BADGE_VERIFYING = 'Verifying code...';
+const RESET_SECTION_BADGE_READY = 'Code verified';
+const RESET_SECTION_COPY_DEFAULT = 'Enter the verification code from your inbox. The new password fields unlock only after the code is verified.';
+const RESET_SECTION_COPY_READY = 'Code verified. You can now enter and confirm a new password.';
+
 let brandingTimer = null;
+let codeVerificationTimer = null;
+let codeVerificationRequestId = 0;
+let resetCodeVerificationState = 'idle';
+let verifiedResetCodeSignature = '';
 
 initialize();
 
@@ -41,7 +54,10 @@ function initialize() {
     form?.addEventListener('submit', (event) => event.preventDefault());
     sendCodeBtn?.addEventListener('click', requestResetCode);
     resetPasswordBtn?.addEventListener('click', submitPasswordReset);
-    codeInput?.addEventListener('input', updatePasswordInputs);
+    codeInput?.addEventListener('input', handleCodeInputChange);
+    codeInput?.addEventListener('blur', () => {
+        verifyResetCode({ focusPasswordOnSuccess: false });
+    });
 
     window.addEventListener('pageshow', (event) => {
         if (event.persisted) {
@@ -50,6 +66,7 @@ function initialize() {
     });
 
     companyCodeInput?.addEventListener('input', () => {
+        invalidateResetCodeVerification();
         resetFeedback();
         updateNavigationLinks();
         if (brandingTimer) {
@@ -60,35 +77,51 @@ function initialize() {
         }, 180);
     });
 
-    [emailInput, codeInput, newPasswordInput, confirmPasswordInput].forEach((input) => {
-        input?.addEventListener('input', resetFeedback);
+    emailInput?.addEventListener('input', () => {
+        invalidateResetCodeVerification();
+        resetFeedback();
     });
+    newPasswordInput?.addEventListener('input', resetFeedback);
+    confirmPasswordInput?.addEventListener('input', resetFeedback);
 }
 
 function updatePasswordInputs() {
-    const hasCode = Boolean(String(codeInput?.value || '').trim());
+    const hasVerifiedCode = isCurrentResetCodeVerified();
     if (newPasswordInput) {
-        newPasswordInput.disabled = !hasCode;
+        newPasswordInput.disabled = !hasVerifiedCode;
     }
     if (confirmPasswordInput) {
-        confirmPasswordInput.disabled = !hasCode;
+        confirmPasswordInput.disabled = !hasVerifiedCode;
     }
     if (resetPasswordBtn) {
-        resetPasswordBtn.disabled = !hasCode;
+        resetPasswordBtn.disabled = !hasVerifiedCode;
     }
     if (resetSection) {
-        resetSection.classList.toggle('is-active', hasCode);
-        resetSection.setAttribute('aria-disabled', hasCode ? 'false' : 'true');
+        resetSection.classList.toggle('is-active', hasVerifiedCode);
+        resetSection.setAttribute('aria-disabled', hasVerifiedCode ? 'false' : 'true');
     }
     if (newPasswordGroup) {
-        newPasswordGroup.classList.toggle('is-disabled', !hasCode);
+        newPasswordGroup.classList.toggle('is-disabled', !hasVerifiedCode);
     }
     if (confirmPasswordGroup) {
-        confirmPasswordGroup.classList.toggle('is-disabled', !hasCode);
+        confirmPasswordGroup.classList.toggle('is-disabled', !hasVerifiedCode);
+    }
+    if (resetSectionBadge) {
+        resetSectionBadge.textContent = resetCodeVerificationState === 'verified'
+            ? RESET_SECTION_BADGE_READY
+            : resetCodeVerificationState === 'verifying'
+                ? RESET_SECTION_BADGE_VERIFYING
+                : RESET_SECTION_BADGE_DEFAULT;
+    }
+    if (resetSectionCopy) {
+        resetSectionCopy.textContent = hasVerifiedCode
+            ? RESET_SECTION_COPY_READY
+            : RESET_SECTION_COPY_DEFAULT;
     }
 }
 
 async function requestResetCode() {
+    invalidateResetCodeVerification();
     resetFeedback();
 
     const email = String(emailInput?.value || '').trim();
@@ -104,8 +137,11 @@ async function requestResetCode() {
 
     try {
         await appClient.requestPasswordResetCode({ companyCode, email });
+        if (codeInput) {
+            codeInput.value = '';
+        }
         showSuccessMessage('Verification Code Sent', 'Check your inbox for the 6-digit code.');
-        setStatus('Code sent. Enter it to reset your password.', false, true);
+        setStatus('Code sent. Enter the 6-digit code to unlock the password fields.', false, true);
         codeInput?.focus?.();
     } catch (error) {
         setStatus(error.message || 'Unable to send reset code.', true);
@@ -130,6 +166,12 @@ async function submitPasswordReset() {
     if (!code) {
         setStatus('Verification code is required.', true);
         return;
+    }
+    if (!isCurrentResetCodeVerified()) {
+        const verified = await verifyResetCode({ focusPasswordOnSuccess: false });
+        if (!verified) {
+            return;
+        }
     }
     if (!password || password.length < 8) {
         setStatus('Password must be at least 8 characters.', true);
@@ -161,11 +203,127 @@ async function submitPasswordReset() {
         if (confirmPasswordInput) {
             confirmPasswordInput.value = '';
         }
+        invalidateResetCodeVerification({ clearPasswords: false });
         updatePasswordInputs();
     } catch (error) {
         setStatus(error.message || 'Unable to reset password.', true);
     } finally {
         setButtonBusy(resetPasswordBtn, false, 'Reset Password');
+        updatePasswordInputs();
+    }
+}
+
+function handleCodeInputChange() {
+    if (codeInput) {
+        const compactCode = String(codeInput.value || '').replace(/\s+/g, '');
+        if (compactCode !== codeInput.value) {
+            codeInput.value = compactCode;
+        }
+    }
+    invalidateResetCodeVerification();
+    resetFeedback();
+    queueResetCodeVerification();
+}
+
+function queueResetCodeVerification() {
+    clearPendingCodeVerification();
+    const { email, code } = getResetCodePayload();
+    if (!email || code.length < RESET_CODE_LENGTH) {
+        return;
+    }
+    codeVerificationTimer = window.setTimeout(() => {
+        codeVerificationTimer = null;
+        verifyResetCode();
+    }, 280);
+}
+
+async function verifyResetCode({ focusPasswordOnSuccess = true } = {}) {
+    clearPendingCodeVerification();
+
+    const payload = getResetCodePayload();
+    if (!payload.email || payload.code.length < RESET_CODE_LENGTH) {
+        return false;
+    }
+
+    const signature = buildResetCodeSignature(payload);
+    if (verifiedResetCodeSignature && verifiedResetCodeSignature === signature) {
+        return true;
+    }
+
+    const requestId = ++codeVerificationRequestId;
+    resetCodeVerificationState = 'verifying';
+    updatePasswordInputs();
+    setStatus('Verifying code...', false);
+
+    try {
+        await appClient.verifyPasswordResetCode(payload);
+        if (requestId !== codeVerificationRequestId) {
+            return false;
+        }
+        verifiedResetCodeSignature = signature;
+        resetCodeVerificationState = 'verified';
+        updatePasswordInputs();
+        setStatus('Code verified. You can set a new password now.', false, true);
+        if (focusPasswordOnSuccess) {
+            newPasswordInput?.focus?.();
+        }
+        return true;
+    } catch (error) {
+        if (requestId !== codeVerificationRequestId) {
+            return false;
+        }
+        verifiedResetCodeSignature = '';
+        resetCodeVerificationState = 'idle';
+        clearPasswordFields();
+        updatePasswordInputs();
+        setStatus(error.message || 'Unable to verify code.', true);
+        return false;
+    }
+}
+
+function getResetCodePayload() {
+    return {
+        companyCode: String(companyCodeInput?.value || '').trim(),
+        email: String(emailInput?.value || '').trim(),
+        code: String(codeInput?.value || '').trim()
+    };
+}
+
+function buildResetCodeSignature({ companyCode = '', email = '', code = '' } = {}) {
+    return `${String(companyCode || '').trim().toLowerCase()}|${String(email || '').trim().toLowerCase()}|${String(code || '').trim()}`;
+}
+
+function isCurrentResetCodeVerified() {
+    if (!verifiedResetCodeSignature) {
+        return false;
+    }
+    return verifiedResetCodeSignature === buildResetCodeSignature(getResetCodePayload());
+}
+
+function invalidateResetCodeVerification({ clearPasswords = true } = {}) {
+    clearPendingCodeVerification();
+    codeVerificationRequestId += 1;
+    verifiedResetCodeSignature = '';
+    resetCodeVerificationState = 'idle';
+    if (clearPasswords) {
+        clearPasswordFields();
+    }
+    updatePasswordInputs();
+}
+
+function clearPendingCodeVerification() {
+    if (codeVerificationTimer) {
+        window.clearTimeout(codeVerificationTimer);
+        codeVerificationTimer = null;
+    }
+}
+
+function clearPasswordFields() {
+    if (newPasswordInput) {
+        newPasswordInput.value = '';
+    }
+    if (confirmPasswordInput) {
+        confirmPasswordInput.value = '';
     }
 }
 

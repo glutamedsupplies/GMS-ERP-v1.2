@@ -1,24 +1,36 @@
 :root {
-  --bg: #ecf5f2;
-  --panel: rgba(255, 255, 255, 0.94);
-  --panel-strong: #ffffff;
-  --ink: #17332c;
-  --muted: #5f756d;
-  --line: #d5e4de;
-  --accent: #0f766e;
-  --accent-strong: #115e59;
-  --accent-soft: #daf4ee;
-  --warm: #d97706;
-  --warm-soft: #fff0d7;
-  --danger: #b42318;
-  --danger-soft: #ffe2de;
-  --success: #15803d;
-  --success-soft: #ddfce8;
-  --shadow: 0 28px 64px rgba(19, 52, 44, 0.12);
+  --bg: #091520;
+  --panel: rgba(8, 16, 28, 0.92);
+  --panel-strong: #0f1f33;
+  --ink: #e2e8f0;
+  --muted: #95a8be;
+  --line: #23314b;
+  --accent: #3fd1b3;
+  --accent-strong: #2ba891;
+  --accent-soft: rgba(63, 209, 179, 0.22);
+  --warm: #fb923c;
+  --warm-soft: #f7f2df;
+  --danger: #ef4444;
+  --danger-soft: #fddedb;
+  --success: #34d399;
+  --success-soft: #dafaf1;
+  --shadow: 0 28px 64px rgba(0, 0, 0, 0.42);
 }
 
 * {
   box-sizing: border-box;
+}
+
+select,
+select option {
+  color: var(--ink) !important;
+  background-color: rgba(1, 29, 45, 0.96) !important;
+}
+
+select option:hover,
+select option:focus {
+  background-color: rgba(63, 209, 179, 0.2) !important;
+  color: #fff !important;
 }
 
 body {

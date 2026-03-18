@@ -348,7 +348,9 @@ function setGoogleModalStatus(message, isError) {
     if (!googleModalStatus) {
         return;
     }
-    googleModalStatus.textContent = message || '';
+    const text = String(message || '').trim();
+    googleModalStatus.textContent = text;
+    googleModalStatus.hidden = !text;
     googleModalStatus.classList.toggle('is-error', Boolean(isError));
 }
 
@@ -366,7 +368,9 @@ function setupPasswordToggle(toggleId, inputId) {
 }
 
 function setStatus(message, isError) {
-    statusText.innerText = message;
-    statusText.classList.toggle('is-error', Boolean(isError));
-    statusText.classList.toggle('is-success', Boolean(message) && !isError);
+    const text = String(message || '').trim();
+    statusText.textContent = text;
+    statusText.hidden = !text;
+    statusText.classList.toggle('is-error', Boolean(text) && Boolean(isError));
+    statusText.classList.toggle('is-success', Boolean(text) && !isError);
 }

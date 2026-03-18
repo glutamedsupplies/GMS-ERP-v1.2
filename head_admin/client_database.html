@@ -5,35 +5,59 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Client Data Base</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Sora:wght@400;500;600;700;800&display=swap">
+<script src="../shared/theme-preload.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
   :root {
-    --bg: #f4f7fb;
-    --panel: #ffffff;
-    --text: #17324d;
-    --muted: #5f7387;
-    --accent: #14532d;
-    --accent-soft: #e7f7ed;
-    --line: #d6e1ea;
-    --danger: #b91c1c;
-    --shadow: 0 20px 50px rgba(23, 50, 77, 0.08);
+    --primary: var(--tenant-primary, #14b8a6);
+    --primary-rgb: var(--tenant-primary-rgb, 20, 184, 166);
+    --bg: #0b1220;
+    --panel: rgba(12, 18, 32, 0.78);
+    --panel-soft: rgba(15, 23, 42, 0.72);
+    --text: #f8fafc;
+    --muted: rgba(226, 232, 240, 0.74);
+    --accent: var(--tenant-primary, #14b8a6);
+    --accent-strong: var(--tenant-primary-strong, #0ea5a4);
+    --accent-soft: rgba(var(--primary-rgb), 0.14);
+    --line: rgba(var(--primary-rgb), 0.18);
+    --danger: #f87171;
+    --shadow: 0 36px 90px rgba(2, 6, 23, 0.55);
   }
 
   * { box-sizing: border-box; }
 
   body {
     margin: 0;
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    font-family: "Sora", "Segoe UI", sans-serif;
     color: var(--text);
     background:
-      radial-gradient(circle at top left, rgba(20, 83, 45, 0.12), transparent 26%),
-      linear-gradient(180deg, #fbfdff 0%, var(--bg) 100%);
+      radial-gradient(circle at 12% 18%, rgba(var(--primary-rgb), 0.28) 0%, transparent 36%),
+      radial-gradient(circle at 88% 10%, rgba(251, 191, 36, 0.18) 0%, transparent 34%),
+      linear-gradient(140deg, #0b1220 0%, #0b1c2d 56%, #0f172a 100%);
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(135deg, rgba(2, 6, 23, 0.18) 0%, rgba(2, 6, 23, 0.76) 100%),
+      radial-gradient(circle at top, rgba(var(--primary-rgb), 0.08) 0%, transparent 36%);
   }
 
   .page {
     max-width: 1220px;
     margin: 0 auto;
     padding: 32px 26px 40px;
+    position: relative;
+    z-index: 1;
   }
 
   .hero {
@@ -46,7 +70,9 @@
 
   .hero h1 {
     margin: 0 0 10px;
+    font-family: "Fraunces", serif;
     font-size: 32px;
+    line-height: 1.04;
   }
 
   .hero p {
@@ -66,20 +92,30 @@
   .card,
   .panel,
   .modal-content {
-    background: var(--panel);
-    border: 1px solid var(--line);
+    background:
+      radial-gradient(circle at top right, rgba(var(--primary-rgb), 0.18) 0%, transparent 34%),
+      linear-gradient(160deg, rgba(15, 23, 42, 0.82), rgba(6, 10, 20, 0.86));
+    border: 1px solid rgba(var(--primary-rgb), 0.16);
     border-radius: 22px;
     box-shadow: var(--shadow);
+    backdrop-filter: blur(20px) saturate(1.08);
   }
 
   .card {
     padding: 20px 22px;
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(var(--primary-rgb), 0.28);
+    box-shadow: 0 26px 52px rgba(var(--primary-rgb), 0.16);
   }
 
   .label {
     display: block;
     margin-bottom: 8px;
-    color: var(--muted);
+    color: rgba(226, 232, 240, 0.7);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     font-size: 12px;
@@ -106,12 +142,28 @@
   .search-box input {
     width: 100%;
     padding: 14px 18px 14px 44px;
-    border: 1px solid var(--line);
+    border: 1px solid rgba(var(--primary-rgb), 0.16);
     border-radius: 14px;
     font-size: 15px;
-    background: #fff;
+    background: rgba(var(--primary-rgb), 0.08);
     color: var(--text);
     outline: none;
+    box-shadow: inset 0 1px 0 rgba(var(--primary-rgb), 0.06);
+    transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+  }
+
+  .search-box input::placeholder {
+    color: rgba(148, 163, 184, 0.84);
+  }
+
+  .search-box input:focus {
+    border-color: rgba(var(--primary-rgb), 0.34);
+    background:
+      linear-gradient(165deg, rgba(var(--primary-rgb), 0.1), rgba(2, 6, 23, 0.02)),
+      rgba(var(--primary-rgb), 0.08);
+    box-shadow:
+      0 0 0 4px rgba(var(--primary-rgb), 0.14),
+      0 16px 32px rgba(var(--primary-rgb), 0.12);
   }
 
   .search-box i {
@@ -134,16 +186,39 @@
     padding: 13px 18px;
     font-size: 14px;
     font-weight: 600;
+    transition:
+      transform 180ms ease,
+      border-color 180ms ease,
+      background 180ms ease,
+      color 180ms ease,
+      box-shadow 180ms ease;
   }
 
   .primary-btn {
-    background: var(--accent);
-    color: #fff;
+    background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.96), rgba(var(--primary-rgb), 0.72));
+    color: #ffffff;
+    box-shadow: 0 18px 34px rgba(var(--primary-rgb), 0.2);
+  }
+
+  .primary-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 22px 40px rgba(var(--primary-rgb), 0.28);
   }
 
   .secondary-btn {
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: rgba(var(--primary-rgb), 0.08);
+    color: var(--text);
+    border: 1px solid rgba(var(--primary-rgb), 0.16);
+  }
+
+  .secondary-btn:hover {
+    transform: translateY(-1px);
+    background:
+      linear-gradient(165deg, rgba(var(--primary-rgb), 0.12), rgba(2, 6, 23, 0.02)),
+      rgba(var(--primary-rgb), 0.18);
+    border-color: rgba(var(--primary-rgb), 0.28);
+    color: #ffffff;
+    box-shadow: 0 18px 34px rgba(var(--primary-rgb), 0.18);
   }
 
   .panel {
@@ -154,8 +229,8 @@
     margin-bottom: 16px;
     padding: 16px 18px;
     border-radius: 16px;
-    background: #f8fbff;
-    border: 1px solid var(--line);
+    background: rgba(var(--primary-rgb), 0.06);
+    border: 1px solid rgba(var(--primary-rgb), 0.12);
     color: var(--muted);
     line-height: 1.6;
     font-size: 14px;
@@ -174,26 +249,27 @@
 
   .table-shell {
     overflow-x: auto;
-    border: 1px solid var(--line);
+    border: 1px solid rgba(var(--primary-rgb), 0.12);
     border-radius: 18px;
+    background: rgba(var(--primary-rgb), 0.04);
   }
 
   table {
     width: 100%;
     border-collapse: collapse;
-    background: #fff;
+    background: transparent;
   }
 
   th, td {
     padding: 15px 16px;
     text-align: left;
-    border-bottom: 1px solid #edf2f7;
+    border-bottom: 1px solid rgba(var(--primary-rgb), 0.12);
     font-size: 14px;
   }
 
   th {
-    background: #f8fbff;
-    color: var(--accent);
+    background: rgba(var(--primary-rgb), 0.08);
+    color: rgba(226, 232, 240, 0.82);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     font-size: 12px;
@@ -205,11 +281,20 @@
 
   tbody tr[data-client-id] {
     cursor: pointer;
-    transition: background-color 140ms ease;
+    transition: background-color 140ms ease, transform 140ms ease;
+  }
+
+  tbody tr[data-client-id] td {
+    transition: background 160ms ease, color 160ms ease;
   }
 
   tbody tr[data-client-id]:hover {
-    background: #f8fbff;
+    transform: translateX(2px);
+  }
+
+  tbody tr[data-client-id]:hover td {
+    background:
+      linear-gradient(90deg, rgba(var(--primary-rgb), 0.16), rgba(2, 6, 23, 0.02));
   }
 
   .source-tag {
@@ -220,8 +305,16 @@
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.04em;
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: rgba(var(--primary-rgb), 0.16);
+    color: #d1fae5;
+    border: 1px solid rgba(var(--primary-rgb), 0.18);
+    transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+  }
+
+  tbody tr[data-client-id]:hover .source-tag {
+    background: rgba(var(--primary-rgb), 0.24);
+    border-color: rgba(var(--primary-rgb), 0.3);
+    transform: translateY(-1px);
   }
 
   .actions-cell {
@@ -234,16 +327,19 @@
   }
 
   .danger-btn {
-    background: #fee2e2;
-    color: #991b1b;
+    background: rgba(248, 113, 113, 0.12);
+    color: #fecaca;
     padding: 8px 12px;
     border-radius: 10px;
     font-size: 12px;
     font-weight: 700;
+    border: 1px solid rgba(248, 113, 113, 0.18);
   }
 
   .danger-btn:hover {
-    background: #fecaca;
+    background: rgba(248, 113, 113, 0.2);
+    border-color: rgba(248, 113, 113, 0.3);
+    transform: translateY(-1px);
   }
 
   .modal {
@@ -289,10 +385,12 @@
   .field input {
     width: 100%;
     padding: 13px 14px;
-    border: 1px solid var(--line);
+    border: 1px solid rgba(var(--primary-rgb), 0.14);
     border-radius: 14px;
     font-size: 14px;
     outline: none;
+    background: rgba(var(--primary-rgb), 0.08);
+    color: var(--text);
   }
 
   .modal-actions {

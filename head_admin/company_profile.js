@@ -98,6 +98,7 @@ async function loadProfile() {
         const resolvedPrimaryColor = normalizeHexColor(profile.primary_color, DEFAULT_PRIMARY_COLOR);
         fields.primaryColor.value = resolvedPrimaryColor;
         fields.primaryColorHex.value = resolvedPrimaryColor;
+        applyCompanyThemePreview(resolvedPrimaryColor, { cache: true });
         fields.appName.value = profile.app_name || '';
         currentLogoPath = String(profile.logo_path || '').trim();
         currentLoginBackgroundPath = String(profile.login_background_path || '').trim();
@@ -159,7 +160,7 @@ async function saveProfile() {
 
 function setStatus(message, isError = false) {
     statusEl.textContent = message;
-    statusEl.style.color = isError ? '#b91c1c' : '#374151';
+    statusEl.style.color = isError ? 'var(--tenant-danger, #b91c1c)' : 'var(--tenant-text, #374151)';
 }
 
 function applyWorkspaceConfig(config) {
@@ -314,6 +315,7 @@ function setOrderFormWorkspaceFieldsReadonly() {
 
 function onPrimaryColorPickerInput() {
     fields.primaryColorHex.value = normalizeHexColor(fields.primaryColor.value, DEFAULT_PRIMARY_COLOR);
+    applyCompanyThemePreview(fields.primaryColorHex.value);
     updateBrandingPreview();
 }
 
@@ -321,6 +323,7 @@ function onPrimaryColorHexInput() {
     const normalized = normalizeHexColor(fields.primaryColorHex.value, '');
     if (normalized) {
         fields.primaryColor.value = normalized;
+        applyCompanyThemePreview(normalized);
         updateBrandingPreview();
     }
 }
@@ -329,6 +332,7 @@ function onPrimaryColorHexBlur() {
     const normalized = normalizeHexColor(fields.primaryColorHex.value, fields.primaryColor.value || DEFAULT_PRIMARY_COLOR);
     fields.primaryColor.value = normalized;
     fields.primaryColorHex.value = normalized;
+    applyCompanyThemePreview(normalized);
     updateBrandingPreview();
 }
 
@@ -544,6 +548,16 @@ function normalizeHexColor(value, fallback = DEFAULT_PRIMARY_COLOR) {
     }
 
     return fallback ? String(fallback).trim().toLowerCase() : '';
+}
+
+function applyCompanyThemePreview(primaryColor, { cache = false } = {}) {
+    if (!appClient?.applyBrandTheme) {
+        return;
+    }
+
+    appClient.applyBrandTheme({
+        primaryColor: normalizeHexColor(primaryColor, DEFAULT_PRIMARY_COLOR)
+    }, { cache });
 }
 
 function readFileAsDataUrl(file) {

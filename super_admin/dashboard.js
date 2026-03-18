@@ -360,35 +360,42 @@ function renderCustomerServiceAccounts() {
 
     const currentUserId = String(state.session?.userId || '').trim();
     if (!state.customerServiceUsers.length) {
-        customerServiceAccountsList.innerHTML = '<div class="row">No customer service accounts yet.</div>';
+        customerServiceAccountsList.innerHTML = '<div class="row row--empty">No customer service accounts yet.</div>';
         return;
     }
 
     customerServiceAccountsList.innerHTML = state.customerServiceUsers.map((user) => {
         const isActive = Boolean(user?.is_active);
         const isCurrentUser = String(user?.id || '').trim() === currentUserId;
+        const username = String(user?.id || '').trim();
+        const loginEmail = String(user?.login_email || '').trim();
+        const createdAt = formatCustomerChatDateTime(user?.created_at || '');
         return `
-            <div class="row" data-cs-user-id="${escape(user.id || '')}">
-                <div class="row-head">
-                    <div class="plan-meta">
-                        <div class="plan-title">
+            <div class="row support-account-card" data-cs-user-id="${escape(user.id || '')}">
+                <div class="support-account-top">
+                    <div class="support-account-meta">
+                        <div class="support-account-title">
                             <strong>${escape(user.name || user.id || '')}</strong>
                             <span class="${isActive ? 'status-pill status-pill--active' : 'status-pill status-pill--inactive'}">${isActive ? 'active' : 'inactive'}</span>
                             <span class="inline-chip">Super Admin Access</span>
                             ${isCurrentUser ? '<span class="inline-chip">Current Login</span>' : ''}
                         </div>
-                        <span class="muted">Username: ${escape(user.id || '')}</span>
-                        <span class="muted">Created: ${escape(user.created_at || '-')}</span>
+                        <span class="support-account-copy">Username: ${escape(username || '-')}</span>
+                        <span class="support-account-copy">Email: ${escape(loginEmail || 'No email assigned yet')}</span>
+                    </div>
+                    <div class="support-account-badges">
+                        <span class="inline-chip">Created ${escape(createdAt || '-')}</span>
+                        <span class="inline-chip">${isActive ? 'Receiving escalations' : 'Access paused'}</span>
                     </div>
                 </div>
-                <div class="company-edit-grid" style="margin-top:0;">
-                    <div><label>Name</label><input data-role="cs-name" type="text" value="${escape(user.name || '')}"></div>
-                    <div><label>Email</label><input data-role="cs-email" type="email" value="${escape(user.login_email || '')}"></div>
-                    <div><label>Status</label><select data-role="cs-active"><option value="true" ${isActive ? 'selected' : ''}>Active</option><option value="false" ${isActive ? '' : 'selected'}>Inactive</option></select></div>
-                    <div><label>Username</label><input data-role="cs-username" type="text" value="${escape(user.id || '')}" readonly></div>
-                    <div class="span-2"><label>New Password (optional)</label><input data-role="cs-password" type="password" placeholder="Leave blank para same password pa rin"></div>
+                <div class="company-edit-grid support-account-grid">
+                    <div class="support-account-field"><label>Name</label><input data-role="cs-name" type="text" value="${escape(user.name || '')}"></div>
+                    <div class="support-account-field"><label>Email</label><input data-role="cs-email" type="email" value="${escape(loginEmail || '')}"></div>
+                    <div class="support-account-field"><label>Status</label><select data-role="cs-active"><option value="true" ${isActive ? 'selected' : ''}>Active</option><option value="false" ${isActive ? '' : 'selected'}>Inactive</option></select></div>
+                    <div class="support-account-field"><label>Username</label><input data-role="cs-username" type="text" value="${escape(username || '')}" readonly></div>
+                    <div class="span-2 support-account-field"><label>New Password (optional)</label><input data-role="cs-password" type="password" placeholder="Leave blank para same password pa rin"></div>
                 </div>
-                <div class="company-actions">
+                <div class="company-actions support-account-actions">
                     <button type="button" data-action="save-cs-user" class="btn-success">Save Account</button>
                     <button type="button" data-action="delete-cs-user" class="btn-danger" ${isCurrentUser ? 'disabled' : ''}>Delete</button>
                 </div>

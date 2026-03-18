@@ -5,41 +5,62 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Company Profile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap">
+  <script src="../shared/theme-preload.js"></script>
   <style>
     :root {
-      --bg: #edf2f8;
-      --bg-shade: #dbe7f7;
-      --card: rgba(255, 255, 255, 0.94);
-      --line: #dbe5f1;
-      --text: #102341;
-      --muted: #5a6f8f;
-      --primary: #2b64e3;
-      --primary-dark: #1849b9;
-      --shadow: 0 18px 40px rgba(18, 40, 78, 0.14);
+      --bg: var(--tenant-bg, #edf2f8);
+      --bg-shade: var(--tenant-bg-alt, #dbe7f7);
+      --card: var(--tenant-panel, rgba(255, 255, 255, 0.94));
+      --card-strong: var(--tenant-panel-strong, #ffffff);
+      --line: var(--tenant-line, #dbe5f1);
+      --line-strong: var(--tenant-line-strong, #b6c9e0);
+      --text: var(--tenant-text-strong, #102341);
+      --text-soft: var(--tenant-text, #334155);
+      --muted: var(--tenant-muted, #5a6f8f);
+      --primary: var(--tenant-primary, #2b64e3);
+      --primary-rgb: var(--tenant-primary-rgb, 43, 100, 227);
+      --primary-dark: var(--tenant-primary-strong, #1849b9);
+      --on-primary: var(--tenant-on-primary, #ffffff);
+      --button-gradient: var(--tenant-button-gradient, linear-gradient(140deg, #2b64e3, #1849b9));
+      --shadow-soft: var(--tenant-shadow-soft, 0 18px 40px rgba(18, 40, 78, 0.14));
+      --shadow: var(--tenant-shadow, 0 22px 46px rgba(18, 40, 78, 0.18));
     }
 
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "Segoe UI Variable", "Segoe UI", Tahoma, sans-serif;
+      font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at top right, #d5e4ff 0%, transparent 42%),
-        radial-gradient(circle at bottom left, #d7ecff 0%, transparent 38%),
-        linear-gradient(160deg, var(--bg), var(--bg-shade));
+        radial-gradient(circle at top right, rgba(var(--primary-rgb), 0.18) 0%, transparent 38%),
+        radial-gradient(circle at bottom left, rgba(var(--primary-rgb), 0.12) 0%, transparent 34%),
+        var(--tenant-page-gradient, linear-gradient(160deg, var(--bg), var(--bg-shade)));
       min-height: 100vh;
+      overflow-x: hidden;
     }
 
     .wrap { max-width: 860px; margin: 0 auto; padding: 30px 16px; }
     .card {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 22px;
+      background:
+        radial-gradient(circle at top right, rgba(var(--primary-rgb), 0.16) 0%, transparent 34%),
+        linear-gradient(165deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06)),
+        var(--card);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 28px;
       padding: 24px;
       box-shadow: var(--shadow);
-      backdrop-filter: blur(8px);
+      backdrop-filter: blur(18px) saturate(1.08);
     }
-    h1 { margin: 0 0 16px; font-size: clamp(24px, 3vw, 32px); letter-spacing: .2px; }
+    h1 {
+      margin: 0 0 16px;
+      font-family: "Sora", "Segoe UI", sans-serif;
+      font-size: clamp(24px, 3vw, 32px);
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
 
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .full { grid-column: 1 / -1; }
@@ -47,7 +68,7 @@
     label {
       display: block;
       font-size: 12px;
-      color: #3e5579;
+      color: var(--text-soft);
       margin-bottom: 6px;
       text-transform: uppercase;
       letter-spacing: .35px;
@@ -57,17 +78,21 @@
       width: 100%;
       height: 42px;
       padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid #c6d3e4;
-      background: #fff;
-      color: #0f172a;
+      border-radius: 14px;
+      border: 1px solid rgba(var(--primary-rgb), 0.2);
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--text);
       font: inherit;
-      transition: border-color .18s ease, box-shadow .18s ease;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
+      transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
     }
     input:focus {
       outline: none;
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+      border-color: rgba(var(--primary-rgb), 0.44);
+      box-shadow:
+        0 0 0 4px rgba(var(--primary-rgb), 0.12),
+        0 14px 26px rgba(var(--primary-rgb), 0.08);
+      transform: translateY(-1px);
     }
     .color-control {
       display: flex;
@@ -92,6 +117,7 @@
       height: auto;
       min-height: 42px;
       padding: 6px 10px;
+      border-color: rgba(var(--primary-rgb), 0.18);
     }
 
     .logo-preview {
@@ -99,13 +125,17 @@
       width: 156px;
       height: 156px;
       border-radius: 14px;
-      border: 1px solid #c9d6e8;
-      background: linear-gradient(160deg, #f9fbff, #eef4fd);
+      border: 1px solid rgba(var(--primary-rgb), 0.16);
+      background:
+        radial-gradient(circle at top right, rgba(var(--primary-rgb), 0.12) 0%, transparent 36%),
+        linear-gradient(160deg, rgba(255, 255, 255, 0.94), rgba(var(--primary-rgb), 0.06));
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, .6),
+        var(--shadow-soft);
     }
     .logo-preview img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
     .logo-meta { margin-top: 8px; font-size: 12px; color: var(--muted); font-weight: 600; }
@@ -116,20 +146,21 @@
       flex-wrap: wrap;
     }
     .secondary-btn {
-      background: #fff;
-      color: #1f3a68;
-      border: 1px solid #c6d3e4;
+      background: rgba(255, 255, 255, 0.84);
+      color: var(--text);
+      border: 1px solid rgba(var(--primary-rgb), 0.16);
       box-shadow: none;
     }
     .secondary-btn:hover {
-      filter: brightness(0.98);
+      background: rgba(var(--primary-rgb), 0.08);
+      color: var(--primary-dark);
     }
     .branding-preview {
       --preview-primary: #2575fc;
       margin-top: 12px;
       min-height: 260px;
       border-radius: 18px;
-      border: 1px solid #c9d6e8;
+      border: 1px solid rgba(var(--primary-rgb), 0.18);
       overflow: hidden;
       position: relative;
       background:
@@ -220,31 +251,35 @@
     }
     button {
       border: none;
-      border-radius: 12px;
+      border-radius: 14px;
       height: 42px;
       padding: 0 16px;
-      background: linear-gradient(140deg, var(--primary), var(--primary-dark));
-      color: #fff;
+      background: var(--button-gradient);
+      color: var(--on-primary);
       font: inherit;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 8px 16px rgba(30, 85, 197, 0.35);
+      box-shadow: 0 12px 24px rgba(var(--primary-rgb), 0.24);
       transition: transform .14s ease, filter .14s ease, box-shadow .14s ease;
     }
     button:hover { transform: translateY(-1px); }
     button:active { transform: translateY(0); }
     button:disabled { opacity: .65; cursor: not-allowed; transform: none; }
-    #status { font-size: 13px; color: #1f3a68; font-weight: 600; }
+    #status { font-size: 13px; color: var(--text-soft); font-weight: 600; }
     .workspace-box {
       margin-top: 18px;
-      border: 1px solid #cfdbeb;
-      border-radius: 14px;
+      border: 1px solid rgba(var(--primary-rgb), 0.16);
+      border-radius: 20px;
       padding: 14px;
-      background: rgba(245, 250, 255, 0.9);
+      background:
+        radial-gradient(circle at top right, rgba(var(--primary-rgb), 0.08) 0%, transparent 36%),
+        linear-gradient(165deg, rgba(255, 255, 255, 0.9), rgba(var(--primary-rgb), 0.05));
+      box-shadow: var(--shadow-soft);
     }
     .workspace-box h2 {
       margin: 0 0 6px;
       font-size: 19px;
+      color: var(--text);
     }
     .workspace-box p {
       margin: 0 0 12px;
@@ -264,14 +299,14 @@
       text-transform: none;
       letter-spacing: 0;
       font-weight: 600;
-      color: #243955;
+      color: var(--text);
       display: flex;
       gap: 8px;
       align-items: center;
       padding: 8px 10px;
-      border-radius: 10px;
-      border: 1px solid #cfdbeb;
-      background: #fff;
+      border-radius: 12px;
+      border: 1px solid rgba(var(--primary-rgb), 0.14);
+      background: rgba(255, 255, 255, 0.86);
     }
     .toggle-grid input[type="checkbox"] {
       width: 16px;
@@ -285,12 +320,20 @@
       width: 100%;
       min-height: 96px;
       padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid #c6d3e4;
-      background: #fff;
-      color: #0f172a;
+      border-radius: 14px;
+      border: 1px solid rgba(var(--primary-rgb), 0.2);
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--text);
       font: inherit;
       resize: vertical;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
+    }
+    textarea:focus {
+      outline: none;
+      border-color: rgba(var(--primary-rgb), 0.44);
+      box-shadow:
+        0 0 0 4px rgba(var(--primary-rgb), 0.12),
+        0 14px 26px rgba(var(--primary-rgb), 0.08);
     }
     .view-only-note {
       grid-column: 1 / -1;
@@ -298,22 +341,22 @@
       margin-bottom: 4px;
       padding: 10px 12px;
       border-radius: 12px;
-      border: 1px solid #cfd9e8;
-      background: #f2f7ff;
-      color: #2f4a73;
+      border: 1px solid rgba(var(--primary-rgb), 0.14);
+      background: rgba(var(--primary-rgb), 0.08);
+      color: var(--primary-dark);
       font-size: 12px;
       font-weight: 600;
       line-height: 1.45;
     }
     .readonly-field {
-      background: #f5f8fd !important;
-      color: #4f607a !important;
-      border-color: #d2dceb !important;
+      background: rgba(var(--primary-rgb), 0.08) !important;
+      color: var(--muted) !important;
+      border-color: rgba(var(--primary-rgb), 0.12) !important;
       cursor: not-allowed;
     }
     .readonly-toggle-grid label {
       opacity: 0.72;
-      background: #f5f8fd;
+      background: rgba(var(--primary-rgb), 0.08);
     }
 
     @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }

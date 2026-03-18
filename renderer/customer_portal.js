@@ -325,13 +325,13 @@ function applyIntentDefaults() {
     if (!focusedIntent) {
         setStatus('Fill up the form to continue.', false);
         if (primaryCardTitle) {
-            primaryCardTitle.textContent = 'Start Chat';
+            primaryCardTitle.textContent = 'New Support Request';
         }
         if (primaryCardCopy) {
-            primaryCardCopy.textContent = 'Mag-send ng message request para diretsong pumasok sa support chat thread.';
+            primaryCardCopy.textContent = 'Send your concern so Customer Service can reply in the same request thread.';
         }
         if (createRequestBtn) {
-            createRequestBtn.textContent = 'Start Chat';
+            createRequestBtn.textContent = 'Send Request';
         }
         if (companyCodeLabel) {
             companyCodeLabel.textContent = 'Company ID';
@@ -364,7 +364,7 @@ function applyIntentDefaults() {
             secondaryCardTitle.textContent = 'Open Existing Request';
         }
         if (secondaryCardCopy) {
-            secondaryCardCopy.textContent = 'Ilagay ang request code at contact number para ma-open at ma-edit/chat mo ulit.';
+            secondaryCardCopy.textContent = 'Use your request code and contact number to reopen and continue an existing Customer Service conversation.';
         }
         return;
     }
@@ -2871,7 +2871,7 @@ function applyBranding(branding) {
     const backgroundImagePath = String(branding.backgroundImagePath || '').trim();
     const focusedIntent = isFocusedIntent();
     const companyRegistration = isCompanyRegistrationIntent();
-    const titleLabel = companyRegistration ? 'Register Company ID' : (isSignupIntent() ? 'Sign Up' : 'Customer Chat');
+    const titleLabel = companyRegistration ? 'Register Company ID' : (isSignupIntent() ? 'Sign Up' : 'Customer Service');
 
     document.title = `${appName} ${titleLabel}`;
     portalTitle.textContent = `${appName} ${titleLabel}`;
@@ -2886,8 +2886,8 @@ function applyBranding(branding) {
             : 'Submit your sign up request for admin approval.';
     } else {
         portalSubtitle.textContent = companyName
-            ? `Company: ${companyName} | Chat directly with support.`
-            : 'Send your message and chat directly with support.';
+            ? `Company: ${companyName} | Start a new request or reopen an existing Customer Service conversation.`
+            : 'Start a new support request or reopen an existing Customer Service conversation.';
     }
 
     document.documentElement.style.setProperty('--accent', primaryColor);

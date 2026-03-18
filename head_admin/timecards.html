@@ -30,6 +30,22 @@
       --success: var(--tenant-success, #0f766e);
       --danger: var(--tenant-danger, #dc2626);
       --warning: var(--tenant-warning, #d97706);
+      --surface-text-strong: rgba(248, 250, 252, 0.96);
+      --surface-text: rgba(226, 232, 240, 0.92);
+      --surface-muted: rgba(203, 213, 225, 0.78);
+      --surface-line: rgba(255, 255, 255, 0.18);
+      --surface-line-strong: rgba(255, 255, 255, 0.28);
+      --surface-card:
+        radial-gradient(circle at top right, rgba(var(--primary-rgb), 0.24) 0%, transparent 34%),
+        linear-gradient(165deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.06) 34%, rgba(255, 255, 255, 0.02) 100%),
+        linear-gradient(180deg, rgba(4, 11, 21, 0.12), rgba(4, 11, 21, 0.4)),
+        rgba(4, 11, 21, 0.34);
+      --surface-card-soft:
+        linear-gradient(165deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05)),
+        rgba(4, 11, 21, 0.2);
+      --surface-elevated:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04)),
+        rgba(255, 255, 255, 0.03);
     }
 
     * {
@@ -39,6 +55,7 @@
     html,
     body {
       min-height: 100%;
+      height: 100%;
     }
 
     body {
@@ -48,26 +65,29 @@
       min-height: 100vh;
       background: var(--tenant-page-gradient, linear-gradient(155deg, #f8fbff 0%, #eef4ff 55%, #ffffff 100%));
       color: var(--text-strong);
-      overflow: auto;
+      overflow: hidden;
       gap: 18px;
       padding: 18px;
     }
 
     .side-panel,
     .main-content {
+      min-height: 0;
+      height: calc(100vh - 36px);
       border-radius: 30px;
-      border: 1px solid rgba(255, 255, 255, 0.78);
+      border: 1px solid var(--surface-line);
       box-shadow: var(--shadow);
-      backdrop-filter: blur(16px);
+      backdrop-filter: blur(20px) saturate(1.08);
     }
 
     .side-panel {
       width: 290px;
       flex: 0 0 290px;
+      display: flex;
+      flex-direction: column;
       color: #ffffff;
       padding: 20px 14px;
-      overflow-y: auto;
-      overflow-x: hidden;
+      overflow: hidden;
       background:
         radial-gradient(circle at top right, rgba(255, 255, 255, 0.16) 0%, transparent 26%),
         linear-gradient(180deg, var(--tenant-sidebar-a, #193254) 0%, var(--tenant-sidebar-b, #0b1325) 100%);
@@ -99,6 +119,13 @@
     #employeeList {
       display: grid;
       gap: 10px;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 4px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(var(--primary-rgb), 0.32) transparent;
     }
 
     .employee-item {
@@ -209,17 +236,23 @@
 
     .main-content {
       flex: 1;
+      display: flex;
+      flex-direction: column;
       min-width: 0;
-      overflow-y: auto;
+      overflow: hidden;
       padding: 26px 28px;
-      background: linear-gradient(165deg, rgba(255, 255, 255, 0.96), var(--panel));
+      background: var(--surface-card);
       position: relative;
+      box-shadow:
+        0 30px 72px rgba(2, 6, 23, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.16);
     }
 
     .hero-head {
       display: flex;
-      align-items: flex-end;
+      align-items: flex-start;
       justify-content: space-between;
+      flex-wrap: wrap;
       gap: 16px;
       margin-bottom: 18px;
     }
@@ -229,14 +262,16 @@
       font-family: "Sora", "Segoe UI", sans-serif;
       font-size: clamp(28px, 4vw, 38px);
       line-height: 1.05;
-      color: var(--text-strong);
+      color: var(--surface-text-strong);
+      overflow-wrap: anywhere;
     }
 
     .hero-head p {
       margin: 10px 0 0;
-      color: var(--muted);
+      color: var(--surface-muted);
       font-size: 15px;
       line-height: 1.6;
+      overflow-wrap: anywhere;
     }
 
     .surface-note {
@@ -246,9 +281,9 @@
       min-height: 40px;
       padding: 0 14px;
       border-radius: 999px;
-      border: 1px solid rgba(var(--primary-rgb), 0.16);
-      background: rgba(var(--primary-rgb), 0.08);
-      color: var(--primary-strong);
+      border: 1px solid var(--surface-line);
+      background: var(--surface-card-soft);
+      color: var(--surface-text);
       font-size: 13px;
       font-weight: 700;
       white-space: nowrap;
@@ -258,18 +293,19 @@
       display: flex;
       gap: 14px;
       margin-bottom: 18px;
-      background: rgba(var(--primary-rgb), 0.05);
+      background: var(--surface-card-soft);
       padding: 16px;
       border-radius: 22px;
       align-items: center;
       flex-wrap: wrap;
-      border: 1px solid rgba(var(--primary-rgb), 0.08);
+      border: 1px solid var(--surface-line);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
     }
 
     .selectors label {
       font-weight: 700;
       margin-right: 6px;
-      color: var(--text);
+      color: var(--surface-text);
       font-size: 13px;
     }
 
@@ -277,9 +313,9 @@
       min-height: 42px;
       padding: 0 12px;
       border-radius: 14px;
-      border: 1px solid var(--line);
+      border: 1px solid rgba(255, 255, 255, 0.14);
       background: rgba(255, 255, 255, 0.9);
-      color: var(--text-strong);
+      color: #0f172a;
       outline: none;
     }
 
@@ -289,18 +325,21 @@
     }
 
     .week-note {
-      color: var(--muted);
+      color: var(--surface-muted);
       font-size: 13px;
       font-weight: 600;
     }
 
     .table-shell {
+      flex: 0 0 auto;
       overflow-x: auto;
       overflow-y: hidden;
       border-radius: 24px;
-      border: 1px solid rgba(var(--primary-rgb), 0.1);
-      background: rgba(255, 255, 255, 0.88);
-      box-shadow: var(--shadow-soft);
+      border: 1px solid var(--surface-line);
+      background: var(--surface-elevated);
+      box-shadow:
+        0 24px 52px rgba(2, 6, 23, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
     }
 
     table {
@@ -317,8 +356,10 @@
     }
 
     th {
-      background: rgba(var(--primary-rgb), 0.1);
-      color: var(--primary-strong);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)),
+        rgba(var(--primary-rgb), 0.14);
+      color: var(--surface-text);
       font-weight: 800;
       font-size: 12px;
       letter-spacing: 0.08em;
@@ -326,12 +367,21 @@
     }
 
     td {
-      color: var(--text-strong);
+      color: var(--surface-text);
       font-size: 14px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+        rgba(4, 11, 21, 0.08);
     }
 
     tbody tr:hover {
-      background: rgba(var(--primary-rgb), 0.04);
+      background: rgba(var(--primary-rgb), 0.08);
+    }
+
+    tbody tr:hover td {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)),
+        rgba(var(--primary-rgb), 0.08);
     }
 
     tbody tr:last-child td {
@@ -354,12 +404,12 @@
     }
 
     .status-excuse {
-      color: var(--primary-strong);
+      color: var(--surface-text);
       font-weight: 800;
     }
 
     .status-day-off {
-      color: var(--muted);
+      color: var(--surface-muted);
       font-weight: 800;
     }
 
@@ -376,7 +426,7 @@
 
     .empty-row {
       padding: 40px 18px !important;
-      color: var(--muted);
+      color: var(--surface-muted);
       text-align: center;
     }
 
@@ -395,14 +445,22 @@
       .main-content {
         width: 100%;
         flex: none;
+        height: auto;
       }
 
       .side-panel {
         padding: 18px 14px;
+        overflow: visible;
       }
 
       .main-content {
         padding: 20px;
+        overflow: visible;
+      }
+
+      #employeeList {
+        overflow: visible;
+        padding-right: 0;
       }
 
       .hero-head {
