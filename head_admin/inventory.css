@@ -1,14 +1,21 @@
 :root {
-  --bg: #0b1523;
-  --panel: rgba(8, 14, 26, 0.88);
-  --ink: #f8fafc;
-  --muted: #a6b3c6;
-  --line: #2a3b51;
-  --accent: #3fd1b3;
-  --accent-strong: #2ba891;
-  --accent-soft: #1f3f5a;
-  --danger: #ef4444;
-  --shadow: 0 24px 56px rgba(0, 0, 0, 0.42);
+  --bg: var(--tenant-bg, #f6f9ff);
+  --panel: var(--tenant-panel, rgba(255, 255, 255, 0.88));
+  --panel-strong: var(--tenant-panel-strong, rgba(255, 255, 255, 0.96));
+  --ink: var(--tenant-text-strong, #102341);
+  --muted: var(--tenant-muted, #64748b);
+  --line: var(--tenant-line, rgba(148, 163, 184, 0.24));
+  --accent: var(--tenant-primary, #3b82f6);
+  --accent-strong: var(--tenant-primary-strong, #1d4ed8);
+  --accent-soft: rgba(var(--tenant-primary-rgb, 59, 130, 246), 0.12);
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-alt: rgba(244, 248, 255, 0.94);
+  --surface-hover: rgba(231, 240, 255, 0.96);
+  --surface-text: var(--tenant-text, #334155);
+  --surface-line: rgba(var(--tenant-primary-rgb, 59, 130, 246), 0.1);
+  --danger-soft: rgba(220, 38, 38, 0.1);
+  --danger: var(--tenant-danger, #dc2626);
+  --shadow: var(--tenant-shadow-soft, 0 20px 44px rgba(37, 117, 252, 0.12));
 }
 
 * {
@@ -18,18 +25,18 @@
 select,
 select option {
   color: var(--ink) !important;
-  background-color: var(--panel) !important;
+  background-color: var(--panel-strong) !important;
 }
 
 select option:checked {
-  background-color: rgba(63, 209, 179, 0.12) !important;
-  color: #fff !important;
+  background-color: var(--accent-soft) !important;
+  color: var(--ink) !important;
 }
 
 select option:hover,
 select option:focus {
-  background-color: rgba(63, 209, 179, 0.14) !important;
-  color: #fff !important;
+  background-color: rgba(var(--tenant-primary-rgb, 59, 130, 246), 0.08) !important;
+  color: var(--ink) !important;
 }
 
 body {
@@ -38,8 +45,9 @@ body {
   color: var(--ink);
   font-family: "Trebuchet MS", "Segoe UI", sans-serif;
   background:
-    radial-gradient(circle at top right, rgba(180, 83, 9, 0.18), transparent 24%),
-    linear-gradient(180deg, #fff8ef 0%, var(--bg) 100%);
+    radial-gradient(circle at top right, rgba(var(--tenant-primary-rgb, 59, 130, 246), 0.16), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(var(--tenant-primary-rgb, 59, 130, 246), 0.1), transparent 26%),
+    var(--tenant-page-gradient, linear-gradient(180deg, #fbfdff 0%, var(--bg) 100%));
 }
 
 button,
@@ -160,15 +168,19 @@ input {
   width: 100%;
   min-height: 46px;
   padding: 12px 14px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(var(--tenant-primary-rgb, 59, 130, 246), 0.16);
   border-radius: 16px;
-  background: #fff;
-  color: var(--ink);
+  background: var(--surface);
+  color: var(--surface-text);
+}
+
+input::placeholder {
+  color: var(--muted);
 }
 
 input:focus {
-  border-color: rgba(180, 83, 9, 0.5);
-  outline: 2px solid rgba(180, 83, 9, 0.12);
+  border-color: rgba(var(--tenant-primary-rgb, 59, 130, 246), 0.32);
+  outline: 2px solid rgba(var(--tenant-primary-rgb, 59, 130, 246), 0.12);
   outline-offset: 0;
 }
 
@@ -182,13 +194,14 @@ button {
 }
 
 .primary-btn {
-  background: linear-gradient(135deg, var(--accent) 0%, #d97706 100%);
-  color: #fff;
+  background: var(--tenant-button-gradient, linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%));
+  color: var(--tenant-on-primary, #ffffff);
 }
 
 .secondary-btn {
-  background: var(--accent-soft);
-  color: var(--accent-strong);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
 }
 
 .icon-btn {
@@ -196,8 +209,9 @@ button {
   min-width: 40px;
   padding: 0;
   border-radius: 999px;
-  background: #f3ede2;
+  background: var(--surface);
   color: var(--ink);
+  border: 1px solid var(--line);
 }
 
 .toolbar-buttons {
@@ -220,7 +234,7 @@ button {
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: 22px;
-  background: #fff;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 248, 255, 0.96));
 }
 
 table {
@@ -231,14 +245,14 @@ table {
 th,
 td {
   padding: 14px 16px;
-  border-bottom: 1px solid #efe4d5;
+  border-bottom: 1px solid var(--surface-line);
   text-align: left;
   font-size: 14px;
   vertical-align: middle;
 }
 
 th {
-  background: #fef6ea;
+  background: var(--accent-soft);
   color: var(--accent-strong);
   font-size: 11px;
   font-weight: 800;
@@ -246,8 +260,17 @@ th {
   text-transform: uppercase;
 }
 
-tbody tr:hover {
-  background: #fffaf2;
+td {
+  color: var(--surface-text);
+  background: var(--surface);
+}
+
+tbody tr:nth-child(even) td {
+  background: var(--surface-alt);
+}
+
+tbody tr:hover td {
+  background: var(--surface-hover);
 }
 
 .price-cell {
@@ -271,8 +294,8 @@ tbody tr:hover {
 }
 
 .delete-btn {
-  background: #fee4e2;
-  color: var(--danger);
+  background: var(--danger-soft);
+  color: #b91c1c;
 }
 
 .empty {
@@ -288,7 +311,7 @@ tbody tr:hover {
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: rgba(28, 20, 10, 0.45);
+  background: rgba(15, 23, 42, 0.16);
   backdrop-filter: blur(6px);
 }
 

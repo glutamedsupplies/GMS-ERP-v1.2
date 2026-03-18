@@ -5,9 +5,6 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Time Cards</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="../shared/theme-preload.js"></script>
   <style>
@@ -60,7 +57,8 @@
 
     body {
       margin: 0;
-      font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+      font-family: "Segoe UI Variable", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      font-weight: 400;
       display: flex;
       min-height: 100vh;
       background: var(--tenant-page-gradient, linear-gradient(155deg, #f8fbff 0%, #eef4ff 55%, #ffffff 100%));
@@ -97,15 +95,16 @@
       margin: 0 0 10px;
       color: rgba(226, 232, 240, 0.8);
       font-size: 11px;
-      font-weight: 800;
+      font-weight: 700;
       letter-spacing: 0.16em;
       text-transform: uppercase;
     }
 
     .side-panel h3 {
       margin: 0 0 18px;
-      font-family: "Sora", "Segoe UI", sans-serif;
+      font-family: "Segoe UI Variable", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
       font-size: 26px;
+      font-weight: 600;
       line-height: 1.08;
     }
 
@@ -195,14 +194,14 @@
 
     .employee-copy strong {
       color: #ffffff;
-      font-weight: 700;
+      font-weight: 600;
       line-height: 1.4;
     }
 
     .employee-copy small {
       color: rgba(226, 232, 240, 0.72);
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 500;
       line-height: 1.4;
     }
 
@@ -215,7 +214,7 @@
       padding: 0 10px;
       border-radius: 999px;
       font-size: 11px;
-      font-weight: 800;
+      font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       white-space: nowrap;
@@ -259,8 +258,9 @@
 
     .hero-head h2 {
       margin: 0;
-      font-family: "Sora", "Segoe UI", sans-serif;
+      font-family: "Segoe UI Variable", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
       font-size: clamp(28px, 4vw, 38px);
+      font-weight: 600;
       line-height: 1.05;
       color: var(--surface-text-strong);
       overflow-wrap: anywhere;
@@ -285,7 +285,7 @@
       background: var(--surface-card-soft);
       color: var(--surface-text);
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 600;
       white-space: nowrap;
     }
 
@@ -303,7 +303,7 @@
     }
 
     .selectors label {
-      font-weight: 700;
+      font-weight: 600;
       margin-right: 6px;
       color: var(--surface-text);
       font-size: 13px;
@@ -327,7 +327,7 @@
     .week-note {
       color: var(--surface-muted);
       font-size: 13px;
-      font-weight: 600;
+      font-weight: 500;
     }
 
     .table-shell {
@@ -360,7 +360,7 @@
         linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)),
         rgba(var(--primary-rgb), 0.14);
       color: var(--surface-text);
-      font-weight: 800;
+      font-weight: 700;
       font-size: 12px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -390,32 +390,32 @@
 
     .status-present {
       color: var(--success);
-      font-weight: 800;
+      font-weight: 700;
     }
 
     .status-late {
       color: var(--warning);
-      font-weight: 800;
+      font-weight: 700;
     }
 
     .status-absent {
       color: var(--danger);
-      font-weight: 800;
+      font-weight: 700;
     }
 
     .status-excuse {
       color: var(--surface-text);
-      font-weight: 800;
+      font-weight: 700;
     }
 
     .status-day-off {
       color: var(--surface-muted);
-      font-weight: 800;
+      font-weight: 700;
     }
 
     .status-suspended {
       color: #475569;
-      font-weight: 800;
+      font-weight: 700;
     }
 
     .status-dropdown {

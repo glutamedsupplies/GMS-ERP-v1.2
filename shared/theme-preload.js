@@ -79,29 +79,29 @@
     function buildBrandTheme(primaryColor = DEFAULT_PRIMARY_COLOR) {
         const primary = normalizeHexColor(primaryColor, DEFAULT_PRIMARY_COLOR);
         const primaryRgb = rgbTupleToCss(hexToRgb(primary));
-        const primaryStrong = mixHexColors(primary, '#ffffff', 0.12);
-        const primaryDeep = mixHexColors(primary, '#020617', 0.78);
-        const buttonStrong = mixHexColors(primary, '#08111d', 0.32);
-        const primarySoft = mixHexColors(primary, '#cbd5e1', 0.36);
-        const primarySoftest = mixHexColors(primary, '#e2e8f0', 0.22);
-        const text = mixHexColors(primary, '#cbd5e1', 0.82);
-        const textStrong = mixHexColors(primary, '#f8fafc', 0.9);
-        const muted = mixHexColors(primary, '#94a3b8', 0.78);
-        const line = hexToRgba(primarySoftest, 0.18);
-        const lineStrong = hexToRgba(primarySoft, 0.3);
-        const bg = mixHexColors(primary, '#0b1220', 0.78);
-        const bgAlt = mixHexColors(primary, '#111c32', 0.68);
-        const panelStrong = hexToRgba(primaryDeep, 0.94);
-        const panel = hexToRgba(primaryDeep, 0.8);
-        const panelAlt = hexToRgba(primaryDeep, 0.66);
-        const sidebarA = mixHexColors(primary, '#11253f', 0.68);
-        const sidebarB = mixHexColors(primary, '#020617', 0.82);
-        const onPrimary = getReadableTextColor(buttonStrong);
-        const success = mixHexColors(primary, '#0f766e', 0.38);
+        const primaryStrong = mixHexColors(primary, '#0f172a', 0.18);
+        const primaryDeep = mixHexColors(primary, '#0f172a', 0.34);
+        const buttonStrong = mixHexColors(primary, '#0f172a', 0.26);
+        const primarySoft = mixHexColors(primary, '#dbeafe', 0.72);
+        const primarySoftest = mixHexColors(primary, '#f8fbff', 0.9);
+        const text = mixHexColors(primary, '#475569', 0.88);
+        const textStrong = mixHexColors(primary, '#10233f', 0.92);
+        const muted = mixHexColors(primary, '#64748b', 0.82);
+        const line = hexToRgba(mixHexColors(primary, '#cbd5e1', 0.82), 0.56);
+        const lineStrong = hexToRgba(mixHexColors(primary, '#94a3b8', 0.54), 0.48);
+        const bg = mixHexColors(primary, '#f8fbff', 0.92);
+        const bgAlt = mixHexColors(primary, '#eef5ff', 0.84);
+        const panelStrong = hexToRgba(mixHexColors(primary, '#ffffff', 0.9), 0.98);
+        const panel = hexToRgba(mixHexColors(primary, '#ffffff', 0.84), 0.86);
+        const panelAlt = hexToRgba(mixHexColors(primary, '#ffffff', 0.78), 0.74);
+        const sidebarA = mixHexColors(primary, '#173450', 0.58);
+        const sidebarB = mixHexColors(primary, '#0f2339', 0.72);
+        const onPrimary = getReadableTextColor(primary);
+        const success = mixHexColors(primary, '#0f766e', 0.58);
         const danger = '#dc2626';
         const warning = '#d97706';
-        const bgStart = mixHexColors(primary, '#08111d', 0.78);
-        const bgEnd = mixHexColors(primary, '#13253e', 0.66);
+        const bgStart = mixHexColors(primary, '#f8fbff', 0.9);
+        const bgEnd = mixHexColors(primary, '#edf5ff', 0.84);
 
         return {
             primary,
@@ -129,18 +129,18 @@
             bgStart,
             bgEnd,
             pageGradient: [
-                `radial-gradient(circle at 12% 18%, ${hexToRgba(primary, 0.28)} 0%, transparent 36%)`,
-                `radial-gradient(circle at 88% 10%, rgba(251, 191, 36, 0.2) 0%, transparent 34%)`,
-                `linear-gradient(140deg, ${bgStart} 0%, ${bgEnd} 56%, ${mixHexColors(bgEnd, '#020617', 0.16)} 100%)`
+                `radial-gradient(circle at 12% 18%, ${hexToRgba(primary, 0.16)} 0%, transparent 34%)`,
+                `radial-gradient(circle at 88% 10%, ${hexToRgba(primaryStrong, 0.1)} 0%, transparent 30%)`,
+                `linear-gradient(145deg, ${bgStart} 0%, ${bgEnd} 58%, ${mixHexColors(bgEnd, '#ffffff', 0.22)} 100%)`
             ].join(', '),
-            darkGradient: `linear-gradient(145deg, ${bgStart} 0%, ${bgEnd} 100%)`,
-            buttonGradient: `linear-gradient(135deg, ${mixHexColors(primary, '#ffffff', 0.16)} 0%, ${primary} 56%, ${buttonStrong} 100%)`,
-            ring: hexToRgba(primary, 0.26),
-            glow: hexToRgba(primary, 0.34),
-            shadowSoft: '0 22px 52px rgba(2, 6, 23, 0.42)',
-            shadow: '0 36px 90px rgba(2, 6, 23, 0.55)',
-            successBg: hexToRgba(success, 0.18),
-            dangerBg: hexToRgba(danger, 0.16)
+            darkGradient: `linear-gradient(145deg, ${sidebarA} 0%, ${sidebarB} 100%)`,
+            buttonGradient: `linear-gradient(135deg, ${mixHexColors(primary, '#ffffff', 0.22)} 0%, ${primary} 60%, ${buttonStrong} 100%)`,
+            ring: hexToRgba(primary, 0.18),
+            glow: hexToRgba(primary, 0.22),
+            shadowSoft: '0 18px 40px rgba(15, 23, 42, 0.12)',
+            shadow: '0 24px 58px rgba(15, 23, 42, 0.16)',
+            successBg: hexToRgba(success, 0.14),
+            dangerBg: hexToRgba(danger, 0.12)
         };
     }
 
@@ -219,7 +219,7 @@
         rootStyle.setProperty('--primary-soft', theme.primarySoftest);
         rootStyle.setProperty('--accent', theme.primary);
         rootStyle.setProperty('--accent-strong', theme.primaryStrong);
-        rootStyle.setProperty('--text', theme.textStrong);
+        rootStyle.setProperty('--text', theme.text);
         rootStyle.setProperty('--muted', theme.muted);
         rootStyle.setProperty('--line', theme.line);
         rootStyle.setProperty('--panel', theme.panel);
@@ -227,10 +227,10 @@
         rootStyle.setProperty('--shadow', theme.shadowSoft);
         rootStyle.setProperty('--bg-start', theme.bgStart);
         rootStyle.setProperty('--bg-end', theme.bgEnd);
-        rootStyle.setProperty('--card-bg', hexToRgba(theme.primaryDeep, 0.88));
-        rootStyle.setProperty('--card-border', hexToRgba(theme.primarySoft, 0.18));
-        rootStyle.setProperty('--input-bg', hexToRgba(theme.primarySoftest, 0.1));
-        rootStyle.setProperty('--input-muted', hexToRgba(theme.primarySoftest, 0.08));
+        rootStyle.setProperty('--card-bg', theme.panelStrong);
+        rootStyle.setProperty('--card-border', theme.lineStrong);
+        rootStyle.setProperty('--input-bg', hexToRgba(theme.primary, 0.06));
+        rootStyle.setProperty('--input-muted', hexToRgba(theme.primary, 0.04));
         rootStyle.setProperty('--success', theme.success);
         rootStyle.setProperty('--danger', theme.danger);
         rootStyle.setProperty('--success-bg', theme.successBg);
