@@ -25,7 +25,7 @@
       </div>
 
       <div class="top-actions">
-        <button id="customerChatBtn" type="button" class="btn-soft">Customer Chat</button>
+        <button id="customerChatBtn" type="button" class="btn-soft">Request Desk</button>
         <button id="refreshBtn" type="button" class="btn-soft">Refresh Data</button>
         <button id="logoutBtn" type="button" class="btn-danger">Log Out</button>
         <span id="status">Loading...</span>
@@ -157,10 +157,10 @@
         <h2>Customer Service Accounts</h2>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
           <p class="section-hint" style="margin:0;">Manage the logins who will receive escalated AI concerns.</p>
-          <button id="openCustomerChatDeskBtn" type="button" class="btn-soft">Open Customer Chat Desk</button>
+          <button id="openCustomerChatDeskBtn" type="button" class="btn-soft">Open Request Desk</button>
         </div>
       </div>
-      <p class="muted" style="margin:0 0 10px;">Dito gumagawa ng account. Puwede nilang buksan ang hiwalay na Customer Chat Desk page kung gusto nila ng mas focused view.</p>
+      <p class="muted" style="margin:0 0 10px;">Dito pumapasok ang customer chats pati Company ID or subscription requests. Puwede nilang buksan ang hiwalay na Request Desk page kung gusto nila ng mas focused view.</p>
       <div id="customerServiceAccountsList" class="list"></div>
     </section>
 
@@ -208,17 +208,6 @@
       <div id="accessList" class="list"></div>
     </section>
 
-    <section class="card" style="margin-top:14px;">
-      <div class="card-head">
-        <h2>Blocked Devices</h2>
-        <p class="section-hint">Active blocks across device IDs and IPs</p>
-      </div>
-      <div class="toolbar">
-        <input id="blockedFilter" type="search" placeholder="Search device, IP, host, reason">
-        <span id="blockedSummary" class="muted"></span>
-      </div>
-      <div id="blockedList" class="list"></div>
-    </section>
   </div>
 
   <div id="planEditModal" class="modal" aria-hidden="true">

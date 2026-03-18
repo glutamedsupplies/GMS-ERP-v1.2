@@ -7,7 +7,7 @@
     const CONFIG = {
         endpoint: '/api/public/ai/chat',
         title: 'GMS AI Assistant',
-        subtitle: 'Taglish help for sales, orders, tracking, payments, reports, and app issues.'
+        subtitle: 'Taglish help for login, modules, troubleshooting, and GMS ERP specialist flows.'
     };
     const STORAGE = {
         conversationKey: 'gmsAiConversationId:v2',
@@ -285,7 +285,7 @@
     }
 
     function getWelcomeMessage() {
-        return 'Hi! Ako ang official AI assistant ng GMS ERP. Pwede tayo mag-Taglish. Sabihin mo lang kung sales, order, tracking, payment, report, o app issue ang concern mo at gagabayan kita nang malinaw step by step.';
+        return 'Hi! Ako ang GMS AI Assistant. Pwede tayo mag-Taglish. Para akong may specialist modes para sa login, sales, tracking, inventory, reports, at admin setup. I-type mo lang yung concern mo at gagabayan kita nang malinaw step by step.';
     }
 
     function normalizeAssistantReply(text = '') {
@@ -426,7 +426,7 @@
         }
 
         const inputWrap = createEl('div', 'gms-ai-input');
-        textarea = createEl('textarea', 'gms-ai-textarea', { placeholder: 'I-type mo yung tanong o issue mo...' });
+        textarea = createEl('textarea', 'gms-ai-textarea', { placeholder: 'I-type mo yung tanong o issue mo... halimbawa: paano mag-login o ano ang Order Form?' });
         sendButton = createEl('button', 'gms-ai-send', { type: 'button', text: 'Send' });
         inputWrap.appendChild(textarea);
         inputWrap.appendChild(sendButton);

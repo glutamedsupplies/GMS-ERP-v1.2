@@ -218,6 +218,57 @@ button {
   grid-column: 1 / -1;
 }
 
+.payment-config-intro {
+  margin-top: 4px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(11, 110, 183, 0.14);
+  background: linear-gradient(135deg, rgba(11, 110, 183, 0.08), rgba(255, 255, 255, 0.94));
+}
+
+.payment-config-intro h3,
+.payment-method-head h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #13345c;
+}
+
+.helper-copy,
+.payment-method-head p {
+  margin: 6px 0 0;
+  color: var(--sa-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.payment-method-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.payment-method-card {
+  border-radius: 22px;
+  border: 1px solid #d6e2f2;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(244, 248, 255, 0.92));
+  box-shadow: var(--sa-shadow-soft);
+  padding: 14px;
+}
+
+.payment-method-head {
+  margin-bottom: 10px;
+}
+
+.payment-method-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.payment-method-fields .full {
+  grid-column: 1 / -1;
+}
+
 label {
   display: block;
   margin-bottom: 5px;
@@ -786,6 +837,7 @@ button[disabled] {
 
   .form,
   .modal-grid,
+  .payment-method-fields,
   .company-edit-grid,
   .customer-chat-grid,
   .grid--compose,

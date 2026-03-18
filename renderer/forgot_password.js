@@ -12,9 +12,14 @@ const statusEl = document.getElementById('status');
 const resultBox = document.getElementById('resultBox');
 const forgotTitle = document.getElementById('forgotTitle');
 const forgotSubtitle = document.getElementById('forgotSubtitle');
+const brandingHint = document.getElementById('brandingHint');
 const openChatLink = document.getElementById('openChatLink');
+const backToLoginLink = document.getElementById('backToLoginLink');
 const brandLogo = document.getElementById('brandLogo');
 const backgroundPhoto = document.getElementById('backgroundPhoto');
+const resetSection = document.getElementById('resetSection');
+const newPasswordGroup = document.getElementById('newPasswordGroup');
+const confirmPasswordGroup = document.getElementById('confirmPasswordGroup');
 
 let brandingTimer = null;
 
@@ -29,7 +34,7 @@ function initialize() {
         companyCodeInput.value = initialCompanyCode;
     }
 
-    updateOpenChatLink();
+    updateNavigationLinks();
     refreshBranding();
     updatePasswordInputs();
 
@@ -46,7 +51,7 @@ function initialize() {
 
     companyCodeInput?.addEventListener('input', () => {
         resetFeedback();
-        updateOpenChatLink();
+        updateNavigationLinks();
         if (brandingTimer) {
             window.clearTimeout(brandingTimer);
         }
@@ -55,7 +60,9 @@ function initialize() {
         }, 180);
     });
 
-    emailInput?.addEventListener('input', resetFeedback);
+    [emailInput, codeInput, newPasswordInput, confirmPasswordInput].forEach((input) => {
+        input?.addEventListener('input', resetFeedback);
+    });
 }
 
 function updatePasswordInputs() {
@@ -68,6 +75,16 @@ function updatePasswordInputs() {
     }
     if (resetPasswordBtn) {
         resetPasswordBtn.disabled = !hasCode;
+    }
+    if (resetSection) {
+        resetSection.classList.toggle('is-active', hasCode);
+        resetSection.setAttribute('aria-disabled', hasCode ? 'false' : 'true');
+    }
+    if (newPasswordGroup) {
+        newPasswordGroup.classList.toggle('is-disabled', !hasCode);
+    }
+    if (confirmPasswordGroup) {
+        confirmPasswordGroup.classList.toggle('is-disabled', !hasCode);
     }
 }
 
@@ -152,14 +169,21 @@ async function submitPasswordReset() {
     }
 }
 
-function updateOpenChatLink() {
-    if (!openChatLink) {
-        return;
-    }
+function updateNavigationLinks() {
     const companyCode = String(companyCodeInput?.value || '').trim();
-    openChatLink.href = companyCode
-        ? `/renderer/customer_portal.html?companyCode=${encodeURIComponent(companyCode)}`
-        : '/renderer/customer_portal.html';
+    const encodedCompanyCode = companyCode ? encodeURIComponent(companyCode) : '';
+
+    if (openChatLink) {
+        openChatLink.href = encodedCompanyCode
+            ? `/renderer/customer_portal.html?companyCode=${encodedCompanyCode}`
+            : '/renderer/customer_portal.html';
+    }
+
+    if (backToLoginLink) {
+        backToLoginLink.href = encodedCompanyCode
+            ? `/login.html?companyCode=${encodedCompanyCode}`
+            : '/login.html';
+    }
 }
 
 function setButtonBusy(button, isBusy, label) {
@@ -233,6 +257,12 @@ function applyBranding(branding) {
         forgotSubtitle.textContent = companyName
             ? `Company: ${companyName} | Request a reset code.`
             : 'Enter your email to receive a reset code.';
+    }
+
+    if (brandingHint) {
+        brandingHint.textContent = companyName
+            ? `Theme preview loaded for ${companyName}. Use the same company ID while resetting your password.`
+            : 'Type your company ID to preview your company theme.';
     }
 
     if (brandLogo) {

@@ -656,10 +656,6 @@
             if (response.status === 401 && !options.skipAuthRedirect) {
                 handleUnauthorized();
             }
-            if (response.status === 403 && payload.code === 'DEVICE_BLOCKED') {
-                handleDeviceBlocked(errorMessage);
-            }
-
             const error = new Error(errorMessage);
             error.code = payload.code || `HTTP_${response.status}`;
             throw error;
@@ -1135,58 +1131,6 @@
         }, 0);
     }
 
-    function handleDeviceBlocked(message = 'This device has been blocked by the administrator.') {
-        clearStoredSession();
-
-        if (redirectPending) {
-            return;
-        }
-
-        redirectPending = true;
-        window.setTimeout(() => {
-            redirectPending = false;
-            if (!(document.body instanceof HTMLElement)) {
-                window.alert(message);
-                return;
-            }
-
-            document.title = 'Device Blocked';
-            document.body.innerHTML = '';
-
-            const shell = document.createElement('main');
-            shell.style.minHeight = '100vh';
-            shell.style.display = 'grid';
-            shell.style.placeItems = 'center';
-            shell.style.padding = '24px';
-            shell.style.background = 'linear-gradient(180deg, #fff7ed 0%, #ffffff 100%)';
-
-            const card = document.createElement('section');
-            card.style.maxWidth = '520px';
-            card.style.width = '100%';
-            card.style.padding = '24px';
-            card.style.borderRadius = '18px';
-            card.style.background = '#ffffff';
-            card.style.boxShadow = '0 24px 70px rgba(15, 23, 42, 0.12)';
-            card.style.border = '1px solid rgba(249, 115, 22, 0.18)';
-
-            const heading = document.createElement('h1');
-            heading.textContent = 'Device Blocked';
-            heading.style.margin = '0 0 12px';
-            heading.style.color = '#9a3412';
-
-            const copy = document.createElement('p');
-            copy.textContent = message || 'This device has been blocked by the administrator.';
-            copy.style.margin = '0';
-            copy.style.color = '#7c2d12';
-            copy.style.lineHeight = '1.6';
-
-            card.appendChild(heading);
-            card.appendChild(copy);
-            shell.appendChild(card);
-            document.body.appendChild(shell);
-        }, 0);
-    }
-
     async function getCurrentSession() {
         const user = await request('/api/session', {
             skipAuthRedirect: true
@@ -1268,13 +1212,46 @@
         getPublicBranding: ({ companyCode = '' } = {}) => request(`/api/public-branding?companyCode=${encodeURIComponent(companyCode)}`, {
             skipAuthRedirect: true
         }),
+        getPublicCompanyRegistrationConfig: () => request('/api/public/company-registration-config', {
+            skipAuthRedirect: true
+        }),
+        getPublicCompanyRegistrationPlans: () => request('/api/public/company-registration-plans', {
+            skipAuthRedirect: true
+        }),
+        getPublicCompanyRegistrationPaymongoQr: () => request('/api/public/company-registration-paymongo-qr', {
+            skipAuthRedirect: true
+        }),
+        createPublicCompanyRegistrationPaymentPreview: (payload) => request('/api/public/company-registration-payment-preview', {
+            method: 'POST',
+            body: payload,
+            skipAuthRedirect: true
+        }),
+        createPublicCompanyRegistrationCheckoutSession: (payload) => request('/api/public/company-registration-checkout-session', {
+            method: 'POST',
+            body: payload,
+            skipAuthRedirect: true
+        }),
+        completePublicCompanyRegistrationCheckout: (payload) => request('/api/public/company-registration-checkout-complete', {
+            method: 'POST',
+            body: payload,
+            skipAuthRedirect: true
+        }),
         createPublicCustomerRequest: (payload) => request('/api/public/customer-requests', {
+            method: 'POST',
+            body: payload,
+            skipAuthRedirect: true
+        }),
+        createPublicCompanyRegistrationRequest: (payload) => request('/api/public/company-registration-requests', {
             method: 'POST',
             body: payload,
             skipAuthRedirect: true
         }),
         getPublicCustomerRequest: ({ companyCode = '', requestCode = '', contactNumber = '' } = {}) => request(
             `/api/public/customer-requests/${encodeURIComponent(requestCode)}?companyCode=${encodeURIComponent(companyCode)}&contactNumber=${encodeURIComponent(contactNumber)}`,
+            { skipAuthRedirect: true }
+        ),
+        getPublicCompanyRegistrationRequest: ({ requestCode = '', contactNumber = '' } = {}) => request(
+            `/api/public/company-registration-requests/${encodeURIComponent(requestCode)}?contactNumber=${encodeURIComponent(contactNumber)}`,
             { skipAuthRedirect: true }
         ),
         updatePublicCustomerRequest: (requestCode, payload = {}, { companyCode = '', contactNumber = '' } = {}) => request(
@@ -1289,6 +1266,17 @@
                 skipAuthRedirect: true
             }
         ),
+        updatePublicCompanyRegistrationRequest: (requestCode, payload = {}, { contactNumber = '' } = {}) => request(
+            `/api/public/company-registration-requests/${encodeURIComponent(requestCode)}?contactNumber=${encodeURIComponent(contactNumber)}`,
+            {
+                method: 'PUT',
+                body: {
+                    ...payload,
+                    authContactNumber: payload.authContactNumber || contactNumber
+                },
+                skipAuthRedirect: true
+            }
+        ),
         sendPublicCustomerRequestMessage: (requestCode, payload = {}, { companyCode = '', contactNumber = '' } = {}) => request(
             `/api/public/customer-requests/${encodeURIComponent(requestCode)}/messages?companyCode=${encodeURIComponent(companyCode)}`,
             {
@@ -1296,6 +1284,17 @@
                 body: {
                     ...payload,
                     companyCode,
+                    authContactNumber: payload.authContactNumber || contactNumber
+                },
+                skipAuthRedirect: true
+            }
+        ),
+        sendPublicCompanyRegistrationRequestMessage: (requestCode, payload = {}, { contactNumber = '' } = {}) => request(
+            `/api/public/company-registration-requests/${encodeURIComponent(requestCode)}/messages`,
+            {
+                method: 'POST',
+                body: {
+                    ...payload,
                     authContactNumber: payload.authContactNumber || contactNumber
                 },
                 skipAuthRedirect: true
@@ -1629,8 +1628,14 @@
         listSuperCustomerRequests: ({ companyId = '', filter = '', status = '', limit = 200 } = {}) => request(
             `/api/super/customer-requests?companyId=${encodeURIComponent(companyId)}&filter=${encodeURIComponent(filter)}&status=${encodeURIComponent(status)}&limit=${encodeURIComponent(limit)}`
         ),
+        listSuperCompanyRegistrationRequests: ({ filter = '', status = '', limit = 200 } = {}) => request(
+            `/api/super/company-registration-requests?filter=${encodeURIComponent(filter)}&status=${encodeURIComponent(status)}&limit=${encodeURIComponent(limit)}`
+        ),
         getSuperCustomerRequestThread: (companyId, requestCode) => request(
             `/api/super/customer-requests/${encodeURIComponent(requestCode)}?companyId=${encodeURIComponent(companyId)}`
+        ),
+        getSuperCompanyRegistrationRequestThread: (requestCode) => request(
+            `/api/super/company-registration-requests/${encodeURIComponent(requestCode)}`
         ),
         updateSuperCustomerRequestByCode: (companyId, requestCode, payload = {}) => request(
             `/api/super/customer-requests/${encodeURIComponent(requestCode)}`,
@@ -1642,6 +1647,13 @@
                 }
             }
         ),
+        updateSuperCompanyRegistrationRequestByCode: (requestCode, payload = {}) => request(
+            `/api/super/company-registration-requests/${encodeURIComponent(requestCode)}`,
+            {
+                method: 'PATCH',
+                body: payload
+            }
+        ),
         sendSuperCustomerRequestMessage: (companyId, requestCode, payload = {}) => request(
             `/api/super/customer-requests/${encodeURIComponent(requestCode)}/messages`,
             {
@@ -1650,6 +1662,13 @@
                     ...payload,
                     companyId
                 }
+            }
+        ),
+        sendSuperCompanyRegistrationRequestMessage: (requestCode, payload = {}) => request(
+            `/api/super/company-registration-requests/${encodeURIComponent(requestCode)}/messages`,
+            {
+                method: 'POST',
+                body: payload
             }
         ),
         createSuperCompany: (payload) => request('/api/super/companies', {
@@ -1701,16 +1720,6 @@
         listSuperAccessLogs: ({ filter = '', limit = 200, offset = 0 } = {}) => request(
             `/api/super/access-logs?filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`
         ),
-        listSuperBlockedDevices: ({ filter = '', limit = 200, offset = 0 } = {}) => request(
-            `/api/super/blocked-devices?filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`
-        ),
-        blockSuperDevice: (payload = {}) => request('/api/super/blocked-devices', {
-            method: 'POST',
-            body: payload
-        }),
-        unblockSuperDevice: (blockId) => request(`/api/super/blocked-devices/${encodeURIComponent(blockId)}`, {
-            method: 'DELETE'
-        }),
         endSupportSession: () => endActiveSupportSession(),
         syncSupportSessionBanner,
         getUser: (userId) => request(`/api/users/${encodeURIComponent(userId)}`),

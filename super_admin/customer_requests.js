@@ -21,11 +21,12 @@ const chatBox = document.getElementById('chatBox');
 const adminMessageInput = document.getElementById('adminMessageInput');
 const sendMessageBtn = document.getElementById('sendMessageBtn');
 const reloadThreadBtn = document.getElementById('reloadThreadBtn');
+const COMPANY_REGISTRATION_SCOPE = '__company_registration__';
 
 const state = {
     session: null,
     companies: [],
-    selectedCompanyId: '',
+    selectedCompanyId: COMPANY_REGISTRATION_SCOPE,
     requests: [],
     selectedCode: '',
     selectedThread: null,
@@ -35,6 +36,10 @@ const state = {
 };
 
 initialize();
+
+function isCompanyRegistrationScope() {
+    return state.selectedCompanyId === COMPANY_REGISTRATION_SCOPE;
+}
 
 async function initialize() {
     const session = await appClient.ensureSession({ role: 'super_admin' });
@@ -114,65 +119,63 @@ async function loadCompanies() {
         state.companies = Array.isArray(rows) ? rows : [];
         renderCompanyOptions();
 
-        if (!state.companies.length) {
-            state.selectedCompanyId = '';
-            requestList.innerHTML = '<div class="empty">No companies found.</div>';
-            setDetailEnabled(false);
-            setStatus('No companies available.', false);
-            return;
+        const hasSelectedCompany = state.companies.some((entry) => entry.id === state.selectedCompanyId);
+        if (!state.selectedCompanyId || (!hasSelectedCompany && !isCompanyRegistrationScope())) {
+            state.selectedCompanyId = COMPANY_REGISTRATION_SCOPE;
         }
+        companySelect.value = state.selectedCompanyId;
 
-        if (!state.selectedCompanyId || !state.companies.some((entry) => entry.id === state.selectedCompanyId)) {
-            state.selectedCompanyId = state.companies[0].id;
-            companySelect.value = state.selectedCompanyId;
-        }
-
-        setStatus('Companies loaded.', false);
+        setStatus(
+            state.companies.length
+                ? 'Companies loaded.'
+                : 'No companies yet. Company ID requests are still available.',
+            false
+        );
     } catch (error) {
         console.error('Failed to load companies:', error);
         state.companies = [];
-        state.selectedCompanyId = '';
+        state.selectedCompanyId = COMPANY_REGISTRATION_SCOPE;
         renderCompanyOptions();
-        requestList.innerHTML = '<div class="empty">Unable to load companies.</div>';
-        setDetailEnabled(false);
+        companySelect.value = state.selectedCompanyId;
         setStatus(error.message || 'Unable to load companies.', true);
     }
 }
 
 function renderCompanyOptions() {
-    companySelect.innerHTML = '';
-    if (!state.companies.length) {
-        companySelect.innerHTML = '<option value="">No companies</option>';
-        return;
-    }
-
-    const optionsHtml = state.companies.map((company) => {
+    const requestDeskOption = '<option value="__company_registration__">Company ID / Subscription Requests</option>';
+    const companyOptions = state.companies.map((company) => {
         const companyCode = String(company.company_code || '').trim();
         const companyName = String(company.name || '').trim();
         const label = companyCode ? `${companyName} (${companyCode})` : companyName;
         return `<option value="${appClient.escapeHtml(company.id || '')}">${appClient.escapeHtml(label || company.id || '-')}</option>`;
     }).join('');
-    companySelect.innerHTML = optionsHtml;
+    companySelect.innerHTML = requestDeskOption + companyOptions;
 }
 
 async function loadRequests({ keepSelection = true } = {}) {
     if (!state.selectedCompanyId) {
-        requestList.innerHTML = '<div class="empty">Select a company to view requests.</div>';
+        requestList.innerHTML = '<div class="empty">Select a request desk to view requests.</div>';
         setDetailEnabled(false);
-        setStatus('Select a company first.', false);
+        setStatus('Select a request desk first.', false);
         return;
     }
 
     setBusy(refreshBtn, true);
-    setStatus('Loading customer requests...', false);
+    setStatus(isCompanyRegistrationScope() ? 'Loading company ID requests...' : 'Loading customer requests...', false);
 
     try {
-        const rows = await appClient.listSuperCustomerRequests({
-            companyId: state.selectedCompanyId,
-            filter: state.filter,
-            status: state.status,
-            limit: 300
-        });
+        const rows = isCompanyRegistrationScope()
+            ? await appClient.listSuperCompanyRegistrationRequests({
+                filter: state.filter,
+                status: state.status,
+                limit: 300
+            })
+            : await appClient.listSuperCustomerRequests({
+                companyId: state.selectedCompanyId,
+                filter: state.filter,
+                status: state.status,
+                limit: 300
+            });
         state.requests = Array.isArray(rows) ? rows : [];
         renderRequestList();
 
@@ -180,7 +183,12 @@ async function loadRequests({ keepSelection = true } = {}) {
             state.selectedCode = '';
             state.selectedThread = null;
             setDetailEnabled(false);
-            setStatus('No customer requests found for this company.', false);
+            setStatus(
+                isCompanyRegistrationScope()
+                    ? 'No company ID or subscription requests found.'
+                    : 'No customer requests found for this company.',
+                false
+            );
             return;
         }
 
@@ -191,7 +199,12 @@ async function loadRequests({ keepSelection = true } = {}) {
         if (nextCode) {
             await loadThread(nextCode, { silent: true });
         }
-        setStatus(`Loaded ${state.requests.length} customer request(s).`, false);
+        setStatus(
+            isCompanyRegistrationScope()
+                ? `Loaded ${state.requests.length} company ID request(s).`
+                : `Loaded ${state.requests.length} customer request(s).`,
+            false
+        );
     } catch (error) {
         console.error('Failed to load customer requests:', error);
         state.requests = [];
@@ -242,7 +255,9 @@ async function loadThread(requestCode, { silent = false } = {}) {
     }
 
     try {
-        const payload = await appClient.getSuperCustomerRequestThread(state.selectedCompanyId, requestCode);
+        const payload = isCompanyRegistrationScope()
+            ? await appClient.getSuperCompanyRegistrationRequestThread(requestCode)
+            : await appClient.getSuperCustomerRequestThread(state.selectedCompanyId, requestCode);
         state.selectedCode = requestCode;
         state.selectedThread = payload;
         applyThread(payload);
@@ -328,13 +343,21 @@ async function saveRequestUpdate() {
     setStatus(`Saving ${state.selectedCode}...`, false);
 
     try {
-        const payload = await appClient.updateSuperCustomerRequestByCode(state.selectedCompanyId, state.selectedCode, {
-            clientName,
-            contactNumber,
-            requestDetails,
-            status,
-            allowCustomerEdit
-        });
+        const payload = isCompanyRegistrationScope()
+            ? await appClient.updateSuperCompanyRegistrationRequestByCode(state.selectedCode, {
+                clientName,
+                contactNumber,
+                requestDetails,
+                status,
+                allowCustomerEdit
+            })
+            : await appClient.updateSuperCustomerRequestByCode(state.selectedCompanyId, state.selectedCode, {
+                clientName,
+                contactNumber,
+                requestDetails,
+                status,
+                allowCustomerEdit
+            });
         state.selectedThread = payload;
         applyThread(payload);
         await loadRequests({ keepSelection: true });
@@ -363,10 +386,15 @@ async function sendAdminReply() {
     setStatus(`Sending reply to ${state.selectedCode}...`, false);
 
     try {
-        const payload = await appClient.sendSuperCustomerRequestMessage(state.selectedCompanyId, state.selectedCode, {
-            message,
-            senderName: state.session?.userName || 'Super Admin'
-        });
+        const payload = isCompanyRegistrationScope()
+            ? await appClient.sendSuperCompanyRegistrationRequestMessage(state.selectedCode, {
+                message,
+                senderName: state.session?.userName || 'Super Admin'
+            })
+            : await appClient.sendSuperCustomerRequestMessage(state.selectedCompanyId, state.selectedCode, {
+                message,
+                senderName: state.session?.userName || 'Super Admin'
+            });
         adminMessageInput.value = '';
         state.selectedThread = payload;
         applyThread(payload);

@@ -51,9 +51,6 @@ const auditList = document.getElementById('auditList');
 const accessFilter = document.getElementById('accessFilter');
 const accessSummary = document.getElementById('accessSummary');
 const accessList = document.getElementById('accessList');
-const blockedFilter = document.getElementById('blockedFilter');
-const blockedSummary = document.getElementById('blockedSummary');
-const blockedList = document.getElementById('blockedList');
 const customerServiceHandoffMessage = document.getElementById('customerServiceHandoffMessage');
 const customerServiceEmail1 = document.getElementById('customerServiceEmail1');
 const customerServiceEmail2 = document.getElementById('customerServiceEmail2');
@@ -109,7 +106,6 @@ const DEFAULT_PRIMARY_COLOR = '#2575fc';
 const COMPANY_STATUS_OPTIONS = ['active', 'inactive', 'suspended'];
 const MAX_LOGO_BYTES = 700 * 1024;
 const MAX_LOGO_DIMENSION = 900;
-
 const state = {
     session: null,
     bootstrap: null,
@@ -117,7 +113,6 @@ const state = {
     plans: [],
     logs: [],
     accessLogs: [],
-    blockedDevices: [],
     customerServiceConfig: null,
     customerServiceUsers: [],
     customerChat: {
@@ -276,16 +271,6 @@ async function initialize() {
     if (accessFilter) {
         accessFilter.addEventListener('input', renderAccessLogs);
     }
-    if (blockedFilter) {
-        blockedFilter.addEventListener('input', renderBlockedDevices);
-    }
-    if (accessList) {
-        accessList.addEventListener('click', handleAccessAction);
-    }
-    if (blockedList) {
-        blockedList.addEventListener('click', handleBlockedAction);
-    }
-
     resetCreateCompanyBrandingInputs();
     setDashboardCustomerChatDetailEnabled(false);
     await loadData();
@@ -294,13 +279,12 @@ async function initialize() {
 async function loadData() {
     setStatus('Loading...');
     try {
-        const [bootstrap, companies, plans, logs, accessLogs, blockedDevices, customerServiceConfig, customerServiceUsers] = await Promise.all([
+        const [bootstrap, companies, plans, logs, accessLogs, customerServiceConfig, customerServiceUsers] = await Promise.all([
             appClient.getSuperBootstrap(),
             appClient.listSuperCompanies(),
             appClient.listSuperPlans(),
             appClient.listSuperAuditLogs({ limit: 200 }),
             appClient.listSuperAccessLogs({ limit: 200 }),
-            appClient.listSuperBlockedDevices({ limit: 200 }),
             appClient.getSuperCustomerServiceConfig(),
             appClient.listSuperCustomerServiceUsers()
         ]);
@@ -310,7 +294,6 @@ async function loadData() {
         state.plans = plans || [];
         state.logs = logs || [];
         state.accessLogs = accessLogs || [];
-        state.blockedDevices = blockedDevices || [];
         state.customerServiceConfig = customerServiceConfig || {};
         state.customerServiceUsers = customerServiceUsers || [];
 
@@ -322,7 +305,6 @@ async function loadData() {
         renderCompanies();
         renderLogs();
         renderAccessLogs();
-        renderBlockedDevices();
         populatePlanSelect();
         await loadDashboardCustomerChats({ keepSelection: true, silent: true });
 
@@ -786,7 +768,8 @@ async function saveCustomerServiceConfig() {
         state.customerServiceConfig = await appClient.updateSuperCustomerServiceConfig({
             handoff_message: String(customerServiceHandoffMessage?.value || '').trim(),
             emails,
-            phones
+            phones,
+            company_registration_payment: state.customerServiceConfig?.company_registration_payment || {}
         });
         renderCustomerServiceConfig();
         setStatus('Customer service contacts updated.');
@@ -1200,7 +1183,6 @@ function renderAccessLogs() {
         const networkLabel = formatNetworkFingerprint(ipAddress);
         const deviceIpCount = Math.max(0, Number(log.device_ip_count || 0));
         const possibleNetworkChange = deviceIpCount > 1 ? `Possible different wifi/network (${deviceIpCount} IPs seen)` : '';
-        const blocked = isAccessBlocked(log);
         const chips = [
             path,
             companyName,
@@ -1222,102 +1204,11 @@ function renderAccessLogs() {
                         ${possibleNetworkChange ? `<span class="muted">${escape(possibleNetworkChange)}</span>` : ''}
                         <span class="muted">Device visits logged: ${escape(String(log.device_access_count || 1))}</span>
                     </div>
-                    <div class="plan-actions">
-                        <button type="button" data-action="block-device" class="${blocked ? 'btn-soft' : 'btn-danger'}" ${blocked ? 'disabled' : ''}>
-                            ${blocked ? 'Blocked' : 'Block'}
-                        </button>
-                    </div>
                 </div>
                 <span class="muted">${escape(userAgent || '')}</span>
             </div>
         `;
     }).join('');
-}
-
-function renderBlockedDevices() {
-    if (!blockedList) {
-        return;
-    }
-
-    const activeBlocks = state.blockedDevices.filter((block) => Number(block.is_active || 0) === 1);
-    const total = activeBlocks.length;
-    if (!total) {
-        blockedList.innerHTML = '<div class="row">No blocked devices yet.</div>';
-        if (blockedSummary) {
-            blockedSummary.textContent = '0 / 0';
-        }
-        return;
-    }
-
-    const query = normalizeSearchText(blockedFilter?.value || '');
-    const filteredBlocks = query
-        ? activeBlocks.filter((block) => {
-            const haystack = [
-                block.device_id,
-                block.ip_address,
-                block.host,
-                block.user_agent,
-                block.reason
-            ].map((value) => normalizeSearchText(value)).join(' ');
-            return haystack.includes(query);
-        })
-        : activeBlocks.slice();
-
-    if (blockedSummary) {
-        blockedSummary.textContent = `${filteredBlocks.length} / ${total}`;
-    }
-
-    if (!filteredBlocks.length) {
-        blockedList.innerHTML = '<div class="row">No blocked devices matched your search.</div>';
-        return;
-    }
-
-    blockedList.innerHTML = filteredBlocks.map((block) => {
-        const deviceId = String(block.device_id || '').trim();
-        const ipAddress = String(block.ip_address || '').trim();
-        const host = String(block.host || '').trim() || 'unknown host';
-        const createdAt = String(block.created_at || '').trim();
-        const reason = String(block.reason || '').trim() || 'No reason provided.';
-        const deviceSummary = summarizeClientEnvironment(block.user_agent || '');
-        const userAgent = truncateText(String(block.user_agent || '').trim(), 160);
-
-        return `
-            <div class="row" data-block-id="${escape(block.id)}">
-                <div class="row-head">
-                    <div class="plan-meta">
-                        <div class="plan-title">
-                            <strong>${escape(deviceId || ipAddress || 'Unknown Device')}</strong>
-                            <span class="inline-chip">${escape(host)}</span>
-                        </div>
-                        <span class="muted">Device: ${escape(deviceId || '-')} | IP: ${escape(ipAddress || '-')} | ${escape(deviceSummary.fullLabel || 'Unknown device')}</span>
-                        <span class="muted">Reason: ${escape(reason)}</span>
-                        <span class="muted">${escape(createdAt || '')}</span>
-                    </div>
-                    <div class="plan-actions">
-                        <button type="button" data-action="unblock-device" class="btn-soft">Unblock</button>
-                    </div>
-                </div>
-                <span class="muted">${escape(userAgent || '')}</span>
-            </div>
-        `;
-    }).join('');
-}
-
-function isAccessBlocked(log) {
-    const deviceId = String(log.device_id || '').trim();
-    const ipAddress = String(log.ip_address || '').trim();
-    return state.blockedDevices.some((block) => {
-        if (Number(block.is_active || 0) !== 1) {
-            return false;
-        }
-        if (deviceId && String(block.device_id || '').trim() === deviceId) {
-            return true;
-        }
-        if (ipAddress && String(block.ip_address || '').trim() === ipAddress) {
-            return true;
-        }
-        return false;
-    });
 }
 
 function buildPlanModuleChips(plan) {
@@ -1787,101 +1678,6 @@ async function handlePlanAction(event) {
     }
 }
 
-async function handleAccessAction(event) {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) {
-        return;
-    }
-
-    const action = target.dataset.action || '';
-    if (action !== 'block-device') {
-        return;
-    }
-
-    const row = target.closest('[data-access-id]');
-    if (!(row instanceof HTMLElement)) {
-        return;
-    }
-
-    const accessId = row.getAttribute('data-access-id') || '';
-    if (!accessId) {
-        return;
-    }
-
-    const log = state.accessLogs.find((item) => String(item.id) === String(accessId));
-    if (!log) {
-        return;
-    }
-
-    const confirmed = window.confirm(`Block device ${log.device_id || log.ip_address || 'unknown'}?`);
-    if (!confirmed) {
-        return;
-    }
-
-    const reason = window.prompt('Reason for blocking this device:', '');
-    if (reason === null) {
-        return;
-    }
-
-    target.setAttribute('disabled', 'true');
-    setStatus('Blocking device...');
-    try {
-        await appClient.blockSuperDevice({
-            device_id: log.device_id,
-            ip_address: log.ip_address,
-            user_agent: log.user_agent,
-            host: log.host,
-            reason
-        });
-        await loadData();
-        setStatus('Device blocked.');
-    } catch (error) {
-        console.error('Failed to block device:', error);
-        setStatus(error.message || 'Failed to block device.', true);
-    } finally {
-        target.removeAttribute('disabled');
-    }
-}
-
-async function handleBlockedAction(event) {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) {
-        return;
-    }
-
-    const action = target.dataset.action || '';
-    if (action !== 'unblock-device') {
-        return;
-    }
-
-    const row = target.closest('[data-block-id]');
-    if (!(row instanceof HTMLElement)) {
-        return;
-    }
-
-    const blockId = row.getAttribute('data-block-id') || '';
-    if (!blockId) {
-        return;
-    }
-
-    const confirmed = window.confirm('Unblock this device?');
-    if (!confirmed) {
-        return;
-    }
-
-    target.setAttribute('disabled', 'true');
-    setStatus('Unblocking device...');
-    try {
-        await appClient.unblockSuperDevice(blockId);
-        await loadData();
-        setStatus('Device unblocked.');
-    } catch (error) {
-        console.error('Failed to unblock device:', error);
-        setStatus(error.message || 'Failed to unblock device.', true);
-    } finally {
-        target.removeAttribute('disabled');
-    }
-}
 
 async function handleCompanyAction(event) {
     const target = event.target;

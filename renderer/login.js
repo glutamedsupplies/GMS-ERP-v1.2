@@ -9,6 +9,7 @@ const emailInput = document.getElementById('email');
 const companyCodeInput = document.getElementById('companyCode');
 const companyCodeGroupEl = document.getElementById('companyCodeGroup');
 const signUpBtn = document.getElementById('signUpBtn');
+const registerCompanyIdBtn = document.getElementById('registerCompanyIdBtn');
 const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
 const googleLoginBtn = document.getElementById('googleLoginBtn');
 const togglePassIcon = document.getElementById('togglePass')?.querySelector('i');
@@ -108,6 +109,12 @@ if (loginBtn) {
 if (signUpBtn) {
     signUpBtn.addEventListener('click', () => {
         window.location.assign(getSignUpUrl());
+    });
+}
+
+if (registerCompanyIdBtn) {
+    registerCompanyIdBtn.addEventListener('click', () => {
+        window.location.assign(getRegisterCompanyIdUrl());
     });
 }
 
@@ -559,6 +566,10 @@ function getSignUpUrl() {
     return companyCode
         ? `/renderer/customer_portal.html?companyCode=${encodeURIComponent(companyCode)}&intent=signup`
         : '/renderer/customer_portal.html?intent=signup';
+}
+
+function getRegisterCompanyIdUrl() {
+    return '/renderer/customer_portal.html?intent=register_company_id';
 }
 
 function getGoogleLoginUrl() {

@@ -7,7 +7,7 @@
 <title>GMS ERP Portal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700&family=Space+Grotesk:wght@500;700&display=swap">
 <style>
   :root {
     --bg: #f4f7ff;
@@ -50,6 +50,13 @@
     justify-content: center;
     position: relative;
     z-index: 2;
+  }
+
+  body.is-company-id-request .page {
+    max-width: 1220px;
+    padding: 28px 20px 40px;
+    min-height: auto;
+    display: block;
   }
 
   .hero {
@@ -253,6 +260,13 @@
 
   body.is-signup .row.signup-only { display: grid; }
 
+  .company-request-only { display: none; }
+  .existing-company-only { display: block; }
+  body.is-company-id-request .company-request-only { display: block; }
+  body.is-company-id-request .row.company-request-only { display: grid; }
+  body.is-company-id-request .existing-company-only { display: none; }
+  body.is-company-id-request .signup-only { display: none !important; }
+
   .signup-banner {
     border-radius: 14px;
     padding: 12px 14px;
@@ -273,6 +287,779 @@
     background: rgba(255, 255, 255, 0.08);
     color: rgba(226, 232, 240, 0.86);
     border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .payment-preview-card {
+    display: none;
+    margin: 4px 0 14px;
+    padding: 16px;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background:
+      radial-gradient(circle at top right, rgba(251, 191, 36, 0.12), transparent 32%),
+      linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+  }
+
+  body.is-company-id-request .payment-preview-card {
+    display: block;
+  }
+
+  .payment-preview-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  .payment-preview-kicker {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(226, 232, 240, 0.64);
+  }
+
+  .field-helper {
+    margin-top: 6px;
+    color: rgba(226, 232, 240, 0.66);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .field-error {
+    min-height: 16px;
+    margin-top: 6px;
+    color: #fca5a5;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  #companyRegistrationFormPanel {
+    display: block;
+  }
+
+  .company-registration-panel {
+    display: none;
+  }
+
+  body.is-company-id-request #companyRegistrationFormPanel {
+    display: none;
+  }
+
+  body.is-company-id-request #companyRegistrationFormPanel.is-active {
+    display: block;
+  }
+
+  body.is-company-id-request .company-registration-panel {
+    display: none;
+  }
+
+  body.is-company-id-request .company-registration-panel.is-active {
+    display: block;
+  }
+
+  .company-request-steps {
+    display: none;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  body.is-company-id-request .company-request-steps {
+    display: grid;
+  }
+
+  .company-request-step {
+    border-radius: 18px;
+    padding: 12px 13px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    display: grid;
+    gap: 4px;
+  }
+
+  .company-request-step strong {
+    color: #f8fafc;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .company-request-step span {
+    color: rgba(226, 232, 240, 0.68);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .company-request-step.is-active {
+    border-color: rgba(45, 212, 191, 0.56);
+    background: linear-gradient(160deg, rgba(20, 184, 166, 0.16), rgba(34, 197, 94, 0.12));
+    box-shadow: 0 16px 34px rgba(16, 185, 129, 0.14);
+  }
+
+  .company-request-step.is-complete {
+    border-color: rgba(74, 222, 128, 0.3);
+    background: rgba(34, 197, 94, 0.12);
+  }
+
+  .company-registration-toolbar {
+    display: none;
+    margin-bottom: 12px;
+  }
+
+  body.is-company-id-request .company-registration-toolbar {
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .company-registration-back-btn {
+    min-width: 104px;
+  }
+
+  .wizard-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .wizard-spacer {
+    flex: 1;
+  }
+
+  .review-card,
+  .success-card {
+    border-radius: 22px;
+    padding: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background:
+      radial-gradient(circle at top right, rgba(45, 212, 191, 0.12), transparent 34%),
+      linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+  }
+
+  .review-kicker,
+  .success-kicker {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(187, 247, 208, 0.82);
+  }
+
+  .review-title,
+  .success-title {
+    margin: 6px 0 8px;
+    color: #f8fafc;
+    font-size: 24px;
+    font-family: "Space Grotesk", "Sora", "Plus Jakarta Sans", sans-serif;
+  }
+
+  .review-copy,
+  .success-copy {
+    margin: 0 0 14px;
+    color: rgba(226, 232, 240, 0.76);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .review-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .review-item {
+    border-radius: 16px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: grid;
+    gap: 4px;
+  }
+
+  .review-item-label {
+    color: rgba(226, 232, 240, 0.58);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .review-item-value {
+    color: #f8fafc;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.45;
+    word-break: break-word;
+  }
+
+  .success-reference {
+    border-radius: 18px;
+    padding: 12px 14px;
+    margin-top: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(226, 232, 240, 0.78);
+    font-size: 13px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+  }
+
+  .success-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    min-height: 44px;
+    padding-inline: 18px;
+  }
+
+  .subscription-catalog {
+    display: none;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin: 10px 0 14px;
+  }
+
+  body.is-company-id-request .subscription-catalog {
+    display: grid;
+  }
+
+  .subscription-card {
+    width: 100%;
+    border-radius: 20px;
+    padding: 13px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    display: grid;
+    gap: 8px;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .subscription-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(45, 212, 191, 0.3);
+    background: rgba(255, 255, 255, 0.07);
+  }
+
+  .subscription-card.is-selected {
+    border-color: rgba(45, 212, 191, 0.56);
+    background: linear-gradient(160deg, rgba(20, 184, 166, 0.16), rgba(34, 197, 94, 0.12));
+    box-shadow: 0 16px 34px rgba(16, 185, 129, 0.14);
+  }
+
+  .subscription-card-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .subscription-card-title {
+    color: #f8fafc;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  .subscription-card-price {
+    color: #bbf7d0;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: right;
+  }
+
+  .subscription-card-copy {
+    color: rgba(226, 232, 240, 0.74);
+    font-size: 12px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+  }
+
+  .subscription-card-meta {
+    color: rgba(226, 232, 240, 0.58);
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .payment-panel-title {
+    margin: 5px 0 0;
+    font-size: 22px;
+    color: #f8fafc;
+    font-family: "Sora", "Plus Jakarta Sans", sans-serif;
+  }
+
+  .payment-method-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #f8fafc;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .payment-panel-note,
+  .payment-panel-instructions,
+  .payment-qr-caption {
+    margin: 0;
+    color: rgba(226, 232, 240, 0.78);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .payment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin: 12px 0 0;
+  }
+
+  .payment-generate-btn {
+    min-height: 44px;
+    padding-inline: 18px;
+  }
+
+  .payment-generate-status {
+    flex: 1;
+    min-width: 180px;
+    color: rgba(226, 232, 240, 0.72);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .payment-generate-status.is-error {
+    color: #fecaca;
+  }
+
+  .payment-preview-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 210px) 1fr;
+    gap: 12px;
+    margin: 12px 0;
+    align-items: start;
+  }
+
+  .payment-qr-shell {
+    border-radius: 22px;
+    padding: 14px;
+    min-height: 230px;
+    background: rgba(255, 255, 255, 0.95);
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 10px;
+  }
+
+  .payment-qr-shell img {
+    display: none;
+    width: 100%;
+    max-width: 182px;
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.14);
+  }
+
+  .payment-qr-shell.has-qr img {
+    display: block;
+  }
+
+  .payment-qr-fallback {
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #475569;
+    max-width: 170px;
+  }
+
+  .payment-qr-shell .payment-qr-caption {
+    display: none;
+  }
+
+  .payment-detail-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .payment-detail {
+    border-radius: 18px;
+    padding: 12px 13px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .payment-detail-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(226, 232, 240, 0.62);
+  }
+
+  .payment-detail-value {
+    display: block;
+    margin-top: 6px;
+    color: #f8fafc;
+    font-size: 14px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .subscription-catalog {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin: 14px 0 18px;
+  }
+
+  .subscription-card {
+    position: relative;
+    min-height: 100%;
+    border-radius: 28px;
+    padding: 18px 16px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background:
+      radial-gradient(circle at top center, rgba(255, 255, 255, 0.1), transparent 42%),
+      linear-gradient(180deg, rgba(247, 254, 231, 0.1), rgba(6, 22, 24, 0.6));
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 42px rgba(3, 10, 18, 0.24);
+  }
+
+  .subscription-card::before {
+    content: "";
+    position: absolute;
+    inset: auto -15% -35% 15%;
+    height: 120px;
+    background: radial-gradient(circle, rgba(74, 222, 128, 0.18), transparent 72%);
+    pointer-events: none;
+  }
+
+  .subscription-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 26px 54px rgba(3, 10, 18, 0.3);
+  }
+
+  .subscription-card.is-selected {
+    border-color: rgba(187, 247, 208, 0.82);
+    background:
+      radial-gradient(circle at top center, rgba(220, 252, 231, 0.28), transparent 42%),
+      linear-gradient(180deg, rgba(236, 253, 245, 0.22), rgba(10, 42, 32, 0.84));
+    box-shadow: 0 0 0 1px rgba(187, 247, 208, 0.14), 0 30px 60px rgba(16, 185, 129, 0.22);
+  }
+
+  .subscription-card.is-custom {
+    background:
+      radial-gradient(circle at top center, rgba(253, 230, 138, 0.16), transparent 42%),
+      linear-gradient(180deg, rgba(255, 251, 235, 0.12), rgba(30, 20, 10, 0.68));
+  }
+
+  .subscription-card-badge-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .subscription-card-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 11px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: rgba(226, 232, 240, 0.88);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .subscription-card-badge.is-selected {
+    background: rgba(134, 239, 172, 0.18);
+    border-color: rgba(187, 247, 208, 0.34);
+    color: #dcfce7;
+  }
+
+  .subscription-card-badge.is-custom {
+    background: rgba(251, 191, 36, 0.18);
+    border-color: rgba(253, 224, 71, 0.34);
+    color: #fef3c7;
+  }
+
+  .subscription-card-kicker {
+    color: rgba(226, 232, 240, 0.62);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .subscription-card-title-wrap {
+    display: grid;
+    gap: 6px;
+  }
+
+  .subscription-card-title {
+    font-size: 24px;
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+  }
+
+  .subscription-card-summary {
+    color: rgba(226, 232, 240, 0.7);
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .subscription-card-price-block {
+    display: grid;
+    gap: 3px;
+  }
+
+  .subscription-card-value {
+    color: #f8fafc;
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.06em;
+  }
+
+  .subscription-card-term {
+    color: rgba(187, 247, 208, 0.88);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .subscription-card-copy {
+    color: rgba(226, 232, 240, 0.74);
+    font-size: 12px;
+    line-height: 1.6;
+    min-height: 56px;
+  }
+
+  .subscription-card-outline {
+    color: rgba(226, 232, 240, 0.54);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .subscription-card-features {
+    display: grid;
+    gap: 8px;
+  }
+
+  .subscription-card-feature {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 9px;
+    align-items: start;
+  }
+
+  .subscription-card-feature-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(134, 239, 172, 0.16);
+    border: 1px solid rgba(187, 247, 208, 0.26);
+    color: #dcfce7;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .subscription-card.is-custom .subscription-card-feature-icon {
+    background: rgba(251, 191, 36, 0.16);
+    border-color: rgba(253, 224, 71, 0.26);
+    color: #fef3c7;
+  }
+
+  .subscription-card-feature-text {
+    color: rgba(226, 232, 240, 0.84);
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .subscription-card-meta {
+    margin-top: auto;
+    padding-top: 2px;
+    color: rgba(226, 232, 240, 0.5);
+    font-size: 11px;
+  }
+
+  .subscription-card-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 12px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .subscription-card-cta-label {
+    color: #f8fafc;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .subscription-card-cta-state {
+    color: rgba(187, 247, 208, 0.88);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .payment-plan-spotlight {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 14px;
+    align-items: end;
+    margin: 0 0 12px;
+    padding: 18px;
+    border-radius: 30px;
+    border: 1px solid rgba(187, 247, 208, 0.24);
+    background:
+      radial-gradient(circle at top left, rgba(220, 252, 231, 0.76), transparent 36%),
+      linear-gradient(180deg, rgba(247, 254, 231, 0.96), rgba(187, 247, 208, 0.92) 58%, rgba(34, 197, 94, 0.84));
+    color: #052e1b;
+    box-shadow: 0 24px 48px rgba(16, 185, 129, 0.18);
+  }
+
+  .payment-plan-spotlight.is-empty {
+    border-color: rgba(255, 255, 255, 0.14);
+    background:
+      radial-gradient(circle at top left, rgba(255, 255, 255, 0.16), transparent 34%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(15, 23, 42, 0.36));
+    color: #e2e8f0;
+    box-shadow: none;
+  }
+
+  .payment-plan-spotlight.is-custom {
+    border-color: rgba(253, 224, 71, 0.26);
+    background:
+      radial-gradient(circle at top left, rgba(254, 249, 195, 0.84), transparent 34%),
+      linear-gradient(180deg, rgba(255, 251, 235, 0.96), rgba(253, 230, 138, 0.84) 58%, rgba(245, 158, 11, 0.66));
+    color: #422006;
+  }
+
+  .payment-plan-spotlight.is-featured {
+    box-shadow: 0 28px 56px rgba(16, 185, 129, 0.24);
+  }
+
+  .payment-plan-kicker {
+    color: inherit;
+    opacity: 0.72;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .payment-plan-title {
+    margin-top: 8px;
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.05em;
+  }
+
+  .payment-plan-subtitle {
+    margin: 10px 0 0;
+    max-width: 540px;
+    color: inherit;
+    opacity: 0.82;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .payment-plan-price {
+    display: grid;
+    gap: 3px;
+    justify-items: end;
+    text-align: right;
+  }
+
+  .payment-plan-price-main {
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.05em;
+  }
+
+  .payment-plan-price-note {
+    font-size: 12px;
+    line-height: 1.5;
+    opacity: 0.72;
+  }
+
+  .payment-plan-benefits {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0 0 14px;
+  }
+
+  .payment-plan-benefit {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    align-items: start;
+    padding: 12px 13px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .payment-plan-benefit.is-placeholder {
+    grid-column: 1 / -1;
+  }
+
+  .payment-plan-benefit-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(134, 239, 172, 0.14);
+    border: 1px solid rgba(187, 247, 208, 0.22);
+    color: #dcfce7;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .payment-plan-benefit-text {
+    color: rgba(226, 232, 240, 0.82);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .payment-plan-spotlight.is-custom + .payment-plan-benefits .payment-plan-benefit-icon {
+    background: rgba(251, 191, 36, 0.16);
+    border-color: rgba(253, 224, 71, 0.24);
+    color: #fef3c7;
   }
 
   .signup-header {
@@ -510,6 +1297,27 @@
     .chat-actions {
       grid-template-columns: 1fr;
     }
+
+    .company-request-steps,
+    .payment-preview-grid,
+    .review-grid,
+    .payment-plan-benefits {
+      grid-template-columns: 1fr;
+    }
+
+    .payment-actions {
+      align-items: stretch;
+    }
+
+    .payment-plan-spotlight {
+      grid-template-columns: 1fr;
+      align-items: start;
+    }
+
+    .payment-plan-price {
+      justify-items: start;
+      text-align: left;
+    }
   }
 
   body.is-signup {
@@ -551,13 +1359,78 @@
     opacity: 0.92;
     transform: scale(1.08);
   }
+
+  body.is-company-id-request {
+    font-family: "Space Grotesk", "Plus Jakarta Sans", sans-serif;
+    background:
+      radial-gradient(circle at 12% 18%, rgba(16, 185, 129, 0.24) 0%, transparent 34%),
+      radial-gradient(circle at 88% 10%, rgba(251, 191, 36, 0.18) 0%, transparent 32%),
+      linear-gradient(140deg, #07141a 0%, #0a1d20 56%, #10211b 100%);
+  }
+
+  body.is-company-id-request .card {
+    background:
+      radial-gradient(circle at top right, rgba(251, 191, 36, 0.08), transparent 34%),
+      linear-gradient(160deg, rgba(5, 18, 22, 0.92), rgba(8, 29, 28, 0.94));
+  }
+
+  body.is-company-id-request .card {
+    padding: 24px;
+  }
+
+  body.is-company-id-request .signup-title,
+  body.is-company-id-request .payment-panel-title,
+  body.is-company-id-request h2 {
+    font-family: "Space Grotesk", "Sora", "Plus Jakarta Sans", sans-serif;
+    letter-spacing: -0.03em;
+  }
+
+  body.is-company-id-request .signup-banner {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(74, 222, 128, 0.18);
+  }
+
+  .plan-picker-intro {
+    margin: 0 0 12px;
+    padding: 14px 16px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(226, 232, 240, 0.8);
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  .plan-picker-intro strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #f8fafc;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  body.is-company-id-request .primary {
+    background: linear-gradient(135deg, #22c55e 0%, #14b8a6 52%, #0ea5a4 100%);
+    box-shadow: 0 18px 34px rgba(16, 185, 129, 0.26);
+  }
+
+  body.is-company-id-request .not-company-request-action {
+    display: none;
+  }
 </style>
 </head>
 <body>
   <script>
-    if (new URLSearchParams(window.location.search).get('intent') === 'signup') {
+    const portalIntent = new URLSearchParams(window.location.search).get('intent');
+    if (portalIntent === 'signup' || portalIntent === 'register_company_id') {
       document.body.classList.add('is-signup');
-      document.title = 'GMS ERP Sign Up';
+      document.title = portalIntent === 'register_company_id'
+        ? 'GMS ERP Register Company ID'
+        : 'GMS ERP Sign Up';
+    }
+    if (portalIntent === 'register_company_id') {
+      document.body.classList.add('is-company-id-request');
     }
   </script>
   <div class="page">
@@ -582,21 +1455,67 @@
         <h2 id="primaryCardTitle" class="support-only">Start Chat</h2>
         <p class="copy support-only" id="primaryCardCopy">Mag-send ng message request para diretsong pumasok sa support chat thread.</p>
         <div class="signup-only signup-banner">
-          <span>Company admin approval required.</span>
-          Para sa security, kailangang i-approve muna ng head admin bago ma-activate ang account.
+          <span id="signupBannerTitle">Company admin approval required.</span>
+          <span id="signupBannerCopy">Para sa security, kailangang i-approve muna ng head admin bago ma-activate ang account.</span>
         </div>
-        <div class="field">
-          <label for="companyCodeInput">Company ID</label>
+        <div class="company-request-only company-registration-toolbar">
+          <button id="companyRegistrationHeaderBackBtn" class="secondary company-registration-back-btn" type="button">Back</button>
+        </div>
+        <div class="company-request-only company-request-steps" id="companyRegistrationSteps">
+          <div class="company-request-step is-active" data-step="1">
+            <strong>1. Fill Up Form</strong>
+            <span>Complete the required Company ID registration details first.</span>
+          </div>
+          <div class="company-request-step" data-step="2">
+            <strong>2. Mode of Payment</strong>
+            <span>Select a payment method, generate the QR code, and pay the exact amount.</span>
+          </div>
+          <div class="company-request-step" data-step="3">
+            <strong>3. Submitted</strong>
+            <span>Show the completed registration details after payment confirmation and setup.</span>
+          </div>
+        </div>
+        <div class="company-request-only company-registration-panel is-active" id="companyRegistrationFormPanel">
+        <div class="field-group-title company-request-only">Step 1 • Company Details</div>
+        <div class="company-request-only plan-picker-intro">
+          <strong>Compare plans first</strong>
+          Check the packages below before filling up the business details. Once you choose a plan, you can continue with the registration form right under it.
+        </div>
+        <div class="field company-request-only">
+          <label for="requestedPlanInput">Subscription / Package</label>
+          <select id="requestedPlanInput" name="company_request_plan">
+            <option value="">Select subscription</option>
+          </select>
+          <div class="field-helper" id="requestedPlanHelper">Compare the plans below first, then pick the package that fits before filling the rest of the form.</div>
+          <div class="field-error" id="requestedPlanError"></div>
+        </div>
+        <div class="company-request-only subscription-catalog" id="companyRegistrationPlanCatalog">
+          <div class="subscription-card">
+            <div class="subscription-card-head">
+              <div class="subscription-card-title">Loading subscriptions...</div>
+            </div>
+            <div class="subscription-card-copy">Please wait while we load the available plans.</div>
+          </div>
+        </div>
+        <div class="field existing-company-only">
+          <label id="companyCodeLabel" for="companyCodeInput">Company ID</label>
           <input id="companyCodeInput" type="text" name="signup_company_code" placeholder="Enter company ID" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+        </div>
+        <div class="field company-request-only">
+          <label for="companyRequestBusinessNameInput">Company / Business Name</label>
+          <input id="companyRequestBusinessNameInput" type="text" name="company_request_business_name" placeholder="Your company or business name" autocomplete="off" autocorrect="off" spellcheck="false">
+          <div class="field-error" id="companyRequestBusinessNameError"></div>
         </div>
         <div class="row">
           <div class="field">
-            <label for="clientNameInput">Name</label>
+            <label id="clientNameLabel" for="clientNameInput">Name</label>
             <input id="clientNameInput" type="text" name="signup_name" placeholder="Your name" autocomplete="off" autocorrect="off" spellcheck="false">
+            <div class="field-error company-request-only" id="clientNameError"></div>
           </div>
           <div class="field">
-            <label for="contactNumberInput">Contact Number</label>
+            <label id="contactNumberLabel" for="contactNumberInput">Contact Number</label>
             <input id="contactNumberInput" type="text" name="signup_contact" inputmode="numeric" placeholder="0917..." autocomplete="off" autocorrect="off" spellcheck="false">
+            <div class="field-error company-request-only" id="contactNumberError"></div>
           </div>
         </div>
         <div class="row signup-only">
@@ -616,6 +1535,25 @@
             <option value="staff">Staff</option>
           </select>
         </div>
+        <div class="row company-request-only">
+          <div class="field">
+            <label for="companyRequestEmailInput">Email</label>
+            <input id="companyRequestEmailInput" type="email" name="company_request_email" placeholder="name@company.com" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+            <div class="field-error" id="companyRequestEmailError"></div>
+          </div>
+          <div class="field">
+            <label for="desiredCompanyIdInput">Desired Company ID</label>
+            <input id="desiredCompanyIdInput" type="text" name="company_request_code" placeholder="e.g. GLUTA-MED" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false">
+            <div class="field-error" id="desiredCompanyIdError"></div>
+          </div>
+        </div>
+        <div class="row company-request-only">
+          <div class="field">
+            <label for="adminIdInput">Admin ID</label>
+            <input id="adminIdInput" type="text" name="company_request_admin_id" placeholder="e.g. ADMIN-001" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false">
+            <div class="field-error" id="adminIdError"></div>
+          </div>
+        </div>
         <div class="field">
           <label id="requestDetailsLabel" for="requestDetailsInput">Topic (optional)</label>
           <textarea id="requestDetailsInput" name="signup_notes" placeholder="Short topic/title ng concern mo"></textarea>
@@ -624,7 +1562,104 @@
           <label id="initialMessageLabel" for="initialMessageInput">Initial Message (optional)</label>
           <textarea id="initialMessageInput" name="signup_message" placeholder="Extra context or question..."></textarea>
         </div>
-        <button id="createRequestBtn" class="primary" type="button">Start Chat</button>
+        <div class="wizard-actions company-request-only">
+          <div class="wizard-spacer"></div>
+          <button id="companyRegistrationReviewBtn" class="primary" type="button" disabled>Next • Review Details</button>
+        </div>
+        </div>
+        <div class="company-request-only company-registration-panel" id="companyRegistrationReviewPanel">
+          <div class="field-group-title company-request-only">Step 2 • Review Details</div>
+          <div class="review-card">
+            <div class="review-kicker">Review Summary</div>
+            <h3 class="review-title">Check your registration details</h3>
+            <p class="review-copy">Make sure the company details, subscription, and payment method are correct before generating the payment QR.</p>
+            <div class="review-grid" id="companyRegistrationReviewGrid"></div>
+            <div class="wizard-actions">
+              <button id="companyRegistrationReviewBackBtn" class="secondary" type="button">Back</button>
+              <button id="companyRegistrationPaymentBtn" class="primary" type="button">Proceed to Payment</button>
+            </div>
+          </div>
+        </div>
+        <div class="company-request-only company-registration-panel" id="companyRegistrationPaymentPanel">
+        <div class="field company-request-only">
+          <label for="paymentMethodInput">Mode of Payment</label>
+          <select id="paymentMethodInput">
+            <option value="">Select payment method</option>
+            <option value="GCash">GCash</option>
+            <option value="Maya">Maya</option>
+            <option value="BDO">BDO</option>
+            <option value="InstaPay">InstaPay</option>
+            <option value="BPI">BPI</option>
+            <option value="Other Bank">Other Bank</option>
+          </select>
+          <div class="field-helper">Choose a payment method to load the QR code for your selected subscription.</div>
+          <div class="field-error" id="paymentMethodError"></div>
+        </div>
+        <div class="field-group-title company-request-only">Step 3 • Pay via QR Code</div>
+        <div class="payment-plan-spotlight is-empty" id="paymentPlanSpotlight">
+          <div class="payment-plan-copy">
+            <div class="payment-plan-kicker" id="paymentPlanKicker">Selected subscription</div>
+            <div class="payment-plan-title" id="paymentPlanTitle">Choose a subscription first</div>
+            <p class="payment-plan-subtitle" id="paymentPlanSubtitle">Your selected package, amount, and included highlights will appear here before payment.</p>
+          </div>
+          <div class="payment-plan-price">
+            <span class="payment-plan-price-main" id="paymentPlanPriceMain">-</span>
+            <span class="payment-plan-price-note" id="paymentPlanPriceNote">Waiting for plan</span>
+          </div>
+        </div>
+        <div class="payment-plan-benefits" id="paymentPlanBenefits"></div>
+        <div class="company-request-only payment-preview-card" id="paymentPreviewCard">
+          <div class="payment-preview-head">
+            <div>
+              <div class="payment-preview-kicker">Secure Checkout</div>
+              <h3 class="payment-panel-title" id="paymentPanelTitle">Complete Step 1 first</h3>
+            </div>
+            <span class="payment-method-badge" id="paymentMethodBadge">Payment Locked</span>
+          </div>
+          <p class="payment-panel-note" id="paymentPanelNotice">Complete the form first, then choose a payment method here to load the QR code.</p>
+          <div class="payment-preview-grid">
+            <div class="payment-qr-shell" id="paymentQrShell">
+              <img id="paymentQrImage" alt="Payment QR code">
+              <div class="payment-qr-fallback" id="paymentQrFallback">Choose a payment method to load the PayMongo QR code here.</div>
+              <p class="payment-qr-caption" id="paymentQrCaption"></p>
+            </div>
+            <div class="payment-detail-list">
+              <div class="payment-detail">
+                <span class="payment-detail-label" id="paymentPrimaryLabel">Amount Due</span>
+                <strong class="payment-detail-value" id="paymentAccountName">-</strong>
+              </div>
+              <div class="payment-detail">
+                <span class="payment-detail-label" id="paymentSecondaryLabel">Selected Mode</span>
+                <strong class="payment-detail-value" id="paymentAccountNumber">-</strong>
+              </div>
+            </div>
+          </div>
+          <div class="payment-actions">
+            <button id="companyRegistrationPaymentBackBtn" class="secondary payment-generate-btn" type="button">Back</button>
+            <button id="generatePaymentQrBtn" class="primary payment-generate-btn" type="button">Generate Payment QR</button>
+            <div class="payment-generate-status" id="paymentGenerateStatus">Complete the form first, then proceed here to generate the payment QR.</div>
+          </div>
+          <p class="payment-panel-instructions" id="paymentPanelInstructions">Please scan the QR code to complete your payment. Once PayMongo confirms the transfer, the registration and Company ID setup will continue automatically.</p>
+        </div>
+        <div class="field company-request-only">
+          <label for="paymentReferenceInput">Payment Note / Reference (optional)</label>
+          <input id="paymentReferenceInput" type="text" name="company_request_payment_reference" placeholder="Optional note, reference number, or fallback payment detail" autocomplete="off" autocorrect="off" spellcheck="false">
+        </div>
+        </div>
+        <div class="company-request-only company-registration-panel" id="companyRegistrationSuccessPanel">
+          <div class="field-group-title company-request-only">Step 4 • Success</div>
+          <div class="success-card">
+            <div class="success-kicker">Registration Submitted</div>
+            <h3 class="success-title" id="companyRegistrationSuccessTitle">Registration Update</h3>
+            <p class="success-copy" id="companyRegistrationSuccessCopy">Your Company ID registration status will appear here after payment confirmation or admin review.</p>
+            <div class="success-reference" id="companyRegistrationSuccessMeta"></div>
+            <div class="wizard-actions">
+              <button id="companyRegistrationOpenRequestBtn" class="secondary" type="button">Open Request Thread</button>
+              <a class="secondary success-link" href="/login.html">Back to Login</a>
+            </div>
+          </div>
+        </div>
+        <button id="createRequestBtn" class="primary not-company-request-action" type="button">Submit Manual Request Only</button>
       </section>
 
       <section class="card support-only" id="secondaryCard">

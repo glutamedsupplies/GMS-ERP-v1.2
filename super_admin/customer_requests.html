@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Super Admin Customer Chat</title>
+<title>Super Admin Request Desk</title>
 <style>
   :root {
     --bg: #f4f7fc;
@@ -290,8 +290,8 @@
   <div class="page">
     <div class="hero">
       <div>
-        <h1>Customer Chat Desk</h1>
-        <p>Super admin review and fixes for customer issues and feedback.</p>
+        <h1>Request Desk</h1>
+        <p>Super admin review for customer chats, company ID requests, and subscription concerns.</p>
       </div>
       <button id="backBtn" class="secondary" type="button">Back to Dashboard</button>
     </div>
@@ -302,9 +302,9 @@
       <section class="card">
         <div class="toolbar">
           <select id="companySelect">
-            <option value="">Select company</option>
+            <option value="">Select request desk</option>
           </select>
-          <input id="searchInput" type="text" placeholder="Search code, customer, contact, details...">
+          <input id="searchInput" type="text" placeholder="Search code, customer, contact, company ID, payment, details...">
           <select id="statusFilter">
             <option value="">All Status</option>
             <option value="open">Open</option>
@@ -316,7 +316,7 @@
         </div>
 
         <div id="requestList" class="request-list">
-          <div class="empty">Select a company to view requests.</div>
+          <div class="empty">Select a request desk to view requests.</div>
         </div>
       </section>
 
