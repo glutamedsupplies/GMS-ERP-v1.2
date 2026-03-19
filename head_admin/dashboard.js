@@ -16,6 +16,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     const frameShell = document.getElementById('frameShell');
     const panelFrame = document.getElementById('panelFrame');
     const frameLoadingLabel = document.getElementById('frameLoadingLabel');
+    const dashboardLogoMark = document.getElementById('dashboardLogoMark');
+    const dashboardLogoIcon = document.getElementById('dashboardLogoIcon');
+    const dashboardLogoText = document.getElementById('dashboardLogoText');
+    const workspaceTag = document.getElementById('workspaceTag');
     const workspaceName = document.getElementById('workspaceName');
     const workspaceCopy = document.getElementById('workspaceCopy');
     const workspaceUser = document.getElementById('workspaceUser');
@@ -208,6 +212,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         console.error('Failed to load bootstrap:', error);
     }
 
+    applyTenantShellIdentity();
     applyWorkspaceConfig();
     cachePanelMetadata();
 
@@ -370,6 +375,98 @@ window.addEventListener('DOMContentLoaded', async () => {
         return bootstrap?.workspaceConfig || {};
     }
 
+    function getWorkspaceShellConfig() {
+        const shell = getWorkspaceConfig()?.shell;
+        return (shell && typeof shell === 'object' && !Array.isArray(shell)) ? shell : {};
+    }
+
+    function getWorkspaceShellVariant() {
+        const configuredVariant = normalizeCompanyCode(getWorkspaceShellConfig()?.variant).replace(/[\s-]+/g, '_');
+        if (configuredVariant) {
+            return configuredVariant;
+        }
+        return resolveCompanyCode() === 'chow' ? 'restaurant_chow' : 'default';
+    }
+
+    function isChowRestaurantShell() {
+        return getWorkspaceShellVariant() === 'restaurant_chow' || resolveCompanyCode() === 'chow';
+    }
+
+    function getDashboardShellName() {
+        const configuredName = String(getWorkspaceShellConfig()?.appShellName || '').trim();
+        if (configuredName) {
+            return configuredName;
+        }
+        if (isChowRestaurantShell()) {
+            return 'Chow Control';
+        }
+        return String(bootstrap?.company?.app_name || '').trim() || 'Head Admin';
+    }
+
+    function getWorkspaceTagLabel() {
+        const configuredTag = String(getWorkspaceShellConfig()?.workspaceTag || '').trim();
+        if (configuredTag) {
+            return configuredTag;
+        }
+        return isChowRestaurantShell() ? 'Restaurant Workspace' : 'Tenant Workspace';
+    }
+
+    function getWorkspaceSummaryCopy(companyCode = '') {
+        const configuredCopy = String(getWorkspaceShellConfig()?.workspaceCopy || '').trim();
+        if (configuredCopy) {
+            return configuredCopy;
+        }
+
+        if (isAttendanceOnlyWorkspace()) {
+            return companyCode
+                ? `Tenant code: ${companyCode}. POS, customers, items, inventory, sales, full attendance tools, and full admin settings are available in this limited workspace.`
+                : 'POS, customers, items, inventory, sales, full attendance tools, and full admin settings are available in this limited workspace.';
+        }
+
+        if (isChowRestaurantShell()) {
+            return companyCode
+                ? `Tenant code: ${companyCode}. Counter POS, menu recipes, ingredient stock sheet, crew attendance, and store setup all live inside this restaurant workspace.`
+                : 'Counter POS, menu recipes, ingredient stock sheet, crew attendance, and store setup all live inside this restaurant workspace.';
+        }
+
+        return companyCode
+            ? `Tenant code: ${companyCode}. Operations, staff tools, and setup panels are now available below.`
+            : 'Operations, staff tools, and setup panels are now available below.';
+    }
+
+    function updatePanelDescription(panel, description) {
+        if (!panel || !description) {
+            return;
+        }
+        panelDescriptions[panel] = description;
+    }
+
+    function applyTenantShellIdentity() {
+        const companyCode = resolveCompanyCode();
+        const chowShell = isChowRestaurantShell();
+
+        if (document.body) {
+            document.body.dataset.companyCode = companyCode || '';
+            document.body.dataset.shellVariant = getWorkspaceShellVariant();
+            document.body.classList.toggle('tenant-shell-chow', chowShell);
+        }
+
+        if (dashboardLogoMark) {
+            dashboardLogoMark.title = `${getDashboardShellName()} workspace`;
+        }
+        if (dashboardLogoIcon) {
+            dashboardLogoIcon.className = chowShell
+                ? 'fa-solid fa-bowl-food'
+                : 'fa-solid fa-shield-halved';
+        }
+        if (dashboardLogoText) {
+            dashboardLogoText.textContent = getDashboardShellName();
+        }
+        if (workspaceTag) {
+            workspaceTag.textContent = getWorkspaceTagLabel();
+        }
+    }
+
     function isAttendanceOnlyWorkspace() {
         return String(getWorkspaceConfig()?.experience?.mode || '').trim().toLowerCase() === 'attendance_only';
     }
@@ -395,6 +492,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     function getPreferredWorkspacePanel() {
+        if (isChowRestaurantShell()) {
+            const preferredPanels = ['order_form', 'inventory_levels', 'time_in_out', 'sales_report', 'employees'];
+            return preferredPanels.find((panel) => isPanelEnabled(panel) || isPanelVisibleByState(panel)) || null;
+        }
+
         if (!isAttendanceOnlyWorkspace()) {
             return null;
         }
@@ -487,6 +589,78 @@ window.addEventListener('DOMContentLoaded', async () => {
             ? 'Composite Recipe'
             : (labels.compositeMenu || 'Composite Recipe');
 
+        if (isChowRestaurantShell()) {
+            const salesInventoryGroup = panelGroups.find((group) => group.id === 'sales_inventory');
+            const attendanceGroup = panelGroups.find((group) => group.id === 'attendance');
+            const adminSetupGroup = panelGroups.find((group) => group.id === 'admin_setup');
+            const communicationGroup = panelGroups.find((group) => group.id === 'communication_panel');
+
+            if (salesInventoryGroup) {
+                salesInventoryGroup.label = 'Counter & Menu';
+                salesInventoryGroup.iconClass = 'fa-solid fa-bowl-food';
+                salesInventoryGroup.panels = [
+                    'order_form',
+                    'client_database',
+                    'inventory_manager',
+                    'composite_items',
+                    'inventory_levels',
+                    'sales_inventory_insight',
+                    'sales_report',
+                    'invoice_summary',
+                    'expenses',
+                    'lbc_tracking'
+                ];
+            }
+            if (attendanceGroup) {
+                attendanceGroup.label = 'Crew Attendance';
+                attendanceGroup.iconClass = 'fa-regular fa-clock';
+            }
+            if (adminSetupGroup) {
+                adminSetupGroup.label = 'Store Setup';
+                adminSetupGroup.iconClass = 'fa-solid fa-shop';
+            }
+            if (communicationGroup) {
+                communicationGroup.label = 'Messages';
+            }
+
+            setNavItemLabel('employees', 'Crew Profiles');
+            setNavItemLabel('client_database', 'Customers');
+            setNavItemLabel('inventory_manager', inventoryLabel === 'Pricing' ? 'Menu Items' : inventoryLabel);
+            setNavItemLabel('inventory_levels', labels.inventoryLevelsMenu || 'Ingredients Sheet');
+            setNavItemLabel('composite_items', labels.compositeMenu || 'Recipes');
+            setNavItemLabel('order_form', labels.orderFormMenu || 'Counter POS');
+            setNavItemLabel('sales_report', labels.salesReportMenu || 'Sales & Profit');
+            setNavItemLabel('expenses', labels.expensesMenu || 'Cash Log');
+            setNavItemLabel('timecards', 'Time Cards');
+            setNavItemLabel('today', "Today's Crew");
+            setNavItemLabel('reports', 'Attendance Reports');
+            setNavItemLabel('users', 'User Access');
+            setNavItemLabel('branches', 'Stores');
+            setNavItemLabel('company_profile', 'Brand & Company');
+            setNavItemLabel('invoice_template', 'Receipt Template');
+            setNavItemLabel('settings', 'Preferences');
+
+            updatePanelDescription('employees', 'Manage crew accounts, roles, and attendance-ready staff profiles for the restaurant team.');
+            updatePanelDescription('client_database', 'Keep guest, reseller, and repeat-customer records organized for counter and pickup operations.');
+            updatePanelDescription('inventory_manager', 'Maintain the Chow menu lineup, selling prices, and item visuals used by the counter POS.');
+            updatePanelDescription('inventory_levels', 'Track ingredients with a restaurant sheet for beginning stock, purchased, used, ending stock, and food cost.');
+            updatePanelDescription('sales_inventory_insight', 'Review fast movers, slow movers, and ingredient movement using the restaurant inventory view.');
+            updatePanelDescription('composite_items', 'Connect each menu item to its ingredients so every sale deducts stock and snapshots true food cost.');
+            updatePanelDescription('order_form', 'Run dine-in, takeout, and pickup orders from a tap-first fast-food counter layout.');
+            updatePanelDescription('sales_report', 'Check daily sales, payment mix, food cost, and profit performance for the Chow counter.');
+            updatePanelDescription('expenses', 'Record cash-outs, petty cash, and operating expenses without leaving the restaurant workspace.');
+            updatePanelDescription('timecards', 'Open crew time cards and shift history from the attendance section.');
+            updatePanelDescription('today', 'See who is on shift today before the lunch or dinner rush starts.');
+            updatePanelDescription('time_in_out', 'Launch the attendance station for quick crew time in and time out actions.');
+            updatePanelDescription('reports', 'Generate attendance summaries for payroll, shift review, and compliance.');
+            updatePanelDescription('users', 'Control user access for managers, cashiers, and support staff.');
+            updatePanelDescription('branches', 'Manage store branches, service availability, and branch-specific setup.');
+            updatePanelDescription('company_profile', 'Update the Chow brand, colors, logo, and company-facing details.');
+            updatePanelDescription('invoice_template', 'Maintain the receipt layout, business info, and branded output for counter sales.');
+            updatePanelDescription('settings', 'Adjust account preferences and restaurant workspace behavior.');
+            return;
+        }
+
         if (isAttendanceOnlyWorkspace()) {
             setNavItemLabel('client_database', 'Customers');
             setNavItemLabel('inventory_manager', 'Items');
@@ -540,7 +714,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     function populateWorkspaceSummary() {
-        const companyName = String(bootstrap?.company?.name || '').trim() || 'Company Workspace';
+        const companyName = String(bootstrap?.company?.app_name || bootstrap?.company?.name || '').trim() || 'Company Workspace';
         const companyCode = String(
             bootstrap?.company?.company_code
             || session?.company_code
@@ -556,13 +730,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             workspaceName.textContent = companyName;
         }
         if (workspaceCopy) {
-            workspaceCopy.textContent = isAttendanceOnlyWorkspace()
-                ? (companyCode
-                    ? `Tenant code: ${companyCode}. POS, customers, items, inventory, sales, full attendance tools, and full admin settings are available in this limited workspace.`
-                    : 'POS, customers, items, inventory, sales, full attendance tools, and full admin settings are available in this limited workspace.')
-                : (companyCode
-                    ? `Tenant code: ${companyCode}. Operations, staff tools, and setup panels are now available below.`
-                    : 'Operations, staff tools, and setup panels are now available below.');
+            workspaceCopy.textContent = getWorkspaceSummaryCopy(companyCode);
         }
         if (workspaceUser) {
             workspaceUser.textContent = session?.userName || 'Admin User';
@@ -598,7 +766,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             sidebarStatusText.textContent = `${activeLabel} ready`;
         }
 
-        document.title = `${activeLabel} | Head Admin`;
+        document.title = `${activeLabel} | ${getDashboardShellName()}`;
     }
 
     function initializeGroupedNavigation() {

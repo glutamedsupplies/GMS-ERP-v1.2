@@ -135,6 +135,7 @@ function getModuleRefs(prefix) {
         summaryGrid: document.getElementById(`${prefix}SummaryGrid`),
         countValue: document.getElementById(`${prefix}CountValue`),
         totalValue: document.getElementById(`${prefix}TotalValue`),
+        cashLeftValue: document.getElementById(`${prefix}CashLeftValue`),
         pendingValue: document.getElementById(`${prefix}PendingValue`),
         tableBody: document.getElementById(`${prefix}TableBody`)
     };
@@ -413,6 +414,9 @@ function renderSummary(moduleKey, summary) {
         refs.countValue.textContent = String(summary.totalCount || state.modules[moduleKey].items.length || 0);
     }
     refs.totalValue.textContent = summary.totalAmountDisplay || formatMoney(0);
+    if (refs.cashLeftValue) {
+        refs.cashLeftValue.textContent = summary.cashLeftAmountDisplay || formatMoney(0);
+    }
     renderBranchSummaryCards(moduleKey, summary);
     if (refs.pendingValue) {
         refs.pendingValue.textContent = summary.pendingAmountDisplay || formatMoney(0);
@@ -428,7 +432,7 @@ function renderBranchSummaryCards(moduleKey, summary) {
 
     grid.querySelectorAll('[data-branch-card="true"]').forEach((card) => card.remove());
 
-    const branchRows = getBranchSummaryRows(summary);
+    const branchRows = getBranchSummaryRows(summary, moduleKey);
     if (!branchRows.length) {
         return;
     }
@@ -449,13 +453,29 @@ function renderBranchSummaryCards(moduleKey, summary) {
 
         card.appendChild(label);
         card.appendChild(value);
+        if (row.detailText) {
+            const detail = document.createElement('small');
+            detail.textContent = row.detailText;
+            card.appendChild(detail);
+        }
         fragment.appendChild(card);
     });
 
     grid.insertBefore(fragment, insertionPoint);
 }
 
-function getBranchSummaryRows(summary) {
+function getBranchSummaryRows(summary, moduleKey = '') {
+    if (moduleKey === 'expense' && Array.isArray(summary.cashLeftBranchBreakdown) && summary.cashLeftBranchBreakdown.length) {
+        return summary.cashLeftBranchBreakdown
+            .filter((item) => String(item?.label || '').trim())
+            .map((item) => ({
+                label: `${String(item.label || '').trim()} Cash Left`,
+                value: Number(item.value || 0),
+                displayValue: item.displayValue || formatMoney(item.value || 0),
+                detailText: String(item.detailText || '').trim()
+            }));
+    }
+
     if (Array.isArray(summary.branchBreakdown) && summary.branchBreakdown.length) {
         return summary.branchBreakdown
             .filter((item) => String(item?.label || '').trim())

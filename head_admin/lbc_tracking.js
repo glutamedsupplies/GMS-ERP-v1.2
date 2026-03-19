@@ -172,6 +172,11 @@ async function initialize() {
 
     try {
         state.bootstrap = await appClient.getBootstrap();
+        if (!state.assignedBranch) {
+            state.assignedBranch = normalizeBranchName(
+                state.bootstrap?.user?.branch_name || state.bootstrap?.user?.branchName || ''
+            );
+        }
     } catch (_error) {
         state.bootstrap = null;
     }
@@ -179,6 +184,10 @@ async function initialize() {
     if (!isAllowedCompany()) {
         lockPanel('LBC Tracking is available for GMS/GWD companies only.');
         return;
+    }
+
+    if (isEmployeeLikeRole(session.role) && state.assignedBranch) {
+        state.filters.branch = state.assignedBranch;
     }
 
     bindEvents();
@@ -1333,6 +1342,7 @@ async function handleBulkTrackingSave() {
         return;
     }
 
+    const effectiveBranch = normalizeText(state.filters.branch || state.assignedBranch);
     const entries = parseBulkTrackingEntries(bulkTrackingInput?.value);
     if (!entries.length) {
         setStatus('Add at least one tracking number for bulk input.', true);
@@ -1348,7 +1358,7 @@ async function handleBulkTrackingSave() {
 
     try {
         const result = await appClient.bulkAssignLbcTracking({
-            branch: state.filters.branch,
+            branch: effectiveBranch,
             items: entries
         });
         const assignedCount = Number(result?.assignedCount || 0);

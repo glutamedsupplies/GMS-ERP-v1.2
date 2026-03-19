@@ -1,24 +1,40 @@
 const appClient = window.appClient;
 
 const pageTitle = document.getElementById('pageTitle');
+const pageCopy = document.getElementById('pageCopy');
 const visibleCount = document.getElementById('visibleCount');
 const lowStockCount = document.getElementById('lowStockCount');
+const inventoryValueCard = document.getElementById('inventoryValueCard');
+const inventoryValueTotal = document.getElementById('inventoryValueTotal');
 const branchLabel = document.getElementById('branchLabel');
 const branchFilter = document.getElementById('branchFilter');
 const searchInput = document.getElementById('searchInput');
 const statusFilter = document.getElementById('statusFilter');
 const refreshBtn = document.getElementById('refreshBtn');
 const statusText = document.getElementById('statusText');
+const sheetGuide = document.getElementById('sheetGuide');
+const inventoryTableHead = document.getElementById('inventoryTableHead');
 const inventoryBody = document.getElementById('inventoryBody');
 
 const LOW_STOCK_THRESHOLD = 5;
 const NEAR_EXPIRY_DAYS = 7;
 const ADJUSTMENT_TYPES = ['add', 'minus', 'damage', 'set'];
+const RESTAURANT_CATEGORIES = [
+    'Meat',
+    'Seafood',
+    'Vegetables',
+    'Dry Goods',
+    'Dairy',
+    'Spices & Condiments',
+    'Beverages'
+];
+const INVENTORY_SHEET_STORAGE_PREFIX = 'restaurant-inventory-sheet';
 
 const state = {
     rows: [],
     branches: [],
     session: null,
+    companyCode: '',
     assignedBranch: '',
     canEditInventory: false,
     canDeleteInventory: false
@@ -35,6 +51,7 @@ async function initialize() {
         return;
     }
     state.session = session;
+    state.companyCode = normalizeCompanyCode(session.companyCode || session.company_code || '');
     state.assignedBranch = normalizeBranchName(session.branchName || '');
     state.canEditInventory = canRoleEditInventory(session.role);
     state.canDeleteInventory = canRoleDeleteInventory(session.role);
@@ -84,9 +101,34 @@ async function applyWorkspaceConfig() {
     try {
         const bootstrap = await appClient.getBootstrap();
         const labels = bootstrap?.workspaceConfig?.labels || {};
-        pageTitle.textContent = labels.inventoryLevelsPageTitle || 'Inventory Levels';
+        const restaurantMode = isChowRestaurantInventoryMode();
+        pageTitle.textContent = restaurantMode
+            ? (labels.inventoryLevelsPageTitle || 'Ingredients Stock')
+            : (labels.inventoryLevelsPageTitle || 'Inventory Levels');
+        if (pageCopy) {
+            pageCopy.textContent = restaurantMode
+                ? 'Use this as the Chow restaurant inventory sheet. Encode beginning stock, purchases, kitchen usage, ending stock, unit cost, supplier, expiry date, and notes in one place.'
+                : 'Manage branch stock movements here. Gumamit ng Add, Minus, Damage, or Set para controlled ang galaw ng quantity bawat item.';
+        }
+        if (inventoryValueCard) {
+            inventoryValueCard.hidden = !restaurantMode;
+        }
+        if (sheetGuide) {
+            sheetGuide.hidden = !restaurantMode;
+        }
+        renderTableHead();
     } catch (_error) {
         pageTitle.textContent = 'Inventory Levels';
+        if (pageCopy) {
+            pageCopy.textContent = 'Manage branch stock movements here. Gumamit ng Add, Minus, Damage, or Set para controlled ang galaw ng quantity bawat item.';
+        }
+        if (inventoryValueCard) {
+            inventoryValueCard.hidden = false;
+        }
+        if (sheetGuide) {
+            sheetGuide.hidden = true;
+        }
+        renderTableHead();
     }
 }
 
@@ -127,16 +169,21 @@ async function loadInventory() {
             branch,
             filter: searchInput.value.trim()
         });
+        const sheetDrafts = isChowRestaurantInventoryMode() ? readInventorySheetDrafts(branch) : {};
 
         state.rows = Array.isArray(rows) ? rows.map((row) => {
             const expirationDate = normalizeDateInput(row.expiration_date);
-            return {
+            const nextRow = {
                 ...row,
                 expiration_date: expirationDate,
                 draftAdjustmentType: 'add',
                 draftAdjustmentQuantity: '',
                 draftExpirationDate: expirationDate
             };
+            if (isChowRestaurantInventoryMode()) {
+                nextRow.sheet = buildInventorySheetState(nextRow, sheetDrafts[String(row.inventory_id || '')] || {});
+            }
+            return nextRow;
         }) : [];
         renderRows();
         renderSummary();
@@ -164,7 +211,53 @@ function getVisibleRows() {
     });
 }
 
+function renderTableHead() {
+    if (!inventoryTableHead) {
+        return;
+    }
+
+    if (isChowRestaurantInventoryMode()) {
+        inventoryTableHead.innerHTML = `
+            <tr>
+                <th>Item Name</th>
+                <th>Category</th>
+                <th>Unit</th>
+                <th>Beginning Stock</th>
+                <th>Purchased</th>
+                <th>Used</th>
+                <th>Ending Stock</th>
+                <th>Unit Cost</th>
+                <th>Total Value</th>
+                <th>Supplier</th>
+                <th>Expiry Date</th>
+                <th>Notes</th>
+                <th>Action</th>
+            </tr>
+        `;
+        return;
+    }
+
+    inventoryTableHead.innerHTML = `
+        <tr>
+            <th>Item Name</th>
+            <th>Unit</th>
+            <th>Type</th>
+            <th>Branch Qty</th>
+            <th>Expiration</th>
+            <th>Adjustment</th>
+            <th>Status</th>
+            <th>Updated</th>
+            <th>Action</th>
+        </tr>
+    `;
+}
+
 function renderRows() {
+    if (isChowRestaurantInventoryMode()) {
+        renderRestaurantInventorySheetRows();
+        return;
+    }
+
     const rows = getVisibleRows();
     if (!rows.length) {
         inventoryBody.innerHTML = '<tr><td colspan="9" class="empty">No inventory items found for this filter.</td></tr>';
@@ -244,17 +337,326 @@ function renderRows() {
     }).join('');
 }
 
+function renderRestaurantInventorySheetRows() {
+    const rows = getVisibleRows();
+    if (!rows.length) {
+        inventoryBody.innerHTML = '<tr><td colspan="13" class="empty">No ingredient rows found for this filter.</td></tr>';
+        return;
+    }
+
+    inventoryBody.innerHTML = rows.map((row) => {
+        const canEditBranch = canEditSelectedBranch(row.branch || branchFilter?.value || '');
+        const canDeleteBranch = canDeleteSelectedBranch(row.branch || branchFilter?.value || '');
+        const readOnlyTag = '<span class="status-tag status-readonly">Read only</span>';
+        const expirationDate = normalizeDateInput(row.draftExpirationDate || row.expiration_date);
+        const statusMeta = getInventoryStatusMeta(row);
+        const sheet = ensureInventorySheetState(row);
+        const endingStock = getSheetEndingStock(row);
+        const totalValue = getSheetTotalValue(row);
+        const actionCell = canEditBranch
+            ? `
+                <div class="row-actions">
+                    <button type="button" class="primary-btn small-btn" data-action="apply" data-inventory-id="${appClient.escapeHtml(row.inventory_id)}">Apply</button>
+                    ${canDeleteBranch
+                        ? `<button type="button" class="danger-btn small-btn" data-action="delete" data-inventory-id="${appClient.escapeHtml(row.inventory_id)}">Delete</button>`
+                        : ''}
+                </div>
+            `
+            : readOnlyTag;
+
+        return `
+            <tr class="row-${statusMeta.rowClass}" data-inventory-id="${appClient.escapeHtml(String(row.inventory_id || ''))}">
+                <td>
+                    <div class="sheet-item">
+                        <strong>${appClient.escapeHtml(row.item_name || '-')}</strong>
+                        <small>${appClient.escapeHtml(row.item_code ? `Code ${row.item_code}` : `Updated ${formatDateTime(row.updated_at)}`)}</small>
+                    </div>
+                </td>
+                <td>
+                    ${canEditBranch
+                        ? `
+                            <select class="sheet-select" data-field="categoryLabel" data-inventory-id="${appClient.escapeHtml(row.inventory_id)}">
+                                ${renderCategoryOptions(sheet.categoryLabel)}
+                            </select>
+                        `
+                        : appClient.escapeHtml(sheet.categoryLabel || '-')
+                    }
+                </td>
+                <td>${appClient.escapeHtml(row.inventory_unit || '-')}</td>
+                <td>
+                    ${renderSheetNumberInput({
+                        inventoryId: row.inventory_id,
+                        field: 'beginningStock',
+                        value: sheet.beginningStock,
+                        canEdit: canEditBranch
+                    })}
+                </td>
+                <td>
+                    ${renderSheetNumberInput({
+                        inventoryId: row.inventory_id,
+                        field: 'purchasedQuantity',
+                        value: sheet.purchasedQuantity,
+                        canEdit: canEditBranch
+                    })}
+                </td>
+                <td>
+                    ${renderSheetNumberInput({
+                        inventoryId: row.inventory_id,
+                        field: 'usedQuantity',
+                        value: sheet.usedQuantity,
+                        canEdit: canEditBranch
+                    })}
+                </td>
+                <td>
+                    <div class="sheet-ending">
+                        <strong data-cell="endingStock" data-inventory-id="${appClient.escapeHtml(row.inventory_id)}">${appClient.escapeHtml(formatQuantity(endingStock))}</strong>
+                        <span class="status-tag ${statusMeta.tagClass} sheet-inline-status" data-cell="sheetStatus" data-inventory-id="${appClient.escapeHtml(row.inventory_id)}">${statusMeta.iconHtml}${appClient.escapeHtml(statusMeta.label)}</span>
+                    </div>
+                </td>
+                <td>
+                    ${renderSheetNumberInput({
+                        inventoryId: row.inventory_id,
+                        field: 'unitCost',
+                        value: sheet.unitCost,
+                        canEdit: canEditBranch,
+                        step: '0.01',
+                        className: 'sheet-input sheet-number sheet-money'
+                    })}
+                </td>
+                <td><span class="sheet-value" data-cell="totalValue" data-inventory-id="${appClient.escapeHtml(row.inventory_id)}">${appClient.escapeHtml(formatMoney(totalValue))}</span></td>
+                <td>
+                    ${renderSheetTextInput({
+                        inventoryId: row.inventory_id,
+                        field: 'supplierName',
+                        value: sheet.supplierName,
+                        canEdit: canEditBranch,
+                        placeholder: 'Supplier'
+                    })}
+                </td>
+                <td>
+                    ${canEditBranch
+                        ? `
+                            <input
+                                type="date"
+                                class="expiration-input"
+                                data-field="expirationDate"
+                                data-inventory-id="${appClient.escapeHtml(row.inventory_id)}"
+                                value="${appClient.escapeHtml(expirationDate)}">
+                        `
+                        : `<span class="expiration-text">${appClient.escapeHtml(formatDateOnly(expirationDate))}</span>`
+                    }
+                </td>
+                <td>
+                    ${renderSheetTextInput({
+                        inventoryId: row.inventory_id,
+                        field: 'notes',
+                        value: sheet.notes,
+                        canEdit: canEditBranch,
+                        placeholder: 'Notes',
+                        className: 'sheet-input sheet-text sheet-notes'
+                    })}
+                </td>
+                <td>${actionCell}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function renderCategoryOptions(selectedValue = '') {
+    const categories = [...RESTAURANT_CATEGORIES];
+    const normalizedSelected = String(selectedValue || '').trim();
+    if (normalizedSelected && !categories.includes(normalizedSelected)) {
+        categories.unshift(normalizedSelected);
+    }
+
+    return categories.map((category) => `
+        <option value="${appClient.escapeHtml(category)}"${category === normalizedSelected ? ' selected' : ''}>${appClient.escapeHtml(category)}</option>
+    `).join('');
+}
+
+function renderSheetNumberInput({ inventoryId, field, value, canEdit, step = '1', className = 'sheet-input sheet-number' }) {
+    if (!canEdit) {
+        return `<span>${appClient.escapeHtml(formatQuantity(value))}</span>`;
+    }
+
+    return `
+        <input
+            class="${className}"
+            type="number"
+            step="${appClient.escapeHtml(step)}"
+            min="0"
+            data-field="${appClient.escapeHtml(field)}"
+            data-inventory-id="${appClient.escapeHtml(inventoryId)}"
+            value="${appClient.escapeHtml(formatDraftNumber(value, step === '1' ? 0 : 2))}">
+    `;
+}
+
+function renderSheetTextInput({ inventoryId, field, value, canEdit, placeholder = '', className = 'sheet-input sheet-text' }) {
+    if (!canEdit) {
+        return `<span>${appClient.escapeHtml(String(value || '').trim() || '-')}</span>`;
+    }
+
+    return `
+        <input
+            class="${className}"
+            type="text"
+            data-field="${appClient.escapeHtml(field)}"
+            data-inventory-id="${appClient.escapeHtml(inventoryId)}"
+            value="${appClient.escapeHtml(String(value || '').trim())}"
+            placeholder="${appClient.escapeHtml(placeholder)}">
+    `;
+}
+
+function ensureInventorySheetState(row) {
+    if (!row.sheet || typeof row.sheet !== 'object') {
+        row.sheet = buildInventorySheetState(row, {});
+    }
+    return row.sheet;
+}
+
+function buildInventorySheetState(row, savedDraft = {}) {
+    const currentQuantity = Math.max(0, Number(row.quantity ?? 0));
+    return {
+        categoryLabel: String(savedDraft.categoryLabel || inferRestaurantCategory(row)).trim() || 'Dry Goods',
+        beginningStock: sanitizeSheetNumber(savedDraft.beginningStock, currentQuantity),
+        purchasedQuantity: sanitizeSheetNumber(savedDraft.purchasedQuantity, 0),
+        usedQuantity: sanitizeSheetNumber(savedDraft.usedQuantity, 0),
+        unitCost: sanitizeSheetNumber(savedDraft.unitCost, 0),
+        supplierName: String(savedDraft.supplierName || '').trim(),
+        notes: String(savedDraft.notes || '').trim()
+    };
+}
+
+function sanitizeSheetNumber(value, fallback = 0) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+        return Math.max(0, Number(fallback || 0));
+    }
+    return Math.max(0, parsed);
+}
+
+function readInventorySheetDrafts(branchName = '') {
+    const storageKey = getInventorySheetStorageKey(branchName);
+    if (!storageKey) {
+        return {};
+    }
+
+    try {
+        const raw = window.localStorage.getItem(storageKey);
+        if (!raw) {
+            return {};
+        }
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch (_error) {
+        return {};
+    }
+}
+
+function writeInventorySheetDrafts(branchName = '', drafts = {}) {
+    const storageKey = getInventorySheetStorageKey(branchName);
+    if (!storageKey) {
+        return;
+    }
+
+    try {
+        window.localStorage.setItem(storageKey, JSON.stringify(drafts));
+    } catch (_error) {
+        // Ignore storage write failures and keep the live worksheet usable.
+    }
+}
+
+function persistInventorySheetDraft(row) {
+    if (!isChowRestaurantInventoryMode() || !row) {
+        return;
+    }
+
+    const branchName = String(row.branch || branchFilter?.value || '').trim();
+    const drafts = readInventorySheetDrafts(branchName);
+    drafts[String(row.inventory_id || '')] = ensureInventorySheetState(row);
+    writeInventorySheetDrafts(branchName, drafts);
+}
+
+function getInventorySheetStorageKey(branchName = '') {
+    const normalizedCompanyCode = normalizeCompanyCode(state.companyCode);
+    const normalizedBranch = normalizeBranchName(branchName || branchFilter?.value || '');
+    if (!normalizedCompanyCode || !normalizedBranch) {
+        return '';
+    }
+    return `${INVENTORY_SHEET_STORAGE_PREFIX}:${normalizedCompanyCode}:${normalizedBranch.toLowerCase()}`;
+}
+
+function getSheetEndingStock(row) {
+    const sheet = ensureInventorySheetState(row);
+    return Math.max(0, Number(sheet.beginningStock || 0) + Number(sheet.purchasedQuantity || 0) - Number(sheet.usedQuantity || 0));
+}
+
+function getSheetTotalValue(row) {
+    const sheet = ensureInventorySheetState(row);
+    return Math.max(0, getSheetEndingStock(row) * Number(sheet.unitCost || 0));
+}
+
+function getDisplayInventoryQuantity(row) {
+    return isChowRestaurantInventoryMode() ? getSheetEndingStock(row) : Number(row?.quantity ?? 0);
+}
+
+function inferRestaurantCategory(row = {}) {
+    const lookup = `${row.item_name || ''} ${row.item_type || ''}`.toLowerCase();
+    if (/(beef|pork|chicken|siomai|meat)/.test(lookup)) return 'Meat';
+    if (/(fish|tuna|shrimp|seafood)/.test(lookup)) return 'Seafood';
+    if (/(radish|vegetable|veg|lettuce|cabbage|carrot)/.test(lookup)) return 'Vegetables';
+    if (/(egg|milk|dairy|cheese)/.test(lookup)) return 'Dairy';
+    if (/(sauce|condiment|spice|curry|pickled)/.test(lookup)) return 'Spices & Condiments';
+    if (/(juice|drink|tea|coffee|soda|beverage)/.test(lookup)) return 'Beverages';
+    return 'Dry Goods';
+}
+
+function updateRestaurantSheetPreview(row) {
+    const inventoryId = String(row?.inventory_id || '').trim();
+    if (!inventoryId) {
+        return;
+    }
+
+    const endingStockLabel = inventoryBody.querySelector(`[data-cell="endingStock"][data-inventory-id="${inventoryId}"]`);
+    const totalValueLabel = inventoryBody.querySelector(`[data-cell="totalValue"][data-inventory-id="${inventoryId}"]`);
+    const statusLabel = inventoryBody.querySelector(`[data-cell="sheetStatus"][data-inventory-id="${inventoryId}"]`);
+    const rowElement = inventoryBody.querySelector(`tr[data-inventory-id="${inventoryId}"]`);
+    const endingStock = getSheetEndingStock(row);
+    const totalValue = getSheetTotalValue(row);
+    const statusMeta = getInventoryStatusMeta(row);
+
+    if (endingStockLabel) {
+        endingStockLabel.textContent = formatQuantity(endingStock);
+    }
+    if (totalValueLabel) {
+        totalValueLabel.textContent = formatMoney(totalValue);
+    }
+    if (statusLabel) {
+        statusLabel.className = `status-tag ${statusMeta.tagClass} sheet-inline-status`;
+        statusLabel.innerHTML = `${statusMeta.iconHtml}${appClient.escapeHtml(statusMeta.label)}`;
+    }
+    if (rowElement) {
+        rowElement.className = `row-${statusMeta.rowClass}`;
+    }
+
+    renderSummary();
+}
+
 function renderSummary() {
     const rows = getVisibleRows();
     const lowCount = rows.reduce((count, row) => (
-        Number(row.quantity ?? 0) > 0 && Number(row.quantity ?? 0) <= LOW_STOCK_THRESHOLD
+        getDisplayInventoryQuantity(row) > 0 && getDisplayInventoryQuantity(row) <= LOW_STOCK_THRESHOLD
             ? count + 1
             : count
     ), 0);
+    const totalValue = rows.reduce((sum, row) => sum + getSheetTotalValue(row), 0);
 
     visibleCount.textContent = String(rows.length);
     lowStockCount.textContent = String(lowCount);
     branchLabel.textContent = branchFilter.value || '-';
+    if (inventoryValueTotal) {
+        inventoryValueTotal.textContent = formatMoney(totalValue);
+    }
 }
 
 function updateLoadedStatus() {
@@ -263,11 +665,12 @@ function updateLoadedStatus() {
         : (state.canEditInventory ? 'read-only mode for other branch' : 'read-only mode');
     const visibleRows = getVisibleRows().length;
     const totalRows = state.rows.length;
+    const sheetSuffix = isChowRestaurantInventoryMode() ? ' restaurant sheet' : '';
     if ((statusFilter?.value || 'all') === 'all') {
-        setStatus(`Loaded ${totalRows} inventory item(s) (${modeLabel}).`, false);
+        setStatus(`Loaded ${totalRows} inventory item(s)${sheetSuffix} (${modeLabel}).`, false);
         return;
     }
-    setStatus(`Loaded ${visibleRows} of ${totalRows} inventory item(s) (${modeLabel}).`, false);
+    setStatus(`Loaded ${visibleRows} of ${totalRows} inventory item(s)${sheetSuffix} (${modeLabel}).`, false);
 }
 
 function handleTableClick(event) {
@@ -292,6 +695,39 @@ function handleTableClick(event) {
 
 function handleTableInput(event) {
     if (!canEditSelectedBranch()) {
+        return;
+    }
+
+    if (isChowRestaurantInventoryMode()) {
+        const sheetInput = event.target.closest('input[data-field]');
+        if (!sheetInput) {
+            return;
+        }
+
+        const row = state.rows.find((entry) => String(entry.inventory_id) === String(sheetInput.dataset.inventoryId || ''));
+        if (!row) {
+            return;
+        }
+
+        const sheet = ensureInventorySheetState(row);
+        const field = String(sheetInput.dataset.field || '').trim();
+
+        if (field === 'expirationDate') {
+            row.draftExpirationDate = normalizeDateInput(sheetInput.value);
+            return;
+        }
+
+        if (field === 'supplierName' || field === 'notes') {
+            sheet[field] = String(sheetInput.value || '').trim();
+            persistInventorySheetDraft(row);
+            return;
+        }
+
+        if (field === 'beginningStock' || field === 'purchasedQuantity' || field === 'usedQuantity' || field === 'unitCost') {
+            sheet[field] = sanitizeSheetNumber(sheetInput.value, 0);
+            persistInventorySheetDraft(row);
+            updateRestaurantSheetPreview(row);
+        }
         return;
     }
 
@@ -320,6 +756,32 @@ function handleTableChange(event) {
     if (!canEditSelectedBranch()) {
         return;
     }
+
+    if (isChowRestaurantInventoryMode()) {
+        const categorySelect = event.target.closest('select[data-field="categoryLabel"]');
+        if (categorySelect) {
+            const row = state.rows.find((entry) => String(entry.inventory_id) === String(categorySelect.dataset.inventoryId || ''));
+            if (!row) {
+                return;
+            }
+            ensureInventorySheetState(row).categoryLabel = String(categorySelect.value || '').trim();
+            persistInventorySheetDraft(row);
+            return;
+        }
+
+        const expirationInput = event.target.closest('input[data-field="expirationDate"]');
+        if (!expirationInput) {
+            return;
+        }
+
+        const row = state.rows.find((entry) => String(entry.inventory_id) === String(expirationInput.dataset.inventoryId || ''));
+        if (!row) {
+            return;
+        }
+        row.draftExpirationDate = normalizeDateInput(expirationInput.value);
+        return;
+    }
+
     const select = event.target.closest('select[data-field="adjustmentType"]');
     if (select) {
         const inventoryId = String(select.dataset.inventoryId || '');
@@ -358,6 +820,62 @@ async function applyAdjustment(inventoryId) {
         setStatus(getInventoryEditRestrictionMessage(branch), true);
         return;
     }
+    const row = state.rows.find((entry) => String(entry.inventory_id) === String(inventoryId));
+
+    if (isChowRestaurantInventoryMode()) {
+        if (!branch || !row) {
+            return;
+        }
+
+        const expirationInput = Array.from(inventoryBody.querySelectorAll('input[data-field="expirationDate"]'))
+            .find((entry) => String(entry.dataset.inventoryId || '') === String(inventoryId || ''));
+        const button = Array.from(inventoryBody.querySelectorAll('button[data-action="apply"]'))
+            .find((entry) => String(entry.dataset.inventoryId || '') === String(inventoryId || ''));
+        const nextExpirationDate = normalizeDateInput(expirationInput?.value || row.draftExpirationDate || row.expiration_date);
+        const endingStock = getSheetEndingStock(row);
+
+        setStatus(`Syncing ending stock for ${row.item_name || 'ingredient'}...`, false);
+        if (expirationInput) {
+            expirationInput.disabled = true;
+        }
+        if (button) {
+            button.disabled = true;
+        }
+
+        try {
+            const updated = await appClient.updateInventoryQuantity(inventoryId, {
+                branch,
+                quantity: endingStock,
+                adjustmentType: 'set',
+                expirationDate: nextExpirationDate,
+                hasExpirationDateOverride: true
+            });
+
+            row.quantity = Number(updated?.quantity ?? endingStock);
+            row.updated_at = updated?.updated_at || row.updated_at;
+            row.expiration_date = normalizeDateInput(updated?.expiration_date || nextExpirationDate);
+            row.draftExpirationDate = row.expiration_date;
+            row.sheet.beginningStock = row.quantity;
+            row.sheet.purchasedQuantity = 0;
+            row.sheet.usedQuantity = 0;
+            persistInventorySheetDraft(row);
+
+            renderRows();
+            renderSummary();
+            updateLoadedStatus();
+        } catch (error) {
+            console.error('Failed to sync restaurant inventory sheet:', error);
+            setStatus(error.message || 'Unable to sync ending stock.', true);
+            if (expirationInput) {
+                expirationInput.disabled = false;
+            }
+            if (button) {
+                button.disabled = false;
+            }
+        }
+        return;
+    }
+
     const input = Array.from(inventoryBody.querySelectorAll('input[data-field="adjustmentQuantity"]'))
         .find((entry) => String(entry.dataset.inventoryId || '') === String(inventoryId || ''));
     const select = Array.from(inventoryBody.querySelectorAll('select[data-field="adjustmentType"]'))
@@ -371,7 +889,6 @@ async function applyAdjustment(inventoryId) {
         return;
     }
 
-    const row = state.rows.find((entry) => String(entry.inventory_id) === String(inventoryId));
     const itemName = row?.item_name || 'Item';
     const operation = normalizeAdjustmentType(select?.value || row?.draftAdjustmentType);
     const rawInputValue = String(input.value || '').trim();
@@ -484,6 +1001,11 @@ async function deleteInventoryItem(inventoryId, triggerButton = null) {
 
     try {
         await appClient.deleteInventoryItem(inventoryId, { branch });
+        if (isChowRestaurantInventoryMode()) {
+            const drafts = readInventorySheetDrafts(branch);
+            delete drafts[String(inventoryId || '')];
+            writeInventorySheetDrafts(branch, drafts);
+        }
         await loadInventory();
         setStatus(`Inventory item "${itemLabel}" deleted.`, false);
     } catch (error) {
@@ -496,7 +1018,7 @@ async function deleteInventoryItem(inventoryId, triggerButton = null) {
 }
 
 function getInventoryStatusMeta(row) {
-    const quantity = Number(row?.quantity ?? 0);
+    const quantity = getDisplayInventoryQuantity(row);
     const expirationDate = normalizeDateInput(row?.expiration_date || row?.draftExpirationDate);
     const daysUntilExpiration = getDaysUntilExpiration(expirationDate);
 
@@ -572,6 +1094,29 @@ function formatQuantity(value) {
         minimumFractionDigits: 0,
         maximumFractionDigits: 2
     });
+}
+
+function formatDraftNumber(value, fractionDigits = 0) {
+    const parsed = Number(value || 0);
+    if (!Number.isFinite(parsed)) {
+        return '';
+    }
+    return fractionDigits > 0
+        ? parsed.toFixed(fractionDigits)
+        : String(Math.round(parsed * 100) / 100).replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
+}
+
+function formatMoney(value) {
+    const parsed = Number(value || 0);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+        return 'PHP 0.00';
+    }
+    return parsed.toLocaleString('en-PH', {
+        style: 'currency',
+        currency: 'PHP',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).replace('₱', 'PHP ');
 }
 
 function formatDateTime(value) {
@@ -709,6 +1254,14 @@ function isStaffRole(role) {
 
 function normalizeBranchName(value) {
     return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeCompanyCode(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function isChowRestaurantInventoryMode() {
+    return normalizeCompanyCode(state.companyCode) === 'chow';
 }
 
 function sameBranch(left, right) {

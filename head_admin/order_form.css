@@ -211,6 +211,131 @@ h2 {
   margin-top: 18px;
 }
 
+body.quick-pos-mode .layout-grid {
+  grid-template-columns: minmax(320px, 0.82fr) minmax(0, 1.18fr);
+}
+
+body.quick-pos-mode .page-shell {
+  max-width: 1700px;
+  padding-top: 18px;
+}
+
+body.quick-pos-mode {
+  overflow-x: hidden;
+}
+
+body.quick-pos-mode .hero-card {
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+}
+
+body.quick-pos-mode .hero-copy,
+body.quick-pos-mode .ai-usage-indicator {
+  display: none;
+}
+
+body.quick-pos-mode .hero-metrics {
+  grid-template-columns: repeat(2, minmax(170px, 1fr));
+  min-width: min(520px, 100%);
+}
+
+body.quick-pos-mode .hero-total,
+body.quick-pos-mode .hero-side-card {
+  min-width: 0;
+  padding: 16px 18px;
+}
+
+body.quick-pos-mode .layout-grid {
+  grid-template-columns: minmax(0, 1.28fr) minmax(320px, 0.72fr);
+  align-items: start;
+}
+
+body.quick-pos-mode #menuPanel,
+body.quick-pos-mode #checkoutPanel {
+  min-width: 0;
+}
+
+body.quick-pos-mode #menuPanel {
+  order: 1;
+}
+
+body.quick-pos-mode #checkoutPanel {
+  order: 2;
+  position: sticky;
+  top: 18px;
+}
+
+body.quick-pos-mode #checkoutPanel .section-heading {
+  margin-bottom: 14px;
+}
+
+body.quick-pos-mode #checkoutPanel h2 {
+  font-size: 26px;
+}
+
+body.quick-pos-mode .panel {
+  padding: 20px;
+}
+
+body.quick-pos-mode .form-grid {
+  gap: 12px;
+}
+
+body.quick-pos-mode .quick-pos-shell {
+  margin-bottom: 0;
+}
+
+body.quick-pos-mode .quick-pos-header > * {
+  min-width: 0;
+}
+
+body.quick-pos-mode .quick-pos-tabs,
+body.quick-pos-mode .quick-pay-strip {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+body.quick-pos-mode .quick-pos-tabs::-webkit-scrollbar,
+body.quick-pos-mode .quick-pay-strip::-webkit-scrollbar {
+  display: none;
+}
+
+body.quick-pos-mode .quick-pos-tab,
+body.quick-pos-mode .quick-pay-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+body.quick-pos-mode .quick-pos-grid {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+body.quick-pos-mode .table-toggle-row {
+  margin-top: 14px;
+}
+
+body.quick-pos-mode .combo-panel {
+  max-width: min(100vw - 32px, 420px);
+}
+
+body.quick-pos-mode .panel-footer {
+  position: sticky;
+  bottom: 12px;
+  z-index: 12;
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid rgba(179, 22, 22, 0.14);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 247, 0.96), rgba(255, 243, 222, 0.92)),
+    rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 30px rgba(78, 30, 16, 0.12);
+  backdrop-filter: blur(12px);
+}
+
 .panel {
   padding: 24px;
 }
@@ -566,6 +691,301 @@ button {
   padding: 0;
   background: var(--danger-soft);
   color: var(--danger);
+}
+
+.quick-pos-shell {
+  margin-bottom: 18px;
+  padding: 22px;
+  border-radius: 28px;
+  border: 1px solid rgba(179, 22, 22, 0.14);
+  background:
+    radial-gradient(circle at top left, rgba(255, 216, 0, 0.16), transparent 28%),
+    linear-gradient(145deg, rgba(123, 7, 7, 0.98) 0%, rgba(180, 18, 18, 0.96) 52%, rgba(16, 109, 74, 0.98) 100%);
+  color: #fff7ea;
+  box-shadow: 0 26px 52px rgba(107, 16, 16, 0.28);
+}
+
+.quick-pos-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.quick-pos-heading {
+  max-width: 560px;
+}
+
+.quick-pos-title {
+  margin: 0;
+  font-family: "Fraunces", serif;
+  font-size: clamp(26px, 3vw, 34px);
+  color: #fff5d8;
+}
+
+.quick-pos-copy {
+  margin: 10px 0 0;
+  color: rgba(255, 245, 216, 0.84);
+  line-height: 1.65;
+}
+
+.quick-pos-toolbar {
+  display: grid;
+  gap: 12px;
+  min-width: min(420px, 100%);
+}
+
+.quick-pos-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 16px;
+  border-radius: 18px;
+  background: rgba(255, 248, 227, 0.14);
+  border: 1px solid rgba(255, 245, 216, 0.2);
+}
+
+.quick-pos-search i {
+  color: rgba(255, 245, 216, 0.78);
+}
+
+.quick-pos-search input {
+  min-height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: #fffdf8;
+  box-shadow: none;
+}
+
+.quick-pos-search input::placeholder {
+  color: rgba(255, 245, 216, 0.64);
+}
+
+.quick-pos-tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.quick-pos-tab,
+.quick-pay-btn {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 248, 227, 0.14);
+  border: 1px solid rgba(255, 245, 216, 0.2);
+  color: #fff8e7;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  box-shadow: none;
+}
+
+.quick-pos-tab.is-active,
+.quick-pay-btn.is-active {
+  background: linear-gradient(135deg, #ffe16a 0%, #ffd000 100%);
+  color: #7a0b0b;
+  border-color: rgba(255, 208, 0, 0.42);
+}
+
+.quick-pay-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.quick-pay-label {
+  color: rgba(255, 245, 216, 0.78);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.quick-pay-btn-clear {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.quick-pos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+body.quick-pos-mode .quick-pos-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.quick-pos-card {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  min-height: 250px;
+  padding: 18px;
+  border-radius: 26px;
+  border: 1px solid rgba(255, 245, 216, 0.18);
+  background: rgba(255, 250, 241, 0.98);
+  color: #1f2b35;
+  text-align: left;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.quick-pos-card:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 22px 34px rgba(52, 24, 12, 0.16);
+}
+
+.quick-pos-card:disabled {
+  opacity: 0.66;
+  cursor: not-allowed;
+}
+
+.quick-pos-card.is-in-cart {
+  border-color: rgba(198, 40, 40, 0.24);
+  box-shadow: 0 20px 32px rgba(198, 40, 40, 0.14);
+}
+
+.quick-pos-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at top right, rgba(255, 216, 0, 0.16), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(126, 14, 14, 0.02) 100%);
+  pointer-events: none;
+}
+
+.quick-pos-card-beef { background: linear-gradient(180deg, #fff8f3 0%, #fff1e5 100%); }
+.quick-pos-card-pork { background: linear-gradient(180deg, #fff8f1 0%, #fff0ea 100%); }
+.quick-pos-card-chicken { background: linear-gradient(180deg, #fffaf0 0%, #fff3dc 100%); }
+.quick-pos-card-spice { background: linear-gradient(180deg, #fff4ef 0%, #ffe6de 100%); }
+.quick-pos-card-curry { background: linear-gradient(180deg, #fff9eb 0%, #ffefc7 100%); }
+.quick-pos-card-addons { background: linear-gradient(180deg, #fefaf1 0%, #f7f0df 100%); }
+
+.quick-pos-badge {
+  width: fit-content;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #ffd400;
+  color: #8d0a0a;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 28px;
+  text-transform: uppercase;
+}
+
+.quick-pos-thumb {
+  display: grid;
+  place-items: center;
+  width: 82px;
+  height: 82px;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.54), transparent 18%),
+    linear-gradient(135deg, #b31217 0%, #f09819 100%);
+  color: #fff7eb;
+  font-size: 28px;
+  font-weight: 900;
+  box-shadow: inset 0 -10px 18px rgba(0, 0, 0, 0.1);
+}
+
+.quick-pos-card-copy strong,
+.quick-pos-card-copy small,
+.quick-pos-card-footer,
+.quick-pos-cart-pill {
+  display: block;
+}
+
+.quick-pos-card-copy strong {
+  font-size: 20px;
+  line-height: 1.08;
+}
+
+.quick-pos-card-copy small {
+  margin-top: 8px;
+  color: #5a6776;
+  line-height: 1.55;
+}
+
+.quick-pos-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.quick-pos-price {
+  font-size: 24px;
+  font-weight: 900;
+  color: #941313;
+}
+
+.quick-pos-cart-pill {
+  width: fit-content;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(148, 19, 19, 0.08);
+  color: #941313;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 30px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.quick-pos-empty {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px dashed rgba(255, 245, 216, 0.24);
+  background: rgba(255, 248, 227, 0.08);
+  color: rgba(255, 245, 216, 0.84);
+  text-align: center;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.table-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin: 2px 0 14px;
+  padding: 16px 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(179, 22, 22, 0.14);
+  background: linear-gradient(180deg, rgba(255, 246, 231, 0.96), rgba(255, 255, 255, 0.98));
+}
+
+body:not(.quick-pos-mode) .table-toggle-row {
+  display: none !important;
+}
+
+.table-toggle-title {
+  display: block;
+  margin-top: 6px;
+  color: #7a1010;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.advanced-rows-shell.is-collapsed {
+  display: none;
 }
 
 .table-shell {
@@ -1167,6 +1587,20 @@ tbody tr:nth-child(even) td {
   .layout-grid {
     grid-template-columns: 1fr;
   }
+
+  body.quick-pos-mode .layout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body.quick-pos-mode #checkoutPanel {
+    position: static;
+  }
+}
+
+@media (max-width: 1380px) {
+  body.quick-pos-mode .layout-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 960px) {
@@ -1177,6 +1611,16 @@ tbody tr:nth-child(even) td {
 
   .hero-metrics {
     grid-template-columns: 1fr;
+  }
+
+  .quick-pos-header,
+  .table-toggle-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .quick-pos-toolbar {
+    min-width: 0;
   }
 }
 
@@ -1203,6 +1647,100 @@ tbody tr:nth-child(even) td {
   .panel-footer {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .quick-pos-shell {
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .quick-pos-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-pos-card {
+    min-height: 220px;
+  }
+
+  body.quick-pos-mode .quick-pos-shell {
+    padding: 16px;
+  }
+
+  body.quick-pos-mode .page-shell {
+    padding: 10px 10px 104px;
+  }
+
+  body.quick-pos-mode .hero-card {
+    padding: 14px;
+    gap: 14px;
+    border-radius: 20px;
+  }
+
+  body.quick-pos-mode .hero-card h1 {
+    font-size: clamp(24px, 7vw, 30px);
+  }
+
+  body.quick-pos-mode .hero-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  body.quick-pos-mode .hero-total,
+  body.quick-pos-mode .hero-side-card {
+    padding: 12px 14px;
+    border-radius: 18px;
+    text-align: left;
+  }
+
+  body.quick-pos-mode .panel {
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  body.quick-pos-mode .quick-pos-header {
+    gap: 12px;
+  }
+
+  body.quick-pos-mode .quick-pos-card {
+    min-height: 0;
+    gap: 12px;
+  }
+
+  body.quick-pos-mode .quick-pos-card-copy strong {
+    font-size: 18px;
+  }
+
+  body.quick-pos-mode .panel-footer {
+    bottom: 10px;
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  body.quick-pos-mode .footer-summary {
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  body.quick-pos-mode .footer-summary > div {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  body.quick-pos-mode .footer-summary strong {
+    font-size: 22px;
+  }
+
+  body.quick-pos-mode .footer-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  body.quick-pos-mode .footer-actions .footer-toggle,
+  body.quick-pos-mode .footer-actions #submitOrderBtn {
+    grid-column: 1 / -1;
   }
 
   .receipt-modal-meta {
@@ -1236,5 +1774,29 @@ tbody tr:nth-child(even) td {
   .table-shell .cell-actions {
     top: 10px;
     right: 10px;
+  }
+}
+
+@media (max-width: 560px) {
+  body.quick-pos-mode .hero-metrics,
+  body.quick-pos-mode .quick-pos-grid,
+  body.quick-pos-mode .footer-actions {
+    grid-template-columns: 1fr;
+  }
+
+  body.quick-pos-mode .quick-pos-card {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  body.quick-pos-mode .quick-pos-thumb {
+    width: 68px;
+    height: 68px;
+    border-radius: 22px;
+    font-size: 24px;
+  }
+
+  body.quick-pos-mode .table-toggle-title {
+    font-size: 18px;
   }
 }

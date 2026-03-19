@@ -21,10 +21,12 @@ const MEDICAL_SUPPLY_HINTS = ['butterfly', '1cc insulin', '10cc syringe', '3cc s
 const CHOW_QUICK_POS_DEFAULTS = Object.freeze({
     companyCode: 'chow',
     clientName: 'Walk-in Customer',
-    courier: 'Meet-Up',
+    courier: 'Dine-In',
     salesRepresentative: 'Counter Staff',
-    paymentMethods: ['CASH', 'GCash', 'Maya', 'Card', 'LBC Collection']
+    paymentMethods: ['CASH', 'GCash', 'Maya', 'Card']
 });
+const CHOW_QUICK_POS_FULFILLMENT_OPTIONS = Object.freeze(['Dine-In', 'Takeout', 'Grab Pickup', 'Foodpanda']);
+const CHOW_QUICK_POS_PAYMENT_METHODS = Object.freeze(['CASH', 'GCash', 'Maya', 'Card']);
 const CHOW_QUICK_POS_CATEGORIES = Object.freeze([
     { id: 'all', label: 'All Menu' },
     { id: 'signature', label: 'Signature Bowls' },
@@ -205,6 +207,14 @@ const orderHeroTitle = document.getElementById('orderHeroTitle');
 const orderHeroCopy = document.getElementById('orderHeroCopy');
 const orderDetailsTitle = document.getElementById('orderDetailsTitle');
 const variantBuilderTitle = document.getElementById('variantBuilderTitle');
+const branchLabel = document.getElementById('branchLabel');
+const courierLabel = document.getElementById('courierLabel');
+const adminLabel = document.getElementById('adminLabel');
+const paymentMethodLabel = document.getElementById('paymentMethodLabel');
+const clientNameLabel = document.getElementById('clientNameLabel');
+const clientContactLabel = document.getElementById('clientContactLabel');
+const clientAddressLabel = document.getElementById('clientAddressLabel');
+const noteLabel = document.getElementById('noteLabel');
 const orderNumberInput = document.getElementById('orderNumberInput');
 const saleDateInput = document.getElementById('saleDateInput');
 const clientContactInput = document.getElementById('clientContactInput');
@@ -489,6 +499,12 @@ function shouldHideClientDetailsForSalesRepresentative(value = '') {
 }
 
 function syncClientDetailVisibility() {
+    if (isChowQuickPosWorkspace()) {
+        setElementVisibility(fieldClientContact, false);
+        setElementVisibility(fieldClientAddress, false);
+        return;
+    }
+
     const salesRepresentativeFieldVisible = isOrderFieldVisible('salesRepresentative');
     const salesRepresentativeValue = state.controls.salesRep?.getValue?.() || '';
     const shouldHideClientDetails = salesRepresentativeFieldVisible
@@ -782,7 +798,7 @@ function bindStaticEvents() {
     itemsTableBody.addEventListener('keydown', handleRowKeydown);
     itemsTableBody.addEventListener('click', handleRowClick);
     quickPosSearchInput?.addEventListener('input', () => {
-        state.quickPos.search = String(quickPosSearchInput.value || '').trim().toLowerCase();
+        state.quickPos.search = normalizeLooseLookup(quickPosSearchInput.value || '');
         renderQuickPos();
     });
     quickPosCategoryTabs?.addEventListener('click', handleQuickPosCategoryClick);
@@ -928,7 +944,7 @@ async function loadBootstrapData() {
             appClient.getSalesReferences(),
             appClient.listInventoryVariants(),
             appClient.listClients(''),
-            appClient.listCompositeItems('', 500, 0)
+            appClient.listCompositeItems('', 500, 0).catch(() => [])
         ]);
 
         state.references = {
@@ -1032,18 +1048,23 @@ function appendUniqueReferenceValues(list = [], values = []) {
         });
 }
 
+function filterReferenceValues(list = [], allowedValues = []) {
+    const allowedLookup = new Set((allowedValues || []).map((entry) => normalizeLookup(entry)));
+    return appendUniqueReferenceValues([], list).filter((entry) => allowedLookup.has(normalizeLookup(entry)));
+}
+
 function applyQuickPosReferenceDefaults() {
     if (!isChowQuickPosWorkspace()) {
         return;
     }
 
     state.references.paymentMethods = appendUniqueReferenceValues(
-        state.references.paymentMethods,
-        CHOW_QUICK_POS_DEFAULTS.paymentMethods
+        filterReferenceValues(state.references.paymentMethods, CHOW_QUICK_POS_PAYMENT_METHODS),
+        CHOW_QUICK_POS_PAYMENT_METHODS
     );
     state.references.couriers = appendUniqueReferenceValues(
-        state.references.couriers,
-        [CHOW_QUICK_POS_DEFAULTS.courier, 'Lalamove', 'LBC']
+        filterReferenceValues(state.references.couriers, CHOW_QUICK_POS_FULFILLMENT_OPTIONS),
+        CHOW_QUICK_POS_FULFILLMENT_OPTIONS
     );
     state.references.admins = appendUniqueReferenceValues(
         state.references.admins,
@@ -1127,6 +1148,8 @@ function applyWorkspaceConfigToView() {
 
 function applyQuickPosModeToView() {
     const quickPosEnabled = isChowQuickPosWorkspace();
+    document.body.classList.toggle('quick-pos-mode', quickPosEnabled);
+
     if (quickPosSection) {
         quickPosSection.hidden = !quickPosEnabled;
     }
@@ -1142,6 +1165,30 @@ function applyQuickPosModeToView() {
         quickPosCopy.textContent = quickPosEnabled
             ? 'Tap a meal card, keep the cart moving, and open the manual editor only for special requests or overrides.'
             : 'Tap the menu cards to build the cart fast.';
+    }
+    if (branchLabel) {
+        branchLabel.textContent = quickPosEnabled ? 'Store' : 'Invoice Branch';
+    }
+    if (courierLabel) {
+        courierLabel.textContent = quickPosEnabled ? 'Order Mode' : 'Courier';
+    }
+    if (adminLabel) {
+        adminLabel.textContent = quickPosEnabled ? 'Cashier' : 'Admin';
+    }
+    if (paymentMethodLabel) {
+        paymentMethodLabel.textContent = quickPosEnabled ? 'Payment' : 'Payment Method';
+    }
+    if (clientNameLabel) {
+        clientNameLabel.textContent = quickPosEnabled ? 'Guest Name' : 'Client Name';
+    }
+    if (clientContactLabel) {
+        clientContactLabel.textContent = quickPosEnabled ? 'Guest Contact' : 'Contact Number';
+    }
+    if (clientAddressLabel) {
+        clientAddressLabel.textContent = quickPosEnabled ? 'Table / Pickup Note' : 'Address';
+    }
+    if (noteLabel) {
+        noteLabel.textContent = quickPosEnabled ? 'Kitchen Note' : 'Note';
     }
     updateAdvancedRowsVisibility();
 }
@@ -1284,6 +1331,11 @@ async function resetOrderForm(statusMessage = '') {
     if (pastedOrderInput) {
         pastedOrderInput.value = '';
     }
+    if (quickPosSearchInput) {
+        quickPosSearchInput.value = '';
+    }
+    state.quickPos.search = '';
+    state.quickPos.category = 'all';
     state.autoDeliveryFee = {
         suggested: 0,
         isManual: false
@@ -1580,7 +1632,17 @@ function updateAdvancedRowsVisibility() {
         return;
     }
 
-    const shouldCollapse = isChowQuickPosWorkspace() && !state.quickPos.manualEditorExpanded;
+    const quickPosWorkspace = isChowQuickPosWorkspace();
+    if (tableToggleRow) {
+        tableToggleRow.hidden = !quickPosWorkspace;
+    }
+
+    if (!quickPosWorkspace) {
+        advancedRowsShell.classList.remove('is-collapsed');
+        return;
+    }
+
+    const shouldCollapse = !state.quickPos.manualEditorExpanded;
     advancedRowsShell.classList.toggle('is-collapsed', shouldCollapse);
     toggleAdvancedRowsBtn.textContent = shouldCollapse ? 'Show Manual Editor' : 'Hide Manual Editor';
 }
@@ -1858,6 +1920,7 @@ async function loadOrderForEditing(orderNumber, { statusMessage = '' } = {}) {
         state.editIntentOrderNumber = order.orderNumber || lookupOrderNumber;
         renderRows();
         renderTotals();
+        resetItemsTableViewport();
         setStatus(statusMessage || `Loaded ${order.orderNumber || lookupOrderNumber} for editing.`, false);
     } catch (error) {
         console.error('Failed to load saved order:', error);
@@ -1956,16 +2019,30 @@ function createEmptyRow(id) {
     };
 }
 
+function getItemsTableShell() {
+    return itemsTableBody?.closest('.table-shell') || null;
+}
+
+function resetItemsTableViewport() {
+    const shell = getItemsTableShell();
+    if (!shell) {
+        return;
+    }
+
+    shell.scrollLeft = 0;
+}
+
 function renderRows() {
     if (!state.rows.length) {
         state.rowControls = new Map();
         itemsTableBody.innerHTML = '<tr><td colspan="8" class="empty">No order rows yet.</td></tr>';
+        renderQuickPos();
         return;
     }
 
     state.rowControls = new Map();
     itemsTableBody.innerHTML = state.rows.map((row, index) => {
-        const stockMeta = getStockMeta(row.productName);
+        const stockMeta = getStockMeta(row.productName, row.setName, row.itemCode);
         const priceIcon = row.priceOverride ? 'fa-lock-open' : 'fa-lock';
         const priceTitle = row.priceOverride ? 'Lock price' : 'Unlock price override';
         const showPriceValue = Boolean(
@@ -2000,6 +2077,7 @@ function renderRows() {
 
     state.rows.forEach((row) => attachRowCombos(row));
     focusPendingField();
+    renderQuickPos();
 }
 
 function attachRowCombos(row) {
@@ -2026,7 +2104,7 @@ function attachRowCombos(row) {
         host: document.getElementById(`row-set-${row.id}`),
         placeholder: row.productName ? 'Type set' : 'Select product first',
         disabled: !row.productName,
-        getOptions: () => buildSetSearchOptions(row),
+        getOptions: () => applyDisplayLabelsToSetOptions(buildQuickPosAwareSetSearchOptions(row)),
         onSelect: (option, _control, meta = {}) => {
             row.setName = option?.value || '';
             syncRowVariant(row);
@@ -2050,7 +2128,7 @@ function buildSetOptions(row) {
 
     return variants.map((variant) => ({
         value: variant.setName,
-        inputValue: variant.setName,
+        inputValue: getSetDisplayLabel(variant.setName),
         label: `${variant.setName} â€¢ ${stockMeta.label}`,
         description: variant.itemCode ? `Code ${variant.itemCode}` : '',
         disabled: stockMeta.disableSelection,
@@ -2064,7 +2142,7 @@ function buildSetSearchOptions(row) {
 
     return variants.map((variant) => ({
         value: variant.setName,
-        inputValue: variant.setName,
+        inputValue: getSetDisplayLabel(variant.setName),
         label: `${variant.setName} | ${stockMeta.label}`,
         description: variant.itemCode ? `Code ${variant.itemCode}` : '',
         disabled: stockMeta.disableSelection,
@@ -2072,10 +2150,67 @@ function buildSetSearchOptions(row) {
     }));
 }
 
+function buildQuickPosAwareSetSearchOptions(row) {
+    const variants = state.variantsByProduct.get(normalizeLookup(row.productName)) || [];
+
+    return variants.map((variant) => {
+        const stockMeta = getStockMeta(variant.productName, variant.setName, variant.itemCode);
+        return {
+            value: variant.setName,
+            inputValue: getSetDisplayLabel(variant.setName),
+            label: `${variant.setName} | ${stockMeta.label}`,
+            description: variant.itemCode ? `Code ${variant.itemCode}` : '',
+            disabled: stockMeta.disableSelection,
+            meta: variant
+        };
+    });
+}
+
+function getSetDisplayLabel(setName = '') {
+    const rawSetName = String(setName || '').trim();
+    if (!isChowQuickPosWorkspace()) {
+        return rawSetName;
+    }
+
+    const normalizedSetName = normalizeLookup(rawSetName);
+    if (normalizedSetName === 'm') {
+        return 'Regular Bowl';
+    }
+    if (normalizedSetName === 't') {
+        return 'Add-On';
+    }
+    return rawSetName;
+}
+
+function applyDisplayLabelsToSetOptions(options = []) {
+    return options.map((option) => {
+        const rawValue = String(option?.value || '').trim();
+        const displayValue = getSetDisplayLabel(rawValue) || rawValue;
+        const rawLabel = String(option?.label || '').trim();
+
+        let nextLabel = rawLabel;
+        if (rawValue && displayValue && displayValue !== rawValue) {
+            if (rawLabel.startsWith(`${rawValue} |`)) {
+                nextLabel = `${displayValue}${rawLabel.slice(rawValue.length)}`;
+            } else if (rawLabel.startsWith(`${rawValue} •`)) {
+                nextLabel = `${displayValue}${rawLabel.slice(rawValue.length)}`;
+            } else {
+                nextLabel = rawLabel.replace(rawValue, displayValue);
+            }
+        }
+
+        return {
+            ...option,
+            inputValue: displayValue,
+            label: nextLabel
+        };
+    });
+}
+
 function syncRowVariant(row, { preserveSelection = false } = {}) {
     const variants = state.variantsByProduct.get(normalizeLookup(row.productName)) || [];
     const variant = variants.find((entry) => normalizeLookup(entry.setName) === normalizeLookup(row.setName));
-    row.stock = getStockMeta(row.productName);
+    row.stock = getStockMeta(row.productName, row.setName, row.itemCode);
 
     if (!variant) {
         if (!preserveSelection) {
@@ -2232,9 +2367,10 @@ function focusPendingField() {
 
     window.requestAnimationFrame(() => {
         const rowElement = document.querySelector(`tr[data-row-id="${rowId}"]`);
-        rowElement?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        rowElement?.scrollIntoView({ block: 'nearest' });
 
         if (field === 'product') {
+            resetItemsTableViewport();
             const input = document.querySelector(`#row-product-${rowId} .combo-input`);
             input?.focus();
             input?.select();
@@ -2242,6 +2378,7 @@ function focusPendingField() {
         }
 
         if (field === 'set') {
+            resetItemsTableViewport();
             const input = document.querySelector(`#row-set-${rowId} .combo-input`);
             input?.focus();
             input?.select();
@@ -2607,6 +2744,7 @@ async function applyParsedOrder(parsed) {
     syncPaymentMethodAvailability();
     renderRows();
     renderTotals();
+    resetItemsTableViewport();
 }
 
 function parsePastedOrderText(rawText) {
@@ -4319,6 +4457,7 @@ function renderTotals() {
 
     pulseCard(heroTotalCard);
     pulseCard(heroCollectionCard);
+    renderQuickPos();
 }
 
 function computeSummary() {
@@ -5358,22 +5497,7 @@ function getDaysUntilInventoryExpiry(expirationDate) {
     return Math.floor(diffMs / 86400000);
 }
 
-function getStockMeta(productName) {
-    if (!productName) {
-        return { label: 'Select product', className: 'na', disableSelection: false };
-    }
-
-    const branch = state.controls.branch?.getValue?.() || '';
-    if (!branch) {
-        return { label: 'Select branch', className: 'na', disableSelection: false };
-    }
-
-    const branchMap = state.stockCacheByBranch.get(branch);
-    if (!branchMap) {
-        return { label: 'Loading stock...', className: 'na', disableSelection: false };
-    }
-
-    const stockEntry = branchMap.get(normalizeLookup(productName));
+function getDirectStockMetaFromEntry(stockEntry = null) {
     if (!stockEntry) {
         return { label: 'Not tracked', className: 'na', disableSelection: false };
     }
@@ -5405,6 +5529,93 @@ function getStockMeta(productName) {
         return { label: `Low ${formatQuantity(quantity)}`, className: 'low', disableSelection: false };
     }
     return { label: `In stock ${formatQuantity(quantity)}`, className: 'good', disableSelection: false };
+}
+
+function getCompositeRecipeForVariant(productName = '', setName = '', itemCode = '') {
+    if (!productName || !setName) {
+        return [];
+    }
+
+    return state.compositeByVariant.get(buildVariantLookupKey(productName, setName, itemCode))
+        || state.compositeByVariant.get(buildVariantLookupKey(productName, setName, ''))
+        || [];
+}
+
+function getCompositeStockMeta(branchMap, productName = '', setName = '', itemCode = '') {
+    const recipe = getCompositeRecipeForVariant(productName, setName, itemCode);
+    if (!recipe.length) {
+        return null;
+    }
+
+    let minReadyQuantity = Number.POSITIVE_INFINITY;
+    let hasNearExpiryComponent = false;
+    let nearestExpiryLabel = '';
+
+    for (const component of recipe) {
+        const stockEntry = branchMap.get(normalizeLookup(component.name));
+        if (!stockEntry) {
+            return { label: 'Recipe missing stock', className: 'na', disableSelection: false };
+        }
+
+        const componentMeta = getDirectStockMetaFromEntry(stockEntry);
+        if (componentMeta.className === 'expired') {
+            return componentMeta;
+        }
+
+        const quantityOnHand = Math.max(0, Number(stockEntry.quantity || 0));
+        const requiredQuantity = Math.max(0, Number(component.quantity || 0));
+        const readyQuantity = requiredQuantity > 0
+            ? Math.floor(quantityOnHand / requiredQuantity)
+            : 0;
+        minReadyQuantity = Math.min(minReadyQuantity, readyQuantity);
+
+        if (componentMeta.className === 'near-expired') {
+            hasNearExpiryComponent = true;
+            nearestExpiryLabel = componentMeta.label;
+        }
+    }
+
+    if (!Number.isFinite(minReadyQuantity)) {
+        return { label: 'Recipe not tracked', className: 'na', disableSelection: false };
+    }
+    if (minReadyQuantity <= 0) {
+        return { label: 'Recipe out of stock', className: 'out', disableSelection: false };
+    }
+    if (hasNearExpiryComponent) {
+        return { label: nearestExpiryLabel || 'Recipe near expiry', className: 'near-expired', disableSelection: false };
+    }
+    if (minReadyQuantity <= 5) {
+        return { label: `Recipe low ${formatQuantity(minReadyQuantity)}`, className: 'low', disableSelection: false };
+    }
+    return { label: `Recipe ready ${formatQuantity(minReadyQuantity)}`, className: 'good', disableSelection: false };
+}
+
+function getStockMeta(productName, setName = '', itemCode = '') {
+    if (!productName) {
+        return { label: 'Select product', className: 'na', disableSelection: false };
+    }
+
+    const branch = state.controls.branch?.getValue?.() || '';
+    if (!branch) {
+        return { label: 'Select branch', className: 'na', disableSelection: false };
+    }
+
+    const branchMap = state.stockCacheByBranch.get(branch);
+    if (!branchMap) {
+        return { label: 'Loading stock...', className: 'na', disableSelection: false };
+    }
+
+    const directStockEntry = branchMap.get(normalizeLookup(productName));
+    const recipeMeta = getCompositeStockMeta(branchMap, productName, setName, itemCode);
+    if (recipeMeta) {
+        if (!directStockEntry || Number(directStockEntry.quantity || 0) <= 0) {
+            return recipeMeta;
+        }
+        const directMeta = getDirectStockMetaFromEntry(directStockEntry);
+        return directMeta.className === 'good' ? directMeta : recipeMeta;
+    }
+
+    return getDirectStockMetaFromEntry(directStockEntry);
 }
 
 function pulseCard(element) {

@@ -220,6 +220,9 @@ function buildWorkspacePayload(baseConfig = {}) {
     const baseExperience = (baseConfig?.experience && typeof baseConfig.experience === 'object' && !Array.isArray(baseConfig.experience))
         ? baseConfig.experience
         : {};
+    const baseShell = (baseConfig?.shell && typeof baseConfig.shell === 'object' && !Array.isArray(baseConfig.shell))
+        ? baseConfig.shell
+        : {};
     const baseLabels = (baseConfig?.labels && typeof baseConfig.labels === 'object' && !Array.isArray(baseConfig.labels))
         ? baseConfig.labels
         : {};
@@ -240,6 +243,12 @@ function buildWorkspacePayload(baseConfig = {}) {
             showInvoiceSummary: Boolean(toggles.showInvoiceSummary.checked),
             showCustomerRequests: Boolean(baseMenu.showCustomerRequests),
             showInventoryLevels: Boolean(toggles.showInventoryLevels.checked)
+        },
+        shell: {
+            variant: String(baseShell.variant || 'default').trim() || 'default',
+            appShellName: String(baseShell.appShellName || '').trim(),
+            workspaceTag: String(baseShell.workspaceTag || '').trim(),
+            workspaceCopy: String(baseShell.workspaceCopy || '').trim()
         },
         labels: {
             inventoryMenu: fields.inventoryMenuLabel.value.trim() || 'Product Pricing',

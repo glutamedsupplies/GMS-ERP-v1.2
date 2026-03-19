@@ -39,7 +39,7 @@
     </section>
 
     <div class="layout-grid">
-      <section class="panel">
+      <section id="checkoutPanel" class="panel">
         <div class="section-heading">
           <div>
             <p class="eyebrow">Header</p>
@@ -71,7 +71,7 @@
             <input id="saleDateInput" type="date">
           </div>
           <div class="field">
-            <label for="branchCombobox">Invoice Branch</label>
+            <label id="branchLabel" for="branchCombobox">Invoice Branch</label>
             <div id="branchCombobox" class="combo-host"></div>
           </div>
           <div id="fieldCashBranch" class="field">
@@ -79,7 +79,7 @@
             <div id="cashBranchCombobox" class="combo-host"></div>
           </div>
           <div class="field">
-            <label for="courierCombobox">Courier</label>
+            <label id="courierLabel" for="courierCombobox">Courier</label>
             <div id="courierCombobox" class="combo-host"></div>
           </div>
           <div class="field">
@@ -87,7 +87,7 @@
             <input id="paymentTypeInput" type="text" placeholder="Auto from amount paid" readonly>
           </div>
           <div class="field">
-            <label for="adminCombobox">Admin</label>
+            <label id="adminLabel" for="adminCombobox">Admin</label>
             <div id="adminCombobox" class="combo-host"></div>
           </div>
           <div id="fieldSalesRep" class="field">
@@ -95,16 +95,16 @@
             <div id="salesRepCombobox" class="combo-host"></div>
           </div>
           <div class="field field-span-2">
-            <label for="paymentMethodCombobox">Payment Method</label>
+            <label id="paymentMethodLabel" for="paymentMethodCombobox">Payment Method</label>
             <div id="paymentMethodCombobox" class="combo-host combo-host-tags"></div>
           </div>
 
           <div class="field field-span-2">
-            <label for="clientNameCombobox">Client Name</label>
+            <label id="clientNameLabel" for="clientNameCombobox">Client Name</label>
             <div id="clientNameCombobox" class="combo-host"></div>
           </div>
           <div id="fieldClientContact" class="field">
-            <label for="clientContactInput">Contact Number</label>
+            <label id="clientContactLabel" for="clientContactInput">Contact Number</label>
             <input id="clientContactInput" type="text" placeholder="09XXXXXXXXX">
           </div>
           <div id="fieldDeliveryFee" class="field">
@@ -112,7 +112,7 @@
             <input id="deliveryFeeInput" type="number" min="0" step="0.01" placeholder="0.00">
           </div>
           <div id="fieldClientAddress" class="field field-span-2">
-            <label for="clientAddressInput">Address</label>
+            <label id="clientAddressLabel" for="clientAddressInput">Address</label>
             <textarea id="clientAddressInput" rows="3" placeholder="Delivery address"></textarea>
           </div>
           <div id="fieldDeliveryFeeRule" class="field field-span-2">
@@ -142,13 +142,13 @@
             <input id="overpaymentInput" type="text" readonly>
           </div>
           <div id="fieldNote" class="field field-span-2">
-            <label for="noteInput">Note</label>
+            <label id="noteLabel" for="noteInput">Note</label>
             <input id="noteInput" type="text" placeholder="Optional note">
           </div>
         </div>
       </section>
 
-      <section class="panel panel-stretch">
+      <section id="menuPanel" class="panel panel-stretch">
         <div class="section-heading">
           <div>
             <p class="eyebrow">Items</p>
