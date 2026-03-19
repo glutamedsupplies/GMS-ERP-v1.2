@@ -259,9 +259,14 @@ function redirectByRole(role, { bootstrap = null } = {}) {
         return;
     }
 
-    const path = (normalizedRole === 'head_admin' || normalizedRole === 'company_admin')
-        ? '/head_admin/dashboard.html'
-        : '/employee/employee.html';
+    const attendanceOnlyMode = String(bootstrap?.workspaceConfig?.experience?.mode || '').trim().toLowerCase() === 'attendance_only';
+    const path = attendanceOnlyMode
+        ? ((normalizedRole === 'head_admin' || normalizedRole === 'company_admin')
+            ? '/head_admin/dashboard.html'
+            : '/employee/employee.html')
+        : ((normalizedRole === 'head_admin' || normalizedRole === 'company_admin')
+            ? '/head_admin/dashboard.html'
+            : '/employee/employee.html');
     const tenantHost = resolveTenantHost(bootstrap);
     if (tenantHost) {
         const currentHost = normalizeHost(window.location.hostname);

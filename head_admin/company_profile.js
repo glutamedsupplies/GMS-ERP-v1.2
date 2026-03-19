@@ -217,6 +217,9 @@ function buildWorkspacePayload(baseConfig = {}) {
     const baseMenu = (baseConfig?.menu && typeof baseConfig.menu === 'object' && !Array.isArray(baseConfig.menu))
         ? baseConfig.menu
         : {};
+    const baseExperience = (baseConfig?.experience && typeof baseConfig.experience === 'object' && !Array.isArray(baseConfig.experience))
+        ? baseConfig.experience
+        : {};
     const baseLabels = (baseConfig?.labels && typeof baseConfig.labels === 'object' && !Array.isArray(baseConfig.labels))
         ? baseConfig.labels
         : {};
@@ -228,6 +231,11 @@ function buildWorkspacePayload(baseConfig = {}) {
         : {};
 
     return {
+        experience: {
+            mode: String(baseExperience.mode || '').trim().toLowerCase() === 'attendance_only'
+                ? 'attendance_only'
+                : 'default'
+        },
         menu: {
             showInvoiceSummary: Boolean(toggles.showInvoiceSummary.checked),
             showCustomerRequests: Boolean(baseMenu.showCustomerRequests),

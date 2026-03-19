@@ -81,6 +81,11 @@ const collectionPendingCount = document.getElementById('collectionPendingCount')
 const collectionConfirmedCount = document.getElementById('collectionConfirmedCount');
 const collectionPendingAmount = document.getElementById('collectionPendingAmount');
 const collectionConfirmedAmount = document.getElementById('collectionConfirmedAmount');
+const workspaceViewButtons = Array.from(document.querySelectorAll('#workspaceSwitch [data-workspace-view]'));
+const trackingWorkspacePanel = document.getElementById('trackingWorkspacePanel');
+const collectionWorkspacePanel = document.getElementById('collectionWorkspacePanel');
+const trackingWorkspaceMeta = document.getElementById('trackingWorkspaceMeta');
+const collectionWorkspaceMeta = document.getElementById('collectionWorkspaceMeta');
 
 const QUICK_FILTER_LABELS = Object.freeze({
     all: 'All Orders',
@@ -143,6 +148,7 @@ const state = {
         quickFilter: 'all',
         collectionStatus: 'all'
     },
+    workspaceView: 'tracking',
     editingOrderKey: '',
     savingOrderKey: '',
     loading: false,
@@ -181,6 +187,20 @@ async function initialize() {
 }
 
 function bindEvents() {
+    workspaceViewButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const nextView = normalizeWorkspaceView(button.dataset.workspaceView);
+            if (nextView === state.workspaceView) {
+                return;
+            }
+            state.workspaceView = nextView;
+            applyWorkspaceView();
+            if (nextView === 'tracking') {
+                focusTrackingInput({ select: true });
+            }
+        });
+    });
+
     branchButtons.forEach((button) => {
         button.addEventListener('click', async () => {
             if (state.locked || state.loading) {
@@ -368,6 +388,9 @@ function bindEvents() {
         if (state.locked) {
             return;
         }
+        if (!isTrackingWorkspaceActive()) {
+            return;
+        }
         if (!canUseTrackingWriteActions()) {
             return;
         }
@@ -416,6 +439,14 @@ function isAllowedCompany() {
 
 function normalizeCompanyCode(value) {
     return normalizeText(value).toLowerCase();
+}
+
+function normalizeWorkspaceView(value) {
+    return normalizeText(value).toLowerCase() === 'collection' ? 'collection' : 'tracking';
+}
+
+function isTrackingWorkspaceActive() {
+    return normalizeWorkspaceView(state.workspaceView) === 'tracking';
 }
 
 function normalizeQuickFilter(value) {
@@ -592,6 +623,19 @@ function applyActiveCollectionFilterButton() {
     });
 }
 
+function applyWorkspaceView() {
+    const activeView = normalizeWorkspaceView(state.workspaceView);
+    workspaceViewButtons.forEach((button) => {
+        button.classList.toggle('active', normalizeWorkspaceView(button.dataset.workspaceView) === activeView);
+    });
+    if (trackingWorkspacePanel) {
+        trackingWorkspacePanel.hidden = activeView !== 'tracking';
+    }
+    if (collectionWorkspacePanel) {
+        collectionWorkspacePanel.hidden = activeView !== 'collection';
+    }
+}
+
 async function loadRows({ keepStatus = false } = {}) {
     if (state.loading || state.locked) {
         return;
@@ -633,9 +677,11 @@ async function loadRows({ keepStatus = false } = {}) {
         renderRows();
         renderCollectionSummary();
         renderCollectionRows();
+        renderWorkspaceMeta();
         applyActiveBranchButton();
         applyActiveQuickFilterButton();
         applyActiveCollectionFilterButton();
+        applyWorkspaceView();
 
         const visibleCount = Number(state.summary?.total || state.items.length || 0);
         const baseCount = Number(state.summary?.baseTotal || visibleCount || 0);
@@ -764,6 +810,20 @@ function renderCollectionSummary() {
     if (collectionConfirmedCount) collectionConfirmedCount.textContent = Number(summary.confirmedCount || 0).toLocaleString('en-PH');
     if (collectionPendingAmount) collectionPendingAmount.textContent = normalizeText(summary.pendingAmountDisplay) || formatAmount(summary.pendingAmount || 0);
     if (collectionConfirmedAmount) collectionConfirmedAmount.textContent = normalizeText(summary.confirmedAmountDisplay) || formatAmount(summary.confirmedAmount || 0);
+}
+
+function renderWorkspaceMeta() {
+    const visibleTracking = Number(state.summary?.total || state.items.length || 0);
+    const pendingCollection = Number(state.collectionSummary?.pendingCount || 0);
+    const confirmedCollection = Number(state.collectionSummary?.confirmedCount || 0);
+
+    if (trackingWorkspaceMeta) {
+        trackingWorkspaceMeta.textContent = `${visibleTracking.toLocaleString('en-PH')} visible order(s)`;
+    }
+
+    if (collectionWorkspaceMeta) {
+        collectionWorkspaceMeta.textContent = `${pendingCollection.toLocaleString('en-PH')} pending, ${confirmedCollection.toLocaleString('en-PH')} confirmed`;
+    }
 }
 
 function renderCollectionRows() {
@@ -1487,10 +1547,14 @@ function setActionLoading(isLoading) {
 }
 
 function focusTrackingInput({ select = false } = {}) {
-    if (!trackingScanInput || state.locked) {
+    if (!trackingScanInput || state.locked || !isTrackingWorkspaceActive()) {
         return;
     }
-    trackingScanInput.focus();
+    try {
+        trackingScanInput.focus({ preventScroll: true });
+    } catch (_error) {
+        trackingScanInput.focus();
+    }
     if (select) {
         trackingScanInput.select();
     }

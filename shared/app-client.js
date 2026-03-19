@@ -1093,19 +1093,120 @@
         return normalizedRole === 'employee' || normalizedRole === 'staff';
     }
 
-    function redirectByRole(role) {
+    function normalizeWorkspaceExperienceMode(value = '') {
+        return String(value || '').trim().toLowerCase() === 'attendance_only'
+            ? 'attendance_only'
+            : 'default';
+    }
+
+    function getWorkspaceExperienceMode(bootstrap = null) {
+        return normalizeWorkspaceExperienceMode(bootstrap?.workspaceConfig?.experience?.mode);
+    }
+
+    function getAttendanceOnlyAllowedPaths(role, bootstrap = null) {
+        if (getWorkspaceExperienceMode(bootstrap) !== 'attendance_only') {
+            return [];
+        }
+
+        const normalizedRole = normalizeRole(role);
+        if (normalizedRole === 'head_admin' || normalizedRole === 'company_admin') {
+            return [
+                '/head_admin/dashboard.html',
+                '/head_admin/client_database.html',
+                '/head_admin/inventory.html',
+                '/head_admin/inventory_levels.html',
+                '/head_admin/order_form.html',
+                '/head_admin/sales_report.html',
+                '/head_admin/employees.html',
+                '/head_admin/users.html',
+                '/head_admin/branches.html',
+                '/head_admin/company_profile.html',
+                '/head_admin/invoice_template.html',
+                '/head_admin/timecards.html',
+                '/head_admin/today_present.html',
+                '/head_admin/time_in_time_out.html',
+                '/head_admin/reports.html',
+                '/head_admin/settings.html'
+            ];
+        }
+
+        if (isEmployeeLikeRole(normalizedRole)) {
+            return [
+                '/employee/employee.html',
+                '/employee/time_card.html',
+                '/employee/time_in_time_out.html',
+                '/employee/settings.html'
+            ];
+        }
+
+        return [];
+    }
+
+    function resolveWorkspaceHomePath(role, bootstrap = null) {
         const normalizedRole = normalizeRole(role);
         if (normalizedRole === 'super_admin') {
-            navigateTo('/super_admin/dashboard.html');
-            return;
+            return '/super_admin/dashboard.html';
+        }
+
+        if (getWorkspaceExperienceMode(bootstrap) === 'attendance_only') {
+            if (normalizedRole === 'head_admin' || normalizedRole === 'company_admin') {
+                return '/head_admin/dashboard.html';
+            }
+            if (isEmployeeLikeRole(normalizedRole)) {
+                return '/employee/employee.html';
+            }
         }
 
         if (normalizedRole === 'head_admin' || normalizedRole === 'company_admin') {
-            navigateTo('/head_admin/dashboard.html');
-            return;
+            return '/head_admin/dashboard.html';
         }
 
-        navigateTo('/employee/employee.html');
+        return '/employee/employee.html';
+    }
+
+    function getBootstrapWithSessionCache() {
+        return requestWithSessionCache('bootstrap', 30000, () => request('/api/bootstrap')).then((payload) => {
+            syncSupportSessionBanner(payload?.support_session || payload?.user?.support_session || payload?.user?.supportSession || null);
+            return payload;
+        });
+    }
+
+    async function enforceWorkspaceRestrictions(user) {
+        const normalizedRole = normalizeRole(user?.role);
+        if (!normalizedRole || normalizedRole === 'super_admin') {
+            return true;
+        }
+
+        const metadata = getPathMetadata();
+        if (metadata.section !== 'head_admin' && metadata.section !== 'employee') {
+            return true;
+        }
+
+        let bootstrap = null;
+        try {
+            bootstrap = await getBootstrapWithSessionCache();
+        } catch (error) {
+            console.error('Failed to load bootstrap for workspace restriction check:', error);
+            return true;
+        }
+
+        const allowedPaths = getAttendanceOnlyAllowedPaths(normalizedRole, bootstrap);
+        const targetPath = resolveWorkspaceHomePath(normalizedRole, bootstrap);
+        const currentPath = String(window.location.pathname || '').replace(/\\/g, '/');
+        if (!targetPath || currentPath === targetPath) {
+            return true;
+        }
+
+        if (!allowedPaths.length || allowedPaths.includes(currentPath)) {
+            return true;
+        }
+
+        navigateTo(targetPath);
+        return false;
+    }
+
+    function redirectByRole(role) {
+        navigateTo(resolveWorkspaceHomePath(role));
     }
 
     function attachEmployeeBackButton(session, {
@@ -1304,6 +1405,11 @@
             return null;
         }
 
+        const workspaceAllowed = await enforceWorkspaceRestrictions(user);
+        if (!workspaceAllowed) {
+            return null;
+        }
+
         return {
             userId: user.id,
             userName: user.name || '',
@@ -1331,6 +1437,7 @@
         ensureSession,
         attachEmployeeBackButton,
         hasUserFeatureAccess,
+        getWorkspaceExperienceMode,
         normalizeUserFeatureAccess,
         normalizeHexColor,
         hexToRgb,
@@ -1463,10 +1570,7 @@
             },
             skipAuthRedirect: true
         }),
-        getBootstrap: () => requestWithSessionCache('bootstrap', 30000, () => request('/api/bootstrap')).then((payload) => {
-            syncSupportSessionBanner(payload?.support_session || payload?.user?.support_session || payload?.user?.supportSession || null);
-            return payload;
-        }),
+        getBootstrap: () => getBootstrapWithSessionCache(),
         parseOrderDraftWithAi: (payload) => request('/api/order-form/ai-parse', {
             method: 'POST',
             body: payload

@@ -231,7 +231,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         showSinglePanelNavigation();
     }
 
-    const initialPanel = panelNav?.querySelector('li.active[data-panel]:not([data-disabled="true"]):not([data-hidden="true"])')?.dataset.panel
+    const initialPanel = getPreferredWorkspacePanel()
+        || panelNav?.querySelector('li.active[data-panel]:not([data-disabled="true"]):not([data-hidden="true"])')?.dataset.panel
         || navItems.find((item) => isPanelEnabled(item.dataset.panel))?.dataset.panel
         || groupedFallbackPanel;
 
@@ -369,6 +370,39 @@ window.addEventListener('DOMContentLoaded', async () => {
         return bootstrap?.workspaceConfig || {};
     }
 
+    function isAttendanceOnlyWorkspace() {
+        return String(getWorkspaceConfig()?.experience?.mode || '').trim().toLowerCase() === 'attendance_only';
+    }
+
+    function getAttendanceOnlyPanels() {
+        return [
+            'client_database',
+            'inventory_manager',
+            'inventory_levels',
+            'order_form',
+            'sales_report',
+            'employees',
+            'users',
+            'branches',
+            'company_profile',
+            'invoice_template',
+            'timecards',
+            'today',
+            'time_in_out',
+            'reports',
+            'settings'
+        ];
+    }
+
+    function getPreferredWorkspacePanel() {
+        if (!isAttendanceOnlyWorkspace()) {
+            return null;
+        }
+
+        const preferredPanels = ['order_form', 'client_database', 'inventory_manager', 'time_in_out', 'settings'];
+        return preferredPanels.find((panel) => isPanelEnabled(panel) || isPanelVisibleByState(panel)) || null;
+    }
+
     function normalizeCompanyCode(value) {
         return String(value || '').trim().toLowerCase();
     }
@@ -404,6 +438,9 @@ window.addEventListener('DOMContentLoaded', async () => {
         const workspace = getWorkspaceConfig();
         const menu = workspace?.menu || {};
 
+        if (isAttendanceOnlyWorkspace()) {
+            return getAttendanceOnlyPanels().includes(panel);
+        }
         if (panel === 'invoice_summary') {
             return Boolean(menu.showInvoiceSummary) && isGmsInvoiceCompany();
         }
@@ -449,6 +486,16 @@ window.addEventListener('DOMContentLoaded', async () => {
         const compositeLabel = labels.compositeMenu === 'Composite Items'
             ? 'Composite Recipe'
             : (labels.compositeMenu || 'Composite Recipe');
+
+        if (isAttendanceOnlyWorkspace()) {
+            setNavItemLabel('client_database', 'Customers');
+            setNavItemLabel('inventory_manager', 'Items');
+            setNavItemLabel('inventory_levels', 'Inventory');
+            setNavItemLabel('order_form', 'POS');
+            setNavItemLabel('sales_report', 'Sales');
+            setNavItemLabel('branches', 'Stores');
+            return;
+        }
 
         setNavItemLabel('inventory_manager', inventoryLabel);
         setNavItemLabel('inventory_levels', labels.inventoryLevelsMenu || 'Inventory');
@@ -509,9 +556,13 @@ window.addEventListener('DOMContentLoaded', async () => {
             workspaceName.textContent = companyName;
         }
         if (workspaceCopy) {
-            workspaceCopy.textContent = companyCode
-                ? `Tenant code: ${companyCode}. Operations, staff tools, and setup panels are now available below.`
-                : 'Operations, staff tools, and setup panels are now available below.';
+            workspaceCopy.textContent = isAttendanceOnlyWorkspace()
+                ? (companyCode
+                    ? `Tenant code: ${companyCode}. POS, customers, items, inventory, sales, full attendance tools, and full admin settings are available in this limited workspace.`
+                    : 'POS, customers, items, inventory, sales, full attendance tools, and full admin settings are available in this limited workspace.')
+                : (companyCode
+                    ? `Tenant code: ${companyCode}. Operations, staff tools, and setup panels are now available below.`
+                    : 'Operations, staff tools, and setup panels are now available below.');
         }
         if (workspaceUser) {
             workspaceUser.textContent = session?.userName || 'Admin User';
@@ -580,7 +631,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         groupNav.hidden = false;
         topPanelBar.hidden = false;
 
-        const initialPanel = getCurrentActivePanel()
+        const initialPanel = getPreferredWorkspacePanel()
+            || getCurrentActivePanel()
             || navItems.find((item) => isPanelEnabled(item.dataset.panel))?.dataset.panel
             || navItems.find((item) => isPanelVisibleByState(item.dataset.panel))?.dataset.panel
             || null;

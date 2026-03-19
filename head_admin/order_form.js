@@ -18,6 +18,125 @@ const NEAR_EXPIRY_DAYS = 7;
 const HEADER_FOCUS_ORDER = ['branch', 'cashBranch', 'courier', 'admin', 'salesRep', 'paymentMethods', 'clientName'];
 const ZERO_AMOUNT_PAYMENT_METHODS = ['LBC Collection'];
 const MEDICAL_SUPPLY_HINTS = ['butterfly', '1cc insulin', '10cc syringe', '3cc syringe', 'cannula', '100ml pnss', '50ml pnss', '10ml sterile water'];
+const CHOW_QUICK_POS_DEFAULTS = Object.freeze({
+    companyCode: 'chow',
+    clientName: 'Walk-in Customer',
+    courier: 'Meet-Up',
+    salesRepresentative: 'Counter Staff',
+    paymentMethods: ['CASH', 'GCash', 'Maya', 'Card', 'LBC Collection']
+});
+const CHOW_QUICK_POS_CATEGORIES = Object.freeze([
+    { id: 'all', label: 'All Menu' },
+    { id: 'signature', label: 'Signature Bowls' },
+    { id: 'specials', label: 'Rice Specials' },
+    { id: 'addons', label: 'Add-Ons' }
+]);
+const CHOW_QUICK_POS_MENU = Object.freeze([
+    {
+        productName: 'Beef and Mushroom',
+        setName: 'M',
+        category: 'signature',
+        badge: 'Best Seller',
+        description: 'Savory beef strips with garlic rice, egg, and mushroom sauce.',
+        accent: 'beef'
+    },
+    {
+        productName: 'Crispy Pork Chop',
+        setName: 'M',
+        category: 'signature',
+        badge: 'Crunch Pick',
+        description: 'Crispy pork chop with rice, egg, and house pickles.',
+        accent: 'pork'
+    },
+    {
+        productName: 'Pork Korean Chili',
+        setName: 'M',
+        category: 'signature',
+        badge: 'Spicy',
+        description: 'Sweet-spicy pork topping finished with egg and rice.',
+        accent: 'spice'
+    },
+    {
+        productName: 'Crispy Chicken Tender',
+        setName: 'M',
+        category: 'signature',
+        badge: 'Value Meal',
+        description: 'Golden chicken tenders with garlic rice and egg.',
+        accent: 'chicken'
+    },
+    {
+        productName: 'Angry Pork Belly',
+        setName: 'M',
+        category: 'signature',
+        badge: 'Heat Wave',
+        description: 'Bold pork belly rice bowl with egg and pickles.',
+        accent: 'spice'
+    },
+    {
+        productName: 'Chicken Curry',
+        setName: 'M',
+        category: 'signature',
+        badge: 'Comfort',
+        description: 'Rich curry chicken over rice with a soft fried egg.',
+        accent: 'curry'
+    },
+    {
+        productName: 'Beef Supreme',
+        setName: 'M',
+        category: 'signature',
+        badge: 'Premium',
+        description: 'Loaded beef rice bowl with egg and signature sauce.',
+        accent: 'beef'
+    },
+    {
+        productName: 'Pork Tenders',
+        setName: 'M',
+        category: 'signature',
+        badge: 'Classic',
+        description: 'Tender pork bites paired with garlic rice and egg.',
+        accent: 'pork'
+    },
+    {
+        productName: 'Chowjin Rice',
+        setName: 'M',
+        category: 'specials',
+        badge: 'Good For Sharing',
+        description: 'Saucy signature rice platter for a hungry table.',
+        accent: 'curry'
+    },
+    {
+        productName: 'Chow Fan',
+        setName: 'M',
+        category: 'specials',
+        badge: 'Sulit',
+        description: 'Chow fan rice bowl sized for quick dine-in or takeout.',
+        accent: 'beef'
+    },
+    {
+        productName: 'Jumbo Sharks Fin Siomai',
+        setName: 'T',
+        category: 'addons',
+        badge: 'Add-On',
+        description: 'Steamed siomai add-on for combo boosting.',
+        accent: 'addons'
+    },
+    {
+        productName: 'Jumbo Pork Beef Siomai',
+        setName: 'T',
+        category: 'addons',
+        badge: 'Add-On',
+        description: 'Pork and beef siomai side order.',
+        accent: 'addons'
+    },
+    {
+        productName: 'Jumbo Japanese Siomai',
+        setName: 'T',
+        category: 'addons',
+        badge: 'Add-On',
+        description: 'Japanese-style siomai side order.',
+        accent: 'addons'
+    }
+]);
 const PASTED_COURIER_ALIASES = [
     { courier: 'Meet-Up', phrases: ['pick up', 'pickup'] },
     { courier: 'Lalamove', phrases: ['own booking'] }
@@ -100,6 +219,16 @@ const underpaymentInput = document.getElementById('underpaymentInput');
 const overpaymentInput = document.getElementById('overpaymentInput');
 const noteInput = document.getElementById('noteInput');
 const addItemRowBtn = document.getElementById('addItemRowBtn');
+const quickPosSection = document.getElementById('quickPosSection');
+const quickPosTitle = document.getElementById('quickPosTitle');
+const quickPosCopy = document.getElementById('quickPosCopy');
+const quickPosSearchInput = document.getElementById('quickPosSearchInput');
+const quickPosCategoryTabs = document.getElementById('quickPosCategoryTabs');
+const quickPosGrid = document.getElementById('quickPosGrid');
+const quickPosClearPaymentBtn = document.getElementById('quickPosClearPaymentBtn');
+const tableToggleRow = document.getElementById('tableToggleRow');
+const toggleAdvancedRowsBtn = document.getElementById('toggleAdvancedRowsBtn');
+const advancedRowsShell = document.getElementById('advancedRowsShell');
 const viewReceiptBtn = document.getElementById('viewReceiptBtn');
 const deleteOrderBtn = document.getElementById('deleteOrderBtn');
 const newOrderBtn = document.getElementById('newOrderBtn');
@@ -210,11 +339,16 @@ const DEFAULT_RECEIPT_TEMPLATE = Object.freeze({
 });
 
 const state = {
+    session: null,
+    companyCode: '',
+    companyName: '',
     references: { ...EXACT_REFS },
     clients: [],
     inventoryVariants: [],
+    compositeItems: [],
     products: [],
     variantsByProduct: new Map(),
+    compositeByVariant: new Map(),
     stockCacheByBranch: new Map(),
     rows: [],
     nextRowId: 1,
@@ -238,6 +372,11 @@ const state = {
         providers: [],
         lastProvider: ''
     },
+    quickPos: {
+        category: 'all',
+        search: '',
+        manualEditorExpanded: true
+    },
     receiptSignatureSrc: RECEIPT_SIGNATURE_SRC,
     receiptTemplate: { ...DEFAULT_RECEIPT_TEMPLATE }
 };
@@ -252,6 +391,9 @@ async function initialize() {
     if (!session) {
         return;
     }
+    state.session = session;
+    state.companyCode = normalizeCompanyCode(session.companyCode || '');
+    state.quickPos.manualEditorExpanded = !isChowQuickPosWorkspace();
     appClient.attachEmployeeBackButton(session);
     if (openOrderFormSetupBtn) {
         openOrderFormSetupBtn.hidden = !canCustomizeOrderForm(session.role);
@@ -272,6 +414,14 @@ async function initialize() {
 
 function getWorkspaceLabels() {
     return state.workspaceConfig?.labels || {};
+}
+
+function normalizeCompanyCode(value = '') {
+    return String(value || '').trim().toLowerCase();
+}
+
+function isChowQuickPosWorkspace() {
+    return normalizeCompanyCode(state.companyCode) === CHOW_QUICK_POS_DEFAULTS.companyCode;
 }
 
 function canCustomizeOrderForm(role) {
@@ -355,6 +505,13 @@ async function loadReceiptConfig() {
         const branding = bootstrap?.branding || {};
         const company = bootstrap?.company || {};
         state.workspaceConfig = bootstrap?.workspaceConfig || {};
+        state.companyName = String(company.name || '').trim();
+        if (!state.companyCode) {
+            state.companyCode = normalizeCompanyCode(company.company_code || company.companyCode || '');
+        }
+        if (isChowQuickPosWorkspace()) {
+            state.quickPos.manualEditorExpanded = false;
+        }
         applyAiUsageFromBootstrap(bootstrap);
 
         RECEIPT_LOGO_SRC = resolveReceiptAssetPath(branding.logoPath || template.logo_path || '/logo.png', '/logo.png');
@@ -621,8 +778,21 @@ function bindStaticEvents() {
     saveOrderFormSetupBtn?.addEventListener('click', saveOrderFormSetup);
 
     itemsTableBody.addEventListener('input', handleRowInput);
+    itemsTableBody.addEventListener('focusin', handleRowFocusIn);
     itemsTableBody.addEventListener('keydown', handleRowKeydown);
     itemsTableBody.addEventListener('click', handleRowClick);
+    quickPosSearchInput?.addEventListener('input', () => {
+        state.quickPos.search = String(quickPosSearchInput.value || '').trim().toLowerCase();
+        renderQuickPos();
+    });
+    quickPosCategoryTabs?.addEventListener('click', handleQuickPosCategoryClick);
+    quickPosGrid?.addEventListener('click', handleQuickPosGridClick);
+    quickPosSection?.addEventListener('click', handleQuickPaymentClick);
+    quickPosClearPaymentBtn?.addEventListener('click', clearQuickPaymentSelection);
+    toggleAdvancedRowsBtn?.addEventListener('click', () => {
+        state.quickPos.manualEditorExpanded = !state.quickPos.manualEditorExpanded;
+        updateAdvancedRowsVisibility();
+    });
 }
 
 function openOrderFormSetupModal() {
@@ -754,10 +924,11 @@ async function loadBootstrapData() {
     setStatus('Loading order form references...', false);
 
     try {
-        const [references, inventoryVariants, clientPayload] = await Promise.all([
+        const [references, inventoryVariants, clientPayload, compositeItems] = await Promise.all([
             appClient.getSalesReferences(),
             appClient.listInventoryVariants(),
-            appClient.listClients('')
+            appClient.listClients(''),
+            appClient.listCompositeItems('', 500, 0)
         ]);
 
         state.references = {
@@ -792,6 +963,8 @@ async function loadBootstrapData() {
 
         state.inventoryVariants = Array.isArray(inventoryVariants) ? inventoryVariants : [];
         buildInventoryCache(state.inventoryVariants);
+        state.compositeItems = Array.isArray(compositeItems) ? compositeItems : [];
+        buildCompositeCache(state.compositeItems);
         state.clients = Array.isArray(clientPayload?.items) ? clientPayload.items : [];
 
         initializeStaticControls();
@@ -838,6 +1011,48 @@ function applyWorkspaceConfigToReferences() {
     } else if (!Array.isArray(state.references.paymentMethods) || !state.references.paymentMethods.length) {
         state.references.paymentMethods = [...EXACT_REFS.paymentMethods];
     }
+
+    applyQuickPosReferenceDefaults();
+}
+
+function appendUniqueReferenceValues(list = [], values = []) {
+    const seen = new Set();
+    return [...list, ...values]
+        .map((entry) => String(entry || '').trim())
+        .filter((entry) => {
+            if (!entry) {
+                return false;
+            }
+            const key = entry.toLowerCase();
+            if (seen.has(key)) {
+                return false;
+            }
+            seen.add(key);
+            return true;
+        });
+}
+
+function applyQuickPosReferenceDefaults() {
+    if (!isChowQuickPosWorkspace()) {
+        return;
+    }
+
+    state.references.paymentMethods = appendUniqueReferenceValues(
+        state.references.paymentMethods,
+        CHOW_QUICK_POS_DEFAULTS.paymentMethods
+    );
+    state.references.couriers = appendUniqueReferenceValues(
+        state.references.couriers,
+        [CHOW_QUICK_POS_DEFAULTS.courier, 'Lalamove', 'LBC']
+    );
+    state.references.admins = appendUniqueReferenceValues(
+        state.references.admins,
+        [state.session?.userName || '', 'Manager']
+    );
+    state.references.salesRepresentatives = appendUniqueReferenceValues(
+        state.references.salesRepresentatives,
+        [CHOW_QUICK_POS_DEFAULTS.salesRepresentative, 'Manager']
+    );
 }
 
 function getReferenceOverrideList(key) {
@@ -906,6 +1121,29 @@ function applyWorkspaceConfigToView() {
         deliveryFeeToggle.checked = false;
     }
     syncFormMode();
+    applyQuickPosModeToView();
+    renderQuickPos();
+}
+
+function applyQuickPosModeToView() {
+    const quickPosEnabled = isChowQuickPosWorkspace();
+    if (quickPosSection) {
+        quickPosSection.hidden = !quickPosEnabled;
+    }
+    if (tableToggleRow) {
+        tableToggleRow.hidden = !quickPosEnabled;
+    }
+    if (quickPosTitle) {
+        quickPosTitle.textContent = quickPosEnabled
+            ? `${state.companyName || 'Chow 2 Go'} Menu Board`
+            : 'Quick POS';
+    }
+    if (quickPosCopy) {
+        quickPosCopy.textContent = quickPosEnabled
+            ? 'Tap a meal card, keep the cart moving, and open the manual editor only for special requests or overrides.'
+            : 'Tap the menu cards to build the cart fast.';
+    }
+    updateAdvancedRowsVisibility();
 }
 
 function initializeStaticControls() {
@@ -932,7 +1170,7 @@ function initializeStaticControls() {
             syncAutoDeliveryFee();
             renderRows();
             renderTotals();
-            if (meta.reason === 'keyboard') {
+            if (shouldAdvanceFocus(meta)) {
                 focusNextHeaderField('branch');
             }
         }
@@ -943,7 +1181,7 @@ function initializeStaticControls() {
         placeholder: 'Type cash branch',
         getOptions: () => getCashBranchOptions(),
         onSelect: (_option, _control, meta = {}) => {
-            if (meta.reason === 'keyboard') {
+            if (shouldAdvanceFocus(meta)) {
                 focusNextHeaderField('cashBranch');
             }
         }
@@ -956,7 +1194,7 @@ function initializeStaticControls() {
         onSelect: (_option, _control, meta = {}) => {
             syncAutoDeliveryFee();
             renderTotals();
-            if (meta.reason === 'keyboard') {
+            if (shouldAdvanceFocus(meta)) {
                 focusNextHeaderField('courier');
             }
         }
@@ -967,8 +1205,8 @@ function initializeStaticControls() {
         placeholder: 'Type admin',
         allowCustom: true,
         getOptions: () => state.references.admins,
-        onSelect: (_option, _control, meta = {}) => {
-            if (meta.reason === 'keyboard') {
+        onCommit: (_value, _option, _control, meta = {}) => {
+            if (shouldAdvanceFocus(meta)) {
                 focusNextHeaderField('admin');
             }
         }
@@ -979,9 +1217,9 @@ function initializeStaticControls() {
         placeholder: 'Type sales representative',
         allowCustom: true,
         getOptions: () => state.references.salesRepresentatives,
-        onSelect: (_option, _control, meta = {}) => {
+        onCommit: (_value, _option, _control, meta = {}) => {
             syncClientDetailVisibility();
-            if (meta.reason === 'keyboard') {
+            if (shouldAdvanceFocus(meta)) {
                 focusNextHeaderField('salesRep');
             }
         }
@@ -993,7 +1231,7 @@ function initializeStaticControls() {
         getOptions: () => state.references.paymentMethods,
         onChange: () => renderTotals(),
         onSelect: (_option, _control, meta = {}) => {
-            if (meta.reason === 'keyboard') {
+            if (shouldAdvanceFocus(meta)) {
                 focusNextHeaderField('paymentMethods');
             }
         }
@@ -1064,6 +1302,7 @@ async function resetOrderForm(statusMessage = '') {
     state.rows = [];
     state.nextRowId = 1;
     state.lastBranchValue = state.controls.branch.getValue();
+    await applyQuickPosDefaults({ force: true });
     await updateOrderNumberPreview();
     syncAutoDeliveryFee({ force: true });
     syncPaymentMethodAvailability();
@@ -1167,6 +1406,41 @@ function buildInventoryCache(rows) {
         .sort((left, right) => left.localeCompare(right));
 }
 
+function buildVariantLookupKey(productName = '', setName = '', itemCode = '') {
+    return [
+        normalizeLookup(productName),
+        normalizeLookup(setName),
+        normalizeLookup(itemCode)
+    ].join('||');
+}
+
+function buildCompositeCache(rows) {
+    const grouped = new Map();
+
+    (rows || []).forEach((row) => {
+        const productName = String(row.product_name || row.productName || '').trim();
+        const setName = String(row.item_set || row.itemSet || '').trim();
+        const itemCode = String(row.item_code || row.itemCode || '').trim();
+        const components = Array.isArray(row.components) ? row.components : [];
+        const normalizedComponents = components
+            .map((component) => ({
+                name: String(component.name || component.component_name || '').trim(),
+                quantity: Math.max(0, Number(component.quantity || component.component_quantity || 0)),
+                unit: String(component.unit || component.component_unit || '').trim()
+            }))
+            .filter((component) => component.name && component.quantity > 0);
+
+        if (!productName || !setName || !normalizedComponents.length) {
+            return;
+        }
+
+        grouped.set(buildVariantLookupKey(productName, setName, itemCode), normalizedComponents);
+        grouped.set(buildVariantLookupKey(productName, setName, ''), normalizedComponents);
+    });
+
+    state.compositeByVariant = grouped;
+}
+
 function isExcludedOrderProduct(productName = '') {
     return EXCLUDED_ORDER_PRODUCT_LOOKUPS.has(normalizeCompactLookup(productName));
 }
@@ -1175,6 +1449,339 @@ function getOrderableInventoryVariants() {
     return state.inventoryVariants
         .map(normalizeInventoryVariantEntry)
         .filter((entry) => entry.productName && entry.setName && !isExcludedOrderProduct(entry.productName));
+}
+
+function findFirstVariantByProduct(productName = '') {
+    const variants = state.variantsByProduct.get(normalizeLookup(productName)) || [];
+    return variants[0] || null;
+}
+
+function getQuickPosMenuItems() {
+    if (!isChowQuickPosWorkspace()) {
+        return [];
+    }
+
+    const cartQuantityByKey = new Map();
+    state.rows.forEach((row) => {
+        if (!row.productName || !row.setName) {
+            return;
+        }
+        const key = buildVariantLookupKey(row.productName, row.setName, row.itemCode);
+        cartQuantityByKey.set(key, (cartQuantityByKey.get(key) || 0) + Math.max(0, Number(row.quantity || 0)));
+    });
+
+    const mappedItems = CHOW_QUICK_POS_MENU.map((meta) => {
+        const variant = findVariantForSelection(meta.productName, meta.setName) || findFirstVariantByProduct(meta.productName);
+        if (!variant) {
+            return null;
+        }
+
+        const stockMeta = getStockMeta(variant.productName, variant.setName, variant.itemCode);
+        const key = buildVariantLookupKey(variant.productName, variant.setName, variant.itemCode);
+        return {
+            ...meta,
+            productName: variant.productName,
+            setName: variant.setName,
+            itemCode: variant.itemCode,
+            helper: variant.helper || [variant.itemCode, variant.setName].filter(Boolean).join(' | '),
+            price: Number(variant.price || 0),
+            stockMeta,
+            cartQuantity: cartQuantityByKey.get(key) || 0
+        };
+    }).filter(Boolean);
+
+    return mappedItems.filter((item) => {
+        const matchesCategory = state.quickPos.category === 'all' || item.category === state.quickPos.category;
+        const searchValue = state.quickPos.search;
+        const matchesSearch = !searchValue || [
+            item.productName,
+            item.description,
+            item.badge,
+            item.category
+        ].some((value) => normalizeLooseLookup(value).includes(searchValue));
+        return matchesCategory && matchesSearch;
+    });
+}
+
+function buildQuickPosCardInitials(value = '') {
+    const words = String(value || '').trim().split(/\s+/).filter(Boolean);
+    return words.slice(0, 2).map((word) => word[0]).join('').toUpperCase() || 'CG';
+}
+
+function renderQuickPos() {
+    if (!quickPosSection || !quickPosGrid || !quickPosCategoryTabs) {
+        return;
+    }
+
+    if (!isChowQuickPosWorkspace()) {
+        quickPosSection.hidden = true;
+        return;
+    }
+
+    quickPosSection.hidden = false;
+    quickPosCategoryTabs.innerHTML = CHOW_QUICK_POS_CATEGORIES.map((category) => `
+        <button
+            type="button"
+            class="quick-pos-tab ${state.quickPos.category === category.id ? 'is-active' : ''}"
+            data-category="${appClient.escapeHtml(category.id)}"
+        >
+            ${appClient.escapeHtml(category.label)}
+        </button>
+    `).join('');
+
+    const items = getQuickPosMenuItems();
+    if (!items.length) {
+        quickPosGrid.innerHTML = `
+            <div class="quick-pos-empty">
+                ${state.inventoryVariants.length
+                    ? 'No Chow menu card matched the current filter.'
+                    : 'No Chow menu variants found yet. Seed the Chow menu first so the quick POS can render.'}
+            </div>
+        `;
+        updateQuickPaymentButtonState();
+        return;
+    }
+
+    quickPosGrid.innerHTML = items.map((item) => {
+        const stockClass = String(item.stockMeta?.className || 'na').replace(/[^a-z-]/g, '');
+        const stockLabel = String(item.stockMeta?.label || 'Not tracked');
+        const cartLabel = item.cartQuantity > 0 ? `${item.cartQuantity} in cart` : 'Tap to add';
+        const isDisabled = stockClass === 'out' || stockClass === 'expired';
+        return `
+            <button
+                type="button"
+                class="quick-pos-card quick-pos-card-${appClient.escapeHtml(item.accent || 'beef')} ${item.cartQuantity > 0 ? 'is-in-cart' : ''}"
+                data-action="quick-add-item"
+                data-product-name="${appClient.escapeHtml(item.productName)}"
+                data-set-name="${appClient.escapeHtml(item.setName)}"
+                data-item-code="${appClient.escapeHtml(item.itemCode)}"
+                ${isDisabled ? 'disabled' : ''}
+            >
+                <span class="quick-pos-badge">${appClient.escapeHtml(item.badge || 'Menu')}</span>
+                <span class="quick-pos-thumb" aria-hidden="true">${appClient.escapeHtml(buildQuickPosCardInitials(item.productName))}</span>
+                <span class="quick-pos-card-copy">
+                    <strong>${appClient.escapeHtml(item.productName)}</strong>
+                    <small>${appClient.escapeHtml(item.description || 'Quick service favorite.')}</small>
+                </span>
+                <span class="quick-pos-card-footer">
+                    <span class="quick-pos-price">${appClient.escapeHtml(formatMoney(item.price))}</span>
+                    <span class="stock-pill ${appClient.escapeHtml(stockClass)}">${appClient.escapeHtml(stockLabel)}</span>
+                </span>
+                <span class="quick-pos-cart-pill">${appClient.escapeHtml(cartLabel)}</span>
+            </button>
+        `;
+    }).join('');
+
+    updateQuickPaymentButtonState();
+}
+
+function updateAdvancedRowsVisibility() {
+    if (!advancedRowsShell || !toggleAdvancedRowsBtn) {
+        return;
+    }
+
+    const shouldCollapse = isChowQuickPosWorkspace() && !state.quickPos.manualEditorExpanded;
+    advancedRowsShell.classList.toggle('is-collapsed', shouldCollapse);
+    toggleAdvancedRowsBtn.textContent = shouldCollapse ? 'Show Manual Editor' : 'Hide Manual Editor';
+}
+
+function handleQuickPosCategoryClick(event) {
+    const button = event.target.closest('button[data-category]');
+    if (!button) {
+        return;
+    }
+    state.quickPos.category = button.dataset.category || 'all';
+    renderQuickPos();
+}
+
+async function handleQuickPosGridClick(event) {
+    const button = event.target.closest('button[data-action="quick-add-item"]');
+    if (!button) {
+        return;
+    }
+
+    await addQuickPosItem({
+        productName: button.dataset.productName || '',
+        setName: button.dataset.setName || '',
+        itemCode: button.dataset.itemCode || ''
+    });
+}
+
+function updateQuickPaymentButtonState() {
+    if (!quickPosSection) {
+        return;
+    }
+
+    const summary = computeSummary();
+    const entries = state.controls.paymentMethods?.getEntries?.() || [];
+    quickPosSection.querySelectorAll('[data-quick-pay]').forEach((button) => {
+        const method = String(button.dataset.quickPay || '').trim();
+        const hasExactMethod = entries.some((entry) => normalizeLookup(entry.method) === normalizeLookup(method))
+            && summary.orderTotal > 0
+            && Math.abs(summary.amountPaid - summary.orderTotal) < 0.001;
+        button.classList.toggle('is-active', hasExactMethod);
+    });
+}
+
+async function applyQuickPosDefaults({ force = false } = {}) {
+    if (!isChowQuickPosWorkspace() || !state.controls.branch) {
+        return;
+    }
+
+    const branchOptions = Array.isArray(state.references.branches) ? state.references.branches : [];
+    const cashBranchOptions = getCashBranchOptions();
+    const courierOptions = Array.isArray(state.references.couriers) ? state.references.couriers : [];
+    const adminOptions = Array.isArray(state.references.admins) ? state.references.admins : [];
+    const salesRepOptions = Array.isArray(state.references.salesRepresentatives) ? state.references.salesRepresentatives : [];
+
+    const branchValue = state.controls.branch.getValue() || branchOptions[0] || '';
+    if ((force || !state.controls.branch.getValue()) && branchValue) {
+        state.controls.branch.setValue(branchValue, { silent: true });
+        await ensureBranchStockLoaded(branchValue);
+    }
+
+    if (isOrderFieldVisible('cashBranch')) {
+        const cashBranchValue = state.controls.cashBranch.getValue() || cashBranchOptions[0] || branchValue;
+        if ((force || !state.controls.cashBranch.getValue()) && cashBranchValue) {
+            state.controls.cashBranch.setValue(cashBranchValue, { silent: true });
+        }
+    }
+
+    const courierValue = courierOptions.find((entry) => normalizeLookup(entry) === normalizeLookup(CHOW_QUICK_POS_DEFAULTS.courier))
+        || courierOptions[0]
+        || CHOW_QUICK_POS_DEFAULTS.courier;
+    if ((force || !state.controls.courier.getValue()) && courierValue) {
+        state.controls.courier.setValue(courierValue, { silent: true });
+    }
+
+    const adminValue = adminOptions.find((entry) => normalizeLookup(entry) === normalizeLookup(state.session?.userName || ''))
+        || adminOptions[0]
+        || state.session?.userName
+        || '';
+    if ((force || !state.controls.admin.getValue()) && adminValue) {
+        state.controls.admin.setValue(adminValue, { silent: true });
+    }
+
+    if (isOrderFieldVisible('salesRepresentative')) {
+        const salesRepValue = salesRepOptions.find((entry) => normalizeLookup(entry) === normalizeLookup(CHOW_QUICK_POS_DEFAULTS.salesRepresentative))
+            || salesRepOptions[0]
+            || CHOW_QUICK_POS_DEFAULTS.salesRepresentative;
+        if ((force || !state.controls.salesRep.getValue()) && salesRepValue) {
+            state.controls.salesRep.setValue(salesRepValue, { silent: true });
+        }
+    }
+
+    if ((force || !state.controls.clientName.getValue()) && CHOW_QUICK_POS_DEFAULTS.clientName) {
+        state.controls.clientName.setValue(CHOW_QUICK_POS_DEFAULTS.clientName, { silent: true });
+    }
+
+    state.lastBranchValue = state.controls.branch.getValue();
+    syncRowsForBranch();
+    syncAutoDeliveryFee({ force: true });
+    syncClientDetailVisibility();
+    renderRows();
+    renderTotals();
+}
+
+async function addQuickPosItem({ productName = '', setName = '', itemCode = '' } = {}) {
+    if (!productName) {
+        return;
+    }
+
+    await applyQuickPosDefaults();
+    const variant = findVariantForSelection(productName, setName)
+        || findVariantForSelection(productName, '')
+        || findFirstVariantByProduct(productName);
+    if (!variant) {
+        setStatus(`No saved pricing variant was found for ${productName}.`, true);
+        return;
+    }
+
+    const stockMeta = getStockMeta(variant.productName, variant.setName, itemCode || variant.itemCode);
+    if (stockMeta.className === 'out' || stockMeta.className === 'expired') {
+        setStatus(`${variant.productName} is currently ${stockMeta.label.toLowerCase()}.`, true);
+        return;
+    }
+
+    const existingRow = state.rows.find((row) => (
+        normalizeLookup(row.productName) === normalizeLookup(variant.productName)
+        && normalizeLookup(row.setName) === normalizeLookup(variant.setName)
+    ));
+
+    if (existingRow) {
+        existingRow.quantity = Math.max(1, Number(existingRow.quantity || 1)) + 1;
+        syncRowVariant(existingRow, { preserveSelection: true });
+        syncSubtotalInput(existingRow.id, existingRow.subtotal);
+        renderTotals();
+        setStatus(`${variant.productName} quantity updated.`, false);
+        return;
+    }
+
+    let targetRow = state.rows.find((row) => (
+        !row.productName
+        && !row.setName
+        && !row.itemCode
+        && Number(row.price || 0) <= 0
+    ));
+    if (!targetRow) {
+        addOrderRow();
+        targetRow = state.rows[state.rows.length - 1];
+    }
+
+    targetRow.productName = variant.productName;
+    targetRow.setName = variant.setName;
+    targetRow.itemCode = variant.itemCode;
+    targetRow.quantity = Math.max(1, Number(targetRow.quantity || 1));
+    targetRow.priceOverride = false;
+    targetRow.price = Number(variant.price || 0);
+    targetRow.helper = variant.helper || [variant.itemCode, variant.setName].filter(Boolean).join(' | ');
+    syncRowVariant(targetRow, { preserveSelection: true });
+    state.pendingFocus = { rowId: targetRow.id, field: 'quantity' };
+    renderRows();
+    renderTotals();
+    setStatus(`${variant.productName} added to cart.`, false);
+}
+
+function handleQuickPaymentClick(event) {
+    const button = event.target.closest('[data-quick-pay]');
+    if (!button) {
+        return;
+    }
+
+    const method = String(button.dataset.quickPay || '').trim();
+    if (method) {
+        applyQuickPaymentSelection(method);
+    }
+}
+
+function applyQuickPaymentSelection(method = '') {
+    const normalizedMethod = String(method || '').trim();
+    if (!normalizedMethod) {
+        return;
+    }
+
+    const summary = computeSummary();
+    if (summary.orderTotal <= 0) {
+        setStatus('Add at least one item before assigning payment.', true);
+        return;
+    }
+
+    const allowedMethod = (state.references.paymentMethods || []).find((entry) => normalizeLookup(entry) === normalizeLookup(normalizedMethod))
+        || normalizedMethod;
+    state.controls.paymentMethods.setEntries([
+        {
+            method: allowedMethod,
+            amount: summary.orderTotal
+        }
+    ]);
+    renderTotals();
+    setStatus(`${allowedMethod} payment set to exact total.`, false);
+}
+
+function clearQuickPaymentSelection() {
+    state.controls.paymentMethods?.clear?.();
+    renderTotals();
+    setStatus('Payment selection cleared.', false);
 }
 
 async function updateOrderNumberPreview() {
@@ -1357,7 +1964,7 @@ function renderRows() {
     }
 
     state.rowControls = new Map();
-    itemsTableBody.innerHTML = state.rows.map((row) => {
+    itemsTableBody.innerHTML = state.rows.map((row, index) => {
         const stockMeta = getStockMeta(row.productName);
         const priceIcon = row.priceOverride ? 'fa-lock-open' : 'fa-lock';
         const priceTitle = row.priceOverride ? 'Lock price' : 'Unlock price override';
@@ -1371,12 +1978,12 @@ function renderRows() {
         const priceValue = showPriceValue ? Number(row.price ?? 0).toFixed(2) : '';
 
         return `
-            <tr data-row-id="${row.id}">
-                <td><div id="row-product-${row.id}" class="combo-host"></div></td>
-                <td><div id="row-set-${row.id}" class="combo-host"></div></td>
-                <td><span class="stock-pill ${stockMeta.className}">${appClient.escapeHtml(stockMeta.label)}</span></td>
-                <td><input data-field="itemCode" type="text" value="${appClient.escapeHtml(row.itemCode || '')}" readonly></td>
-                <td>
+            <tr data-row-id="${row.id}" data-row-number="${index + 1}">
+                <td class="cell-product" data-label="Product Name"><div id="row-product-${row.id}" class="combo-host"></div></td>
+                <td class="cell-set" data-label="Set"><div id="row-set-${row.id}" class="combo-host"></div></td>
+                <td class="cell-stock" data-label="Stock"><span class="stock-pill ${stockMeta.className}">${appClient.escapeHtml(stockMeta.label)}</span></td>
+                <td class="cell-code" data-label="Item Code"><input data-field="itemCode" type="text" value="${appClient.escapeHtml(row.itemCode || '')}" readonly></td>
+                <td class="cell-price" data-label="Price">
                     <div class="price-shell">
                         <input data-field="price" type="number" min="0" step="0.01" value="${priceValue}" ${row.priceOverride ? '' : 'readonly'}>
                         <button type="button" class="icon-btn ${row.priceOverride ? 'is-unlocked' : ''}" data-action="toggle-price-override" title="${priceTitle}">
@@ -1384,9 +1991,9 @@ function renderRows() {
                         </button>
                     </div>
                 </td>
-                <td><input data-field="quantity" type="number" min="1" step="1" value="${Math.max(1, Number(row.quantity || 1))}"></td>
-                <td><input data-field="subtotal" type="text" value="${formatMoney(row.subtotal)}" readonly></td>
-                <td><button type="button" class="row-remove-btn" data-action="remove-row" title="Remove row"><i class="fa-solid fa-trash"></i></button></td>
+                <td class="cell-qty" data-label="Qty"><input data-field="quantity" type="number" min="1" step="1" value="${Math.max(1, Number(row.quantity || 1))}"></td>
+                <td class="cell-subtotal" data-label="Subtotal"><input data-field="subtotal" type="text" value="${formatMoney(row.subtotal)}" readonly></td>
+                <td class="cell-actions" data-label="Actions"><button type="button" class="row-remove-btn" data-action="remove-row" title="Remove row"><i class="fa-solid fa-trash"></i></button></td>
             </tr>
         `;
     }).join('');
@@ -1409,7 +2016,7 @@ function attachRowCombos(row) {
             row.helper = '';
             row.priceOverride = false;
             syncRowVariant(row);
-            state.pendingFocus = meta.reason === 'keyboard' ? { rowId: row.id, field: 'set' } : null;
+            state.pendingFocus = shouldAdvanceFocus(meta) ? { rowId: row.id, field: 'set' } : null;
             renderRows();
             renderTotals();
         }
@@ -1423,7 +2030,7 @@ function attachRowCombos(row) {
         onSelect: (option, _control, meta = {}) => {
             row.setName = option?.value || '';
             syncRowVariant(row);
-            state.pendingFocus = meta.reason === 'keyboard' ? { rowId: row.id, field: 'quantity' } : null;
+            state.pendingFocus = shouldAdvanceFocus(meta) ? { rowId: row.id, field: 'quantity' } : null;
             renderRows();
             renderTotals();
         }
@@ -1509,6 +2116,17 @@ function handleRowInput(event) {
         syncSubtotalInput(row.id, row.subtotal);
         renderTotals();
     }
+}
+
+function handleRowFocusIn(event) {
+    const field = event.target?.dataset?.field || '';
+    if (field !== 'price' && field !== 'quantity') {
+        return;
+    }
+
+    window.requestAnimationFrame(() => {
+        event.target.select?.();
+    });
 }
 
 function handleRowKeydown(event) {
@@ -1613,6 +2231,9 @@ function focusPendingField() {
     state.pendingFocus = null;
 
     window.requestAnimationFrame(() => {
+        const rowElement = document.querySelector(`tr[data-row-id="${rowId}"]`);
+        rowElement?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+
         if (field === 'product') {
             const input = document.querySelector(`#row-product-${rowId} .combo-input`);
             input?.focus();
@@ -1667,6 +2288,11 @@ function focusStaticField(field) {
         input.select?.();
     });
     return true;
+}
+
+function shouldAdvanceFocus(meta = {}) {
+    const reason = String(meta?.reason || '').toLowerCase();
+    return reason === 'keyboard' || reason === 'tab';
 }
 
 function getRowFromTarget(target) {

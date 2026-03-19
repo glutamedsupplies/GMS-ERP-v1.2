@@ -85,6 +85,10 @@ async function loadBootstrap() {
     }
 }
 
+function isAttendanceOnlyWorkspace(bootstrap = null) {
+    return appClient.getWorkspaceExperienceMode?.(bootstrap) === 'attendance_only';
+}
+
 function bindCoreCards() {
     if (timeCardBtn) {
         timeCardBtn.addEventListener('click', () => {
@@ -112,17 +116,24 @@ function renderWorkspaceOverview(session, bootstrap) {
     const roleLabel = isStaffUser ? 'Staff' : 'Employee';
     const companyName = String(bootstrap?.company?.name || '').trim() || 'Your company';
     const activeModules = Object.values(bootstrap?.modules || {}).filter(Boolean).length;
+    const attendanceOnlyMode = isAttendanceOnlyWorkspace(bootstrap);
 
     if (dashboardKicker) {
-        dashboardKicker.textContent = isStaffUser ? 'Shared Staff Workspace' : 'Personal Employee Workspace';
+        dashboardKicker.textContent = attendanceOnlyMode
+            ? 'Attendance Workspace'
+            : (isStaffUser ? 'Shared Staff Workspace' : 'Personal Employee Workspace');
     }
     if (dashboardTitle) {
-        dashboardTitle.textContent = isStaffUser ? 'Staff Workspace' : 'Employee Workspace';
+        dashboardTitle.textContent = attendanceOnlyMode
+            ? 'Attendance Workspace'
+            : (isStaffUser ? 'Staff Workspace' : 'Employee Workspace');
     }
     if (dashboardCopy) {
-        dashboardCopy.textContent = isStaffUser
-            ? 'Move between operational tools faster with a clearer layout that stays readable on phones, tablets, and desktop screens.'
-            : 'Keep your attendance, records, and account details in one cleaner workspace built for both desktop and mobile use.';
+        dashboardCopy.textContent = attendanceOnlyMode
+            ? 'Use Time Card, Time In / Out, and account settings while the rest of the workspace stays streamlined.'
+            : (isStaffUser
+                ? 'Move between operational tools faster with a clearer layout that stays readable on phones, tablets, and desktop screens.'
+                : 'Keep your attendance, records, and account details in one cleaner workspace built for both desktop and mobile use.');
     }
     if (companyBadge) {
         companyBadge.textContent = companyName;
@@ -144,10 +155,18 @@ function renderWorkspaceOverview(session, bootstrap) {
         coreToolCount.textContent = '3';
     }
     if (workspaceMode) {
-        workspaceMode.textContent = isStaffUser ? 'Collaborative' : 'Focused';
+        workspaceMode.textContent = attendanceOnlyMode ? 'Attendance Only' : (isStaffUser ? 'Collaborative' : 'Focused');
     }
 
     document.title = `${roleLabel} Workspace`;
+
+    if (attendanceOnlyMode) {
+        featureAccessSection.hidden = true;
+        if (featureCount) {
+            featureCount.textContent = '0';
+        }
+        return;
+    }
 
     if (activeModules && dashboardCopy) {
         dashboardCopy.textContent = `${dashboardCopy.textContent} ${activeModules} plan modules are active for this tenant.`;
@@ -161,6 +180,13 @@ async function renderGrantedFeatureCards(session, bootstrap = null) {
 
     featureCards.innerHTML = '';
     featureAccessSection.hidden = true;
+
+    if (isAttendanceOnlyWorkspace(bootstrap)) {
+        if (featureCount) {
+            featureCount.textContent = '0';
+        }
+        return;
+    }
 
     try {
         const modules = (bootstrap && typeof bootstrap.modules === 'object' && !Array.isArray(bootstrap.modules))

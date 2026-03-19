@@ -157,24 +157,64 @@
           <button id="addItemRowBtn" type="button" class="secondary-btn"><i class="fa-solid fa-plus"></i> Add Item</button>
         </div>
 
-        <div class="table-shell">
-          <table>
-            <thead>
-              <tr>
-                <th>Product Name</th>
-                <th>Set</th>
-                <th>Stock</th>
-                <th>Item Code</th>
-                <th>Price</th>
-                <th>Qty</th>
-                <th>Subtotal</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="itemsTableBody">
-              <tr><td colspan="8" class="empty">Loading inventory cache...</td></tr>
-            </tbody>
-          </table>
+        <section id="quickPosSection" class="quick-pos-shell" hidden>
+          <div class="quick-pos-header">
+            <div class="quick-pos-heading">
+              <p class="eyebrow">Counter POS</p>
+              <h3 id="quickPosTitle" class="quick-pos-title">Chow 2 Go Menu Board</h3>
+              <p id="quickPosCopy" class="quick-pos-copy">Tap the menu cards to build the cart fast. The manual editor stays available below for special requests and price overrides.</p>
+            </div>
+            <div class="quick-pos-toolbar">
+              <label class="quick-pos-search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input id="quickPosSearchInput" type="search" placeholder="Search meals or add-ons">
+              </label>
+              <div id="quickPosCategoryTabs" class="quick-pos-tabs" aria-label="POS categories"></div>
+            </div>
+          </div>
+
+          <div class="quick-pay-strip">
+            <span class="quick-pay-label">Exact Payment</span>
+            <button type="button" class="quick-pay-btn" data-quick-pay="CASH">Cash Exact</button>
+            <button type="button" class="quick-pay-btn" data-quick-pay="GCash">GCash Exact</button>
+            <button type="button" class="quick-pay-btn" data-quick-pay="Maya">Maya Exact</button>
+            <button type="button" class="quick-pay-btn" data-quick-pay="Card">Card Exact</button>
+            <button id="quickPosClearPaymentBtn" type="button" class="quick-pay-btn quick-pay-btn-clear">Clear Payment</button>
+          </div>
+
+          <div id="quickPosGrid" class="quick-pos-grid">
+            <div class="quick-pos-empty">Loading menu cards...</div>
+          </div>
+        </section>
+
+        <div id="tableToggleRow" class="table-toggle-row" hidden>
+          <div>
+            <span class="footer-label">Manual Editor</span>
+            <strong class="table-toggle-title">Advanced Line Builder</strong>
+          </div>
+          <button id="toggleAdvancedRowsBtn" type="button" class="secondary-btn secondary-btn-compact">Hide Manual Editor</button>
+        </div>
+
+        <div id="advancedRowsShell" class="advanced-rows-shell">
+          <div class="table-shell">
+            <table>
+              <thead>
+                <tr>
+                  <th>Product Name</th>
+                  <th>Set</th>
+                  <th>Stock</th>
+                  <th>Item Code</th>
+                  <th>Price</th>
+                  <th>Qty</th>
+                  <th>Subtotal</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="itemsTableBody">
+                <tr><td colspan="8" class="empty">Loading inventory cache...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div class="panel-footer">

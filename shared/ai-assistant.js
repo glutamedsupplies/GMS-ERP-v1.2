@@ -7,7 +7,7 @@
     const CONFIG = {
         endpoint: '/api/public/ai/chat',
         title: 'GMS AI Assistant',
-        subtitle: 'Taglish help for login, modules, troubleshooting, and GMS ERP specialist flows.'
+        subtitle: 'Taglish help for login, sign up, register company ID, modules, troubleshooting, and GMS ERP workflows.'
     };
     const STORAGE = {
         conversationKey: 'gmsAiConversationId:v2',
@@ -285,7 +285,7 @@
     }
 
     function getWelcomeMessage() {
-        return 'Hi! Ako ang GMS AI Assistant. Pwede tayo mag-Taglish. Para akong may specialist modes para sa login, sales, tracking, inventory, reports, at admin setup. I-type mo lang yung concern mo at gagabayan kita nang malinaw step by step.';
+        return 'Hi! Ako ang GMS AI Assistant. Pwede tayo mag-Taglish. Alam ko ang Login, Forgot Password, Sign up, Register Company ID, Customer Portal, Order Form, Communication Panel, Inventory, Reports, Tracking, Settings, at role-based pages ng Employee, Head Admin, at Super Admin. I-type mo lang yung page o problem mo at gagabayan kita step by step.';
     }
 
     function normalizeAssistantReply(text = '') {

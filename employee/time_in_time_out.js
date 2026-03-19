@@ -27,9 +27,12 @@ async function initialize() {
 
     sessionTimeZone = session.timeZone || '';
     welcomeUser.innerText = `Welcome, ${session.userName || 'Employee'}`;
-    backBtn?.addEventListener('click', () => {
-        window.location.href = '/employee/employee.html';
-    });
+    if (backBtn && !backBtn.dataset.bound) {
+        backBtn.dataset.bound = 'true';
+        backBtn.addEventListener('click', () => {
+            window.location.href = '/employee/employee.html';
+        });
+    }
 
     timeInBtn?.addEventListener('click', () => handleAction('in'));
     timeOutBtn?.addEventListener('click', () => handleAction('out'));

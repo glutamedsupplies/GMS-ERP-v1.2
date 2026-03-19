@@ -16,6 +16,7 @@ const visibleCount = document.getElementById('visibleCount');
 const uniqueCount = document.getElementById('uniqueCount');
 const filterLabel = document.getElementById('filterLabel');
 const pageSubtitle = document.getElementById('pageSubtitle');
+const CLIENT_BATCH_SIZE = 500;
 
 const state = {
     clients: [],
@@ -98,7 +99,7 @@ async function loadClients(filter = '') {
     setStatus('Loading client records...', false);
 
     try {
-        const payload = await appClient.listClients(filter);
+        const payload = await loadAllClientPages(filter, requestToken);
         if (requestToken !== state.loadRequestToken) {
             return;
         }
@@ -119,6 +120,32 @@ async function loadClients(filter = '') {
         if (requestToken === state.loadRequestToken) {
             refreshBtn.disabled = false;
         }
+    }
+}
+
+async function loadAllClientPages(filter = '', requestToken) {
+    const normalizedFilter = String(filter || '').trim();
+    const allItems = [];
+    let offset = 0;
+
+    while (true) {
+        if (requestToken !== state.loadRequestToken) {
+            return { items: [] };
+        }
+
+        // Load the client directory in pages so the screen is not capped at the default API batch size.
+        const payload = await appClient.listClients(normalizedFilter, CLIENT_BATCH_SIZE, offset);
+        const items = Array.isArray(payload?.items) ? payload.items : [];
+
+        allItems.push(...items);
+        if (items.length < CLIENT_BATCH_SIZE) {
+            return {
+                ...payload,
+                items: allItems
+            };
+        }
+
+        offset += items.length;
     }
 }
 

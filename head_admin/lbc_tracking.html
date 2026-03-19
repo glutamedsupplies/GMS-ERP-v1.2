@@ -27,6 +27,8 @@
       --red-200: #fecaca;
       --red-700: #b91c1c;
       --shadow: 0 20px 44px rgba(15, 23, 42, 0.1);
+      --tracking-table-height: clamp(320px, calc(100vh - 340px), 620px);
+      --collection-table-height: clamp(300px, calc(100vh - 360px), 520px);
     }
 
     * {
@@ -78,6 +80,68 @@
       background: #f3f8fd;
       display: grid;
       gap: 14px;
+    }
+
+    .workspace-switch {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .workspace-tab {
+      border: 1px solid #cfe0f1;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      color: #0f172a;
+      padding: 14px 16px;
+      text-align: left;
+      display: grid;
+      gap: 5px;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+      transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease, background 140ms ease;
+    }
+
+    .workspace-tab:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 28px rgba(15, 23, 42, 0.09);
+    }
+
+    .workspace-tab.active {
+      border-color: #0f766e;
+      background: linear-gradient(135deg, rgba(15, 118, 110, 0.12), rgba(20, 184, 166, 0.08));
+      box-shadow: 0 16px 28px rgba(15, 118, 110, 0.16);
+    }
+
+    .workspace-tab-kicker {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.45px;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+
+    .workspace-tab-label {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 0.12px;
+      color: #0f172a;
+    }
+
+    .workspace-tab-note,
+    .workspace-tab-meta {
+      font-size: 12px;
+      line-height: 1.45;
+      color: #526174;
+    }
+
+    .workspace-tab-meta {
+      color: #0f766e;
+      font-weight: 800;
+    }
+
+    .workspace-panel[hidden] {
+      display: none !important;
     }
 
     .tracking-main-panel {
@@ -235,6 +299,34 @@
       border-bottom: 1px solid var(--line);
     }
 
+    .shared-toolbar {
+      border: 1px solid #d7e5f3;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+      border-bottom: 0;
+    }
+
+    .toolbar-head {
+      display: grid;
+      gap: 3px;
+    }
+
+    .toolbar-kicker {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.45px;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+
+    .toolbar-note {
+      margin: 0;
+      font-size: 12px;
+      color: #526174;
+      line-height: 1.45;
+    }
+
     .chip-row,
     .quick-row,
     .search-row {
@@ -339,7 +431,8 @@
     .table-wrap {
       border-top: 1px solid var(--line);
       overflow: auto;
-      max-height: calc(100vh - 440px);
+      height: var(--tracking-table-height);
+      min-height: 320px;
     }
 
     table {
@@ -666,7 +759,8 @@
       border: 1px solid #d8e6f4;
       border-radius: 12px;
       background: #fff;
-      max-height: 360px;
+      height: var(--collection-table-height);
+      min-height: 300px;
     }
 
     .collection-table {
@@ -724,6 +818,10 @@
         padding: 10px;
       }
 
+      .workspace-switch {
+        grid-template-columns: 1fr;
+      }
+
       .hero,
       .tracking-intake,
       .toolbar,
@@ -761,7 +859,7 @@
       }
 
       .table-wrap {
-        max-height: calc(100vh - 390px);
+        min-height: 280px;
       }
     }
 
@@ -789,7 +887,42 @@
     </header>
 
     <div class="panel-body">
-      <section class="tracking-main-panel">
+      <div class="workspace-switch" id="workspaceSwitch">
+        <button class="workspace-tab active" type="button" data-workspace-view="tracking">
+          <span class="workspace-tab-kicker">Shipment Workspace</span>
+          <span class="workspace-tab-label">LBC Tracking Panel</span>
+          <span class="workspace-tab-note">Scan tracking numbers, assign orders, and update delivery status.</span>
+          <span id="trackingWorkspaceMeta" class="workspace-tab-meta">0 visible orders</span>
+        </button>
+        <button class="workspace-tab" type="button" data-workspace-view="collection">
+          <span class="workspace-tab-kicker">Owner Confirmation</span>
+          <span class="workspace-tab-label">LBC Collection Confirmation</span>
+          <span class="workspace-tab-note">Review delivered orders and confirm cash collection separately.</span>
+          <span id="collectionWorkspaceMeta" class="workspace-tab-meta">0 pending confirmations</span>
+        </button>
+      </div>
+
+      <section class="toolbar shared-toolbar">
+        <div class="toolbar-head">
+          <span class="toolbar-kicker">Shared Filters</span>
+          <p class="toolbar-note">Branch and search filters apply to both the tracking panel and the collection confirmation panel.</p>
+        </div>
+
+        <div id="branchButtons" class="chip-row">
+          <button class="chip active" data-branch="">All Branches</button>
+          <button class="chip" data-branch="Pampanga">Pampanga</button>
+          <button class="chip" data-branch="Cubao">Cubao</button>
+        </div>
+
+        <div class="search-row">
+          <input id="searchInput" class="field" type="text" placeholder="Search order, client, tracking, assignee, branch">
+          <button id="searchBtn" class="btn secondary" type="button">Apply</button>
+          <button id="reloadBtn" class="btn secondary" type="button">Reload Table</button>
+          <button id="refreshTrackingBtn" class="btn warning" type="button">Reload Tracking</button>
+        </div>
+      </section>
+
+      <section id="trackingWorkspacePanel" class="tracking-main-panel workspace-panel">
         <section class="tracking-intake">
       <article class="input-card">
         <h2 class="input-title">Tracking Number Input</h2>
@@ -813,19 +946,6 @@
         </section>
 
         <section class="toolbar">
-      <div id="branchButtons" class="chip-row">
-        <button class="chip active" data-branch="">All Branches</button>
-        <button class="chip" data-branch="Pampanga">Pampanga</button>
-        <button class="chip" data-branch="Cubao">Cubao</button>
-      </div>
-
-      <div class="search-row">
-        <input id="searchInput" class="field" type="text" placeholder="Search order, client, tracking, assignee, branch">
-        <button id="searchBtn" class="btn secondary" type="button">Apply</button>
-        <button id="reloadBtn" class="btn secondary" type="button">Reload Table</button>
-        <button id="refreshTrackingBtn" class="btn warning" type="button">Reload Tracking</button>
-      </div>
-
       <div id="quickFilterButtons" class="quick-row">
         <button class="chip quick active" data-quick-filter="all">All Orders</button>
         <button class="chip quick" data-quick-filter="in_transit">In Transit</button>
@@ -889,7 +1009,7 @@
         </div>
       </section>
 
-      <section class="collection-panel">
+      <section id="collectionWorkspacePanel" class="collection-panel workspace-panel" hidden>
       <header class="collection-header">
         <h2>LBC Collection Confirmation</h2>
         <p>Delivered orders go here for owner confirmation. Confirm once payment is collected.</p>
