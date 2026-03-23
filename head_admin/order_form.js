@@ -200,6 +200,7 @@ const PASTED_SET_ALIASES = [
     }
 ];
 const EXCLUDED_ORDER_PRODUCT_LOOKUPS = new Set(['handlingfee']);
+const VIRTUAL_T_VARIANT_SOURCE = 'virtual_t_set';
 
 const pastedOrderInput = document.getElementById('pastedOrderInput');
 const applyPastedOrderBtn = document.getElementById('applyPastedOrderBtn');
@@ -1427,8 +1428,9 @@ function buildInventoryCache(rows) {
     const grouped = new Map();
 
     rows.forEach((row) => {
-        const productName = String(row.product_name || row.productName || '').trim();
-        const setName = String(row.set_name || row.setName || '').trim();
+        const normalizedRow = normalizeInventoryVariantEntry(row);
+        const productName = normalizedRow.productName;
+        const setName = normalizedRow.setName;
         if (!productName || !setName || isExcludedOrderProduct(productName)) {
             return;
         }
@@ -1439,18 +1441,20 @@ function buildInventoryCache(rows) {
         }
 
         grouped.get(key).push({
-            productName,
-            setName,
-            itemCode: String(row.item_code || row.itemCode || '').trim(),
-            price: Number(row.price || 0),
-            helper: String(row.helper || '').trim()
+            ...normalizedRow
         });
     });
 
     grouped.forEach((variants) => {
+        const hasTrackedT = variants.some((variant) => normalizeLookup(variant.setName) === 't');
+        const virtualTTemplate = pickVirtualTTemplateVariant(variants);
+        if (!hasTrackedT && virtualTTemplate) {
+            variants.push(buildVirtualTOrderFormVariant(virtualTTemplate));
+        }
         variants.sort((left, right) => getSetRank(left.setName) - getSetRank(right.setName));
     });
 
+    state.inventoryVariants = Array.from(grouped.values()).flatMap((variants) => variants);
     state.variantsByProduct = grouped;
     state.products = Array.from(grouped.values())
         .map((variants) => variants[0]?.productName || '')
@@ -1952,6 +1956,7 @@ function buildLoadedOrderRow(item) {
         quantity,
         subtotal: quantity * unitPrice,
         helper: String(item.helper || variant?.helper || '').trim(),
+        variantSource: String(variant?.source || '').trim(),
         priceOverride: Math.abs(unitPrice - referencePrice) > 0.0001,
         stock: null
     };
@@ -2014,6 +2019,7 @@ function createEmptyRow(id) {
         quantity: 1,
         subtotal: 0,
         helper: '',
+        variantSource: '',
         priceOverride: false,
         stock: null
     };
@@ -2045,6 +2051,9 @@ function renderRows() {
         const stockMeta = getStockMeta(row.productName, row.setName, row.itemCode);
         const priceIcon = row.priceOverride ? 'fa-lock-open' : 'fa-lock';
         const priceTitle = row.priceOverride ? 'Lock price' : 'Unlock price override';
+        const isVirtualTWithoutPrice = String(row.variantSource || '').trim() === VIRTUAL_T_VARIANT_SOURCE
+            && !row.priceOverride
+            && Number(row.price || 0) <= 0;
         const showPriceValue = Boolean(
             row.productName
             || row.setName
@@ -2052,7 +2061,9 @@ function renderRows() {
             || row.priceOverride
             || Number(row.price || 0) > 0
         );
-        const priceValue = showPriceValue ? Number(row.price ?? 0).toFixed(2) : '';
+        const priceValue = isVirtualTWithoutPrice
+            ? ''
+            : (showPriceValue ? Number(row.price ?? 0).toFixed(2) : '');
 
         return `
             <tr data-row-id="${row.id}" data-row-number="${index + 1}">
@@ -2130,7 +2141,7 @@ function buildSetOptions(row) {
         value: variant.setName,
         inputValue: getSetDisplayLabel(variant.setName),
         label: `${variant.setName} â€¢ ${stockMeta.label}`,
-        description: variant.itemCode ? `Code ${variant.itemCode}` : '',
+        description: getVariantSetOptionDescription(variant),
         disabled: stockMeta.disableSelection,
         meta: variant
     }));
@@ -2144,7 +2155,7 @@ function buildSetSearchOptions(row) {
         value: variant.setName,
         inputValue: getSetDisplayLabel(variant.setName),
         label: `${variant.setName} | ${stockMeta.label}`,
-        description: variant.itemCode ? `Code ${variant.itemCode}` : '',
+        description: getVariantSetOptionDescription(variant),
         disabled: stockMeta.disableSelection,
         meta: variant
     }));
@@ -2159,7 +2170,7 @@ function buildQuickPosAwareSetSearchOptions(row) {
             value: variant.setName,
             inputValue: getSetDisplayLabel(variant.setName),
             label: `${variant.setName} | ${stockMeta.label}`,
-            description: variant.itemCode ? `Code ${variant.itemCode}` : '',
+            description: getVariantSetOptionDescription(variant),
             disabled: stockMeta.disableSelection,
             meta: variant
         };
@@ -2219,12 +2230,14 @@ function syncRowVariant(row, { preserveSelection = false } = {}) {
         row.itemCode = '';
         row.price = 0;
         row.helper = '';
+        row.variantSource = '';
         row.subtotal = 0;
         return;
     }
 
     row.itemCode = variant.itemCode;
     row.helper = variant.helper || [variant.itemCode, variant.setName].filter(Boolean).join(' | ');
+    row.variantSource = String(variant.source || '').trim();
     if (!row.priceOverride) {
         row.price = Number(variant.price || 0);
     }
@@ -4118,8 +4131,32 @@ function normalizeInventoryVariantEntry(variant) {
         setName: String(variant.setName || variant.set_name || '').trim(),
         itemCode: String(variant.itemCode || variant.item_code || '').trim(),
         price: Number(variant.price || 0),
-        helper: String(variant.helper || '').trim()
+        helper: String(variant.helper || '').trim(),
+        source: String(variant.source || '').trim()
     };
+}
+
+function pickVirtualTTemplateVariant(variants = []) {
+    return [...variants]
+        .filter((variant) => normalizeLookup(variant.setName) !== 't')
+        .sort((left, right) => getSetRank(left.setName) - getSetRank(right.setName))[0] || null;
+}
+
+function buildVirtualTOrderFormVariant(variant) {
+    return {
+        ...variant,
+        setName: 'T',
+        price: 0,
+        helper: '',
+        source: VIRTUAL_T_VARIANT_SOURCE
+    };
+}
+
+function getVariantSetOptionDescription(variant = {}) {
+    if (String(variant.source || '').trim() === VIRTUAL_T_VARIANT_SOURCE) {
+        return 'Order form only';
+    }
+    return variant.itemCode ? `Code ${variant.itemCode}` : '';
 }
 
 function normalizePastedMultilineText(value) {
