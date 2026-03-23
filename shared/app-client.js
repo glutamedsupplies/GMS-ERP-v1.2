@@ -1700,7 +1700,15 @@
             () => window.electronAPI?.inventoryVariants?.resolve({ productName, setName }),
             () => request(`/api/inventory-variants/resolve?productName=${encodeURIComponent(productName)}&setName=${encodeURIComponent(setName)}`)
         ),
+<<<<<<< HEAD
         listInventory: ({ branch = '', filter = '', limit = 500, offset = 0 } = {}) => request(`/api/inventory?branch=${encodeURIComponent(branch)}&filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`),
+=======
+        listInventory: ({ branch = '', filter = '' } = {}) => request(`/api/inventory?branch=${encodeURIComponent(branch)}&filter=${encodeURIComponent(filter)}`),
+        updateInventoryItem: (inventoryId, payload) => request(`/api/inventory-items/${encodeURIComponent(inventoryId)}`, {
+            method: 'PATCH',
+            body: payload
+        }),
+>>>>>>> 86b2446516fd9922750ab901e397ff1c1a7ff133
         updateInventoryQuantity: (helper, payload) => request(`/api/inventory/${encodeURIComponent(helper)}`, {
             method: 'PATCH',
             body: payload

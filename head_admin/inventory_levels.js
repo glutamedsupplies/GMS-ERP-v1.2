@@ -178,7 +178,9 @@ async function loadInventory() {
                 expiration_date: expirationDate,
                 draftAdjustmentType: 'add',
                 draftAdjustmentQuantity: '',
-                draftExpirationDate: expirationDate
+                draftExpirationDate: expirationDate,
+                draftInventoryUnit: String(row.inventory_unit || '').trim(),
+                draftItemType: String(row.item_type || '').trim()
             };
             if (isChowRestaurantInventoryMode()) {
                 nextRow.sheet = buildInventorySheetState(nextRow, sheetDrafts[String(row.inventory_id || '')] || {});
@@ -274,7 +276,33 @@ function renderRows() {
         const adjustmentQuantity = row.draftAdjustmentQuantity ?? '';
         const adjustmentMin = adjustmentType === 'set' ? '' : '0.01';
 
+<<<<<<< HEAD
         const adjustmentCell = canEditBranch
+=======
+        const unitCell = state.canEditInventory
+            ? `
+                    <input
+                        class="inline-input"
+                        data-field="inventoryUnit"
+                        data-inventory-id="${appClient.escapeHtml(row.inventory_id)}"
+                        type="text"
+                        value="${appClient.escapeHtml(String(row.draftInventoryUnit ?? row.inventory_unit ?? '').trim())}">
+                `
+            : appClient.escapeHtml(row.inventory_unit || '-');
+
+        const typeCell = state.canEditInventory
+            ? `
+                    <input
+                        class="inline-input"
+                        data-field="itemType"
+                        data-inventory-id="${appClient.escapeHtml(row.inventory_id)}"
+                        type="text"
+                        value="${appClient.escapeHtml(String(row.draftItemType ?? row.item_type ?? '').trim())}">
+                `
+            : appClient.escapeHtml(row.item_type || '-');
+
+        const adjustmentCell = state.canEditInventory
+>>>>>>> 86b2446516fd9922750ab901e397ff1c1a7ff133
             ? `
                     <div class="adjust-controls">
                         <select
@@ -324,8 +352,8 @@ function renderRows() {
         return `
             <tr class="row-${statusMeta.rowClass}">
                 <td><strong>${appClient.escapeHtml(row.item_name || '-')}</strong></td>
-                <td>${appClient.escapeHtml(row.inventory_unit || '-')}</td>
-                <td>${appClient.escapeHtml(row.item_type || '-')}</td>
+                <td>${unitCell}</td>
+                <td>${typeCell}</td>
                 <td><strong>${appClient.escapeHtml(formatQuantity(quantity))}</strong></td>
                 <td>${expirationCell}</td>
                 <td>${adjustmentCell}</td>
@@ -731,6 +759,26 @@ function handleTableInput(event) {
         return;
     }
 
+    const unitInput = event.target.closest('input[data-field="inventoryUnit"]');
+    if (unitInput) {
+        const row = state.rows.find((entry) => String(entry.inventory_id) === String(unitInput.dataset.inventoryId || ''));
+        if (!row) {
+            return;
+        }
+        row.draftInventoryUnit = String(unitInput.value || '').trim();
+        return;
+    }
+
+    const typeInput = event.target.closest('input[data-field="itemType"]');
+    if (typeInput) {
+        const row = state.rows.find((entry) => String(entry.inventory_id) === String(typeInput.dataset.inventoryId || ''));
+        if (!row) {
+            return;
+        }
+        row.draftItemType = String(typeInput.value || '').trim();
+        return;
+    }
+
     const qtyInput = event.target.closest('input[data-field="adjustmentQuantity"]');
     if (qtyInput) {
         const row = state.rows.find((entry) => String(entry.inventory_id) === String(qtyInput.dataset.inventoryId || ''));
@@ -820,6 +868,7 @@ async function applyAdjustment(inventoryId) {
         setStatus(getInventoryEditRestrictionMessage(branch), true);
         return;
     }
+<<<<<<< HEAD
     const row = state.rows.find((entry) => String(entry.inventory_id) === String(inventoryId));
 
     if (isChowRestaurantInventoryMode()) {
@@ -876,6 +925,13 @@ async function applyAdjustment(inventoryId) {
         return;
     }
 
+=======
+    const branch = String(branchFilter.value || '').trim();
+    const unitInput = Array.from(inventoryBody.querySelectorAll('input[data-field="inventoryUnit"]'))
+        .find((entry) => String(entry.dataset.inventoryId || '') === String(inventoryId || ''));
+    const typeInput = Array.from(inventoryBody.querySelectorAll('input[data-field="itemType"]'))
+        .find((entry) => String(entry.dataset.inventoryId || '') === String(inventoryId || ''));
+>>>>>>> 86b2446516fd9922750ab901e397ff1c1a7ff133
     const input = Array.from(inventoryBody.querySelectorAll('input[data-field="adjustmentQuantity"]'))
         .find((entry) => String(entry.dataset.inventoryId || '') === String(inventoryId || ''));
     const select = Array.from(inventoryBody.querySelectorAll('select[data-field="adjustmentType"]'))
@@ -890,6 +946,12 @@ async function applyAdjustment(inventoryId) {
     }
 
     const itemName = row?.item_name || 'Item';
+    const unitValue = normalizeInlineText(unitInput?.value ?? row?.draftInventoryUnit ?? row?.inventory_unit);
+    const typeValue = normalizeInlineText(typeInput?.value ?? row?.draftItemType ?? row?.item_type);
+    const hasUnitTypeChange = row
+        ? normalizeInlineText(row.inventory_unit) !== unitValue
+            || normalizeInlineText(row.item_type) !== typeValue
+        : false;
     const operation = normalizeAdjustmentType(select?.value || row?.draftAdjustmentType);
     const rawInputValue = String(input.value || '').trim();
     const hasQuantityValue = rawInputValue !== '';
@@ -902,6 +964,11 @@ async function applyAdjustment(inventoryId) {
     const previousExpirationDate = normalizeDateInput(row?.expiration_date);
     const expirationChanged = nextExpirationDate !== previousExpirationDate;
 
+    if (hasUnitTypeChange && (!unitValue || !typeValue)) {
+        setStatus('Unit and type are required.', true);
+        return;
+    }
+
     if (hasQuantityValue && !isValidAmount) {
         setStatus(
             operation === 'set'
@@ -912,8 +979,8 @@ async function applyAdjustment(inventoryId) {
         return;
     }
 
-    if (!hasQuantityValue && !expirationChanged) {
-        setStatus('Enter quantity or change expiration date before applying.', true);
+    if (!hasQuantityValue && !expirationChanged && !hasUnitTypeChange) {
+        setStatus('Enter quantity, change expiration date, or update unit/type before applying.', true);
         return;
     }
 
@@ -932,13 +999,25 @@ async function applyAdjustment(inventoryId) {
         }
     }
 
-    const actionLabel = hasQuantityValue
-        ? `${operation} adjustment`
-        : 'expiration update';
-    setStatus(`Applying ${actionLabel} for ${itemName}...`, false);
+    const actionLabels = [];
+    if (hasUnitTypeChange) {
+        actionLabels.push('unit/type update');
+    }
+    if (hasQuantityValue) {
+        actionLabels.push(`${operation} adjustment`);
+    } else if (expirationChanged) {
+        actionLabels.push('expiration update');
+    }
+    setStatus(`Applying ${actionLabels.join(' and ')} for ${itemName}...`, false);
     input.disabled = true;
     if (select) {
         select.disabled = true;
+    }
+    if (unitInput) {
+        unitInput.disabled = true;
+    }
+    if (typeInput) {
+        typeInput.disabled = true;
     }
     if (expirationInput) {
         expirationInput.disabled = true;
@@ -948,26 +1027,47 @@ async function applyAdjustment(inventoryId) {
     }
 
     try {
-        const updated = await appClient.updateInventoryQuantity(inventoryId, payload);
+        if (hasUnitTypeChange) {
+            const updatedItem = await appClient.updateInventoryItem(inventoryId, {
+                inventoryUnit: unitValue,
+                itemType: typeValue
+            });
+            if (row && updatedItem) {
+                row.inventory_unit = updatedItem.inventory_unit;
+                row.item_type = updatedItem.item_type;
+                row.draftInventoryUnit = updatedItem.inventory_unit;
+                row.draftItemType = updatedItem.item_type;
+            }
+        }
 
-        if (row) {
-            row.quantity = Number(updated?.quantity ?? row.quantity ?? 0);
-            row.updated_at = updated?.updated_at || row.updated_at;
-            row.expiration_date = normalizeDateInput(updated?.expiration_date || nextExpirationDate);
-            row.draftExpirationDate = row.expiration_date;
-            row.draftAdjustmentQuantity = '';
-            row.draftAdjustmentType = operation;
+        if (hasQuantityValue || expirationChanged) {
+            const updated = await appClient.updateInventoryQuantity(inventoryId, payload);
+
+            if (row) {
+                row.quantity = Number(updated?.quantity ?? row.quantity ?? 0);
+                row.updated_at = updated?.updated_at || row.updated_at;
+                row.expiration_date = normalizeDateInput(updated?.expiration_date || nextExpirationDate);
+                row.draftExpirationDate = row.expiration_date;
+                row.draftAdjustmentQuantity = '';
+                row.draftAdjustmentType = operation;
+            }
         }
 
         renderRows();
         renderSummary();
         updateLoadedStatus();
     } catch (error) {
-        console.error('Failed to update inventory quantity:', error);
-        setStatus(error.message || 'Unable to update quantity.', true);
+        console.error('Failed to update inventory entry:', error);
+        setStatus(error.message || 'Unable to update inventory item.', true);
         input.disabled = false;
         if (select) {
             select.disabled = false;
+        }
+        if (unitInput) {
+            unitInput.disabled = false;
+        }
+        if (typeInput) {
+            typeInput.disabled = false;
         }
         if (expirationInput) {
             expirationInput.disabled = false;
@@ -1226,6 +1326,12 @@ function isValidDateParts(year, month, day) {
     }
     const date = new Date(year, month - 1, day);
     return date.getFullYear() === year && (date.getMonth() + 1) === month && date.getDate() === day;
+}
+
+function normalizeInlineText(value) {
+    return String(value || '')
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 
 function setStatus(message, isError) {
