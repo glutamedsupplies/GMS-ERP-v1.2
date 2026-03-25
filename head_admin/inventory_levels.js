@@ -276,10 +276,7 @@ function renderRows() {
         const adjustmentQuantity = row.draftAdjustmentQuantity ?? '';
         const adjustmentMin = adjustmentType === 'set' ? '' : '0.01';
 
-<<<<<<< HEAD
-        const adjustmentCell = canEditBranch
-=======
-        const unitCell = state.canEditInventory
+        const unitCell = canEditBranch
             ? `
                     <input
                         class="inline-input"
@@ -290,7 +287,7 @@ function renderRows() {
                 `
             : appClient.escapeHtml(row.inventory_unit || '-');
 
-        const typeCell = state.canEditInventory
+        const typeCell = canEditBranch
             ? `
                     <input
                         class="inline-input"
@@ -301,8 +298,7 @@ function renderRows() {
                 `
             : appClient.escapeHtml(row.item_type || '-');
 
-        const adjustmentCell = state.canEditInventory
->>>>>>> 86b2446516fd9922750ab901e397ff1c1a7ff133
+        const adjustmentCell = canEditBranch
             ? `
                     <div class="adjust-controls">
                         <select
@@ -868,7 +864,6 @@ async function applyAdjustment(inventoryId) {
         setStatus(getInventoryEditRestrictionMessage(branch), true);
         return;
     }
-<<<<<<< HEAD
     const row = state.rows.find((entry) => String(entry.inventory_id) === String(inventoryId));
 
     if (isChowRestaurantInventoryMode()) {
@@ -924,14 +919,10 @@ async function applyAdjustment(inventoryId) {
         }
         return;
     }
-
-=======
-    const branch = String(branchFilter.value || '').trim();
     const unitInput = Array.from(inventoryBody.querySelectorAll('input[data-field="inventoryUnit"]'))
         .find((entry) => String(entry.dataset.inventoryId || '') === String(inventoryId || ''));
     const typeInput = Array.from(inventoryBody.querySelectorAll('input[data-field="itemType"]'))
         .find((entry) => String(entry.dataset.inventoryId || '') === String(inventoryId || ''));
->>>>>>> 86b2446516fd9922750ab901e397ff1c1a7ff133
     const input = Array.from(inventoryBody.querySelectorAll('input[data-field="adjustmentQuantity"]'))
         .find((entry) => String(entry.dataset.inventoryId || '') === String(inventoryId || ''));
     const select = Array.from(inventoryBody.querySelectorAll('select[data-field="adjustmentType"]'))

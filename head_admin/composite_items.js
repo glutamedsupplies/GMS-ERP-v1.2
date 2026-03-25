@@ -76,6 +76,7 @@ async function initialize() {
 async function applyWorkspaceConfig() {
     try {
         const bootstrap = await appClient.getBootstrap();
+        appClient.applyBootstrapBrandTheme(bootstrap);
         const labels = bootstrap?.workspaceConfig?.labels || {};
         pageTitle.textContent = labels.compositePageTitle || labels.compositeMenu || 'Composite Items';
         pageCopy.textContent = 'I-set up ang product composite recipe. Kapag na-order ang composite item, automatic na mababawas ang components sa inventory levels.';

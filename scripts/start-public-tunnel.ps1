@@ -1,4 +1,5 @@
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'managed-local-server.ps1')
 
 function Get-RepoRoot {
     return (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -131,25 +132,6 @@ function Wait-ForLocalServer {
     return $false
 }
 
-function Stop-ManagedServer {
-    param(
-        [string]$PidFile,
-        [System.Diagnostics.Process]$Process
-    )
-
-    $stopped = $false
-    if ($Process -and -not $Process.HasExited) {
-        & taskkill /PID $Process.Id /T /F *> $null
-        $stopped = $true
-    }
-
-    if (Test-Path $PidFile) {
-        Remove-Item $PidFile -Force -ErrorAction SilentlyContinue
-    }
-
-    return $stopped
-}
-
 $repoRoot = Get-RepoRoot
 $paths = Get-RuntimePaths -RepoRoot $repoRoot
 $config = Get-RuntimeConfig -ConfigPath $paths.ConfigPath
@@ -157,12 +139,15 @@ $cloudflared = Get-CloudflaredCommand -ConfiguredPath $config.cloudflaredPath
 $localUrl = "http://127.0.0.1:$($config.port)/api/server-info"
 
 if (Test-Path $paths.PidFile) {
-    $existingPid = Get-Content $paths.PidFile -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($existingPid -and (Get-Process -Id $existingPid -ErrorAction SilentlyContinue)) {
-        throw "A managed local server is already running with PID $existingPid. Run stop-local-server.cmd first."
+    $resolvedExisting = Resolve-ManagedServerProcess -PidFile $paths.PidFile
+    if ($resolvedExisting.IsManaged) {
+        throw "A managed local server is already running with PID $($resolvedExisting.State.Pid). Run stop-local-server.cmd first."
     }
 
-    Remove-Item $paths.PidFile -Force -ErrorAction SilentlyContinue
+    Remove-ManagedServerState -PidFile $paths.PidFile
+    if ($resolvedExisting.State) {
+        Write-Host "Removed stale managed local server PID file ($($resolvedExisting.Reason))." -ForegroundColor DarkYellow
+    }
 }
 
 Write-Host "Starting local server in the background..." -ForegroundColor Cyan
@@ -179,7 +164,7 @@ $serverProcess = Start-Process -FilePath 'powershell.exe' `
     -RedirectStandardError $paths.StdErrLog `
     -PassThru
 
-Set-Content -Path $paths.PidFile -Value $serverProcess.Id -Encoding ASCII
+Write-ManagedServerState -PidFile $paths.PidFile -Process $serverProcess
 
 try {
     if (-not (Wait-ForLocalServer -Url $localUrl -TimeoutSeconds 45)) {
@@ -198,5 +183,16 @@ try {
 
     Start-CloudflaredTunnel -Cloudflared $cloudflared -Config $config -RepoRoot $repoRoot
 } finally {
-    Stop-ManagedServer -PidFile $paths.PidFile -Process $serverProcess | Out-Null
+    $resolvedServer = Resolve-ManagedServerProcess -PidFile $paths.PidFile
+    if ($resolvedServer.IsManaged) {
+        if (Stop-ManagedServerTree -ResolvedProcess $resolvedServer -TimeoutSeconds 15) {
+            Remove-ManagedServerState -PidFile $paths.PidFile
+        } else {
+            Write-Warning "Failed to stop managed local server PID $($resolvedServer.State.Pid). Run stop-local-server.cmd."
+        }
+    }
+
+    if ($resolvedServer.IsStale) {
+        Remove-ManagedServerState -PidFile $paths.PidFile
+    }
 }

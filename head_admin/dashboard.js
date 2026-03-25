@@ -392,6 +392,14 @@ window.addEventListener('DOMContentLoaded', async () => {
         return getWorkspaceShellVariant() === 'restaurant_chow' || resolveCompanyCode() === 'chow';
     }
 
+    function isIglowWorkspaceShell() {
+        const variant = getWorkspaceShellVariant();
+        return variant === 'iglow'
+            || variant === 'tenant_iglow'
+            || variant === 'iglow_glow'
+            || resolveCompanyCode() === 'iglow';
+    }
+
     function getDashboardShellName() {
         const configuredName = String(getWorkspaceShellConfig()?.appShellName || '').trim();
         if (configuredName) {
@@ -444,11 +452,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     function applyTenantShellIdentity() {
         const companyCode = resolveCompanyCode();
         const chowShell = isChowRestaurantShell();
+        const iglowShell = isIglowWorkspaceShell();
 
         if (document.body) {
             document.body.dataset.companyCode = companyCode || '';
             document.body.dataset.shellVariant = getWorkspaceShellVariant();
             document.body.classList.toggle('tenant-shell-chow', chowShell);
+            document.body.classList.toggle('tenant-shell-iglow', iglowShell);
         }
 
         if (dashboardLogoMark) {
