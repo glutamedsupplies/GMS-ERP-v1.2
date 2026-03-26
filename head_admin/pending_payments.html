@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pending Payments</title>
+<script src="../shared/theme-preload.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f1efe8;
+    --panel: rgba(255, 255, 255, 0.92);
+    --ink: #162218;
+    --muted: #667167;
+    --line: #d9dfd8;
+    --sage: #2f6f57;
+    --sage-soft: #e9f4ee;
+    --amber: #c88f1f;
+    --amber-soft: #fff5dc;
+    --rose: #c76363;
+    --rose-soft: #fff0ef;
+    --shadow: 0 26px 70px rgba(18, 39, 31, 0.1);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Manrope", sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at top left, rgba(47, 111, 87, 0.12), transparent 20%),
+      radial-gradient(circle at bottom right, rgba(200, 143, 31, 0.12), transparent 22%),
+      linear-gradient(180deg, #fbfaf7 0%, var(--bg) 100%);
+  }
+  .page {
+    max-width: 1580px;
+    margin: 0 auto;
+    padding: 28px 22px 40px;
+  }
+  .hero,
+  .panel,
+  .card {
+    background: var(--panel);
+    border: 1px solid rgba(255, 255, 255, 0.76);
+    border-radius: 30px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+  }
+  .hero {
+    padding: 28px;
+  }
+  .hero-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .eyebrow {
+    margin: 0 0 8px;
+    color: var(--sage);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  h1, h2, h3 {
+    margin: 0;
+    font-family: "Fraunces", serif;
+  }
+  h1 {
+    font-size: clamp(34px, 4vw, 48px);
+  }
+  h2 {
+    font-size: clamp(24px, 3vw, 32px);
+  }
+  .hero-copy,
+  .section-copy {
+    margin: 12px 0 0;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .active-range {
+    padding: 14px 18px;
+    border-radius: 22px;
+    background: linear-gradient(180deg, #f4fbf7 0%, #ebf4ef 100%);
+    border: 1px solid #dbe8e0;
+    min-width: 280px;
+  }
+  .active-range span,
+  .active-range strong {
+    display: block;
+  }
+  .active-range span {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .active-range strong {
+    margin-top: 8px;
+    font-size: 24px;
+  }
+  .filter-panel {
+    margin-top: 18px;
+    padding: 18px;
+    border-radius: 24px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.82);
+  }
+  .filter-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+    gap: 12px;
+    align-items: end;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .field.span-2 {
+    grid-column: span 2;
+  }
+  .field label {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  input,
+  select,
+  button {
+    font: inherit;
+  }
+  input,
+  select {
+    width: 100%;
+    min-height: 48px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 12px 14px;
+    background: #fffdfb;
+    color: var(--ink);
+  }
+  input:focus,
+  select:focus {
+    outline: none;
+    border-color: rgba(47, 111, 87, 0.44);
+    box-shadow: 0 0 0 4px rgba(47, 111, 87, 0.1);
+  }
+  .filter-actions {
+    display: flex;
+    gap: 10px;
+  }
+  button {
+    min-height: 46px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    font-weight: 800;
+  }
+  .primary-btn {
+    background: linear-gradient(135deg, #2f6f57 0%, #48906f 100%);
+    color: #fff;
+  }
+  .secondary-btn {
+    background: #edf4ef;
+    color: var(--sage);
+  }
+  .ghost-btn {
+    background: #fff;
+    color: var(--sage);
+    border: 1px solid #dbe7df;
+  }
+  .status {
+    min-height: 22px;
+    margin-top: 14px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .status.error {
+    color: #b42318;
+  }
+  .content-grid {
+    margin-top: 18px;
+    display: grid;
+    gap: 18px;
+  }
+  .panel {
+    padding: 22px;
+  }
+  .stack-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .status-badge {
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .status-badge.is-unpaid {
+    background: #fdeaea;
+    color: #b42318;
+  }
+  .status-badge.is-partial {
+    background: #fff5da;
+    color: #9a6a00;
+  }
+  .admin-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .admin-summary-card {
+    padding: 20px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    background:
+      linear-gradient(180deg, rgba(245, 250, 247, 0.98) 0%, rgba(255, 255, 255, 0.94) 100%);
+  }
+  .admin-summary-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .admin-summary-head h3 {
+    font-size: clamp(22px, 2.2vw, 28px);
+  }
+  .admin-summary-copy {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.6;
+  }
+  .admin-branch-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .admin-branch-card {
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: #fff;
+    border: 1px solid #e8eeea;
+  }
+  .admin-branch-card span {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .admin-branch-card strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 18px;
+    line-height: 1.4;
+  }
+  .admin-branch-card p {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .admin-summary-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid #edf1ee;
+  }
+  .admin-summary-footer span {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .admin-summary-footer strong {
+    font-size: 15px;
+  }
+  .pending-list {
+    display: grid;
+    gap: 16px;
+  }
+  .pending-card {
+    padding: 20px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 249, 247, 0.94) 100%);
+  }
+  .pending-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .pending-head h3 {
+    font-size: clamp(22px, 2.4vw, 28px);
+  }
+  .pending-subtitle {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.6;
+  }
+  .pending-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .pending-field {
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: #fff;
+    border: 1px solid #e8eeea;
+  }
+  .pending-field span {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .pending-field strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 18px;
+    line-height: 1.4;
+  }
+  .pending-field p {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .pending-field.balance strong {
+    color: #b42318;
+  }
+  .pending-note {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: #fffdf8;
+    border: 1px solid #f0e5cb;
+  }
+  .pending-note span {
+    display: block;
+    color: #8b6b20;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .pending-note p {
+    margin: 8px 0 0;
+    color: var(--ink);
+    line-height: 1.7;
+  }
+  .pending-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid #edf1ee;
+  }
+  .pending-meta {
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.7;
+  }
+  .empty {
+    padding: 28px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-weight: 700;
+    border: 1px dashed #d9dfd8;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.76);
+  }
+  @media (max-width: 1380px) {
+    .filter-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .pending-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .admin-branch-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 860px) {
+    .page {
+      padding: 18px 14px 28px;
+    }
+    .hero,
+    .panel,
+    .card {
+      padding: 18px;
+      border-radius: 24px;
+    }
+    .hero-head,
+    .filter-actions {
+      flex-direction: column;
+    }
+    .filter-grid,
+    .pending-grid,
+    .admin-branch-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="hero-head">
+        <div>
+          <p class="eyebrow">Follow-up</p>
+          <h1>Pending Payments</h1>
+          <p class="hero-copy">Hiwalay na panel ito para sa unpaid at partially paid orders lang. Automatic na hindi kasama ang anumang <strong>LBC</strong> orders o LBC collection flow.</p>
+        </div>
+
+        <div class="active-range">
+          <span>Active Range</span>
+          <strong id="activeDateLabel">All Dates</strong>
+        </div>
+      </div>
+
+      <section class="filter-panel">
+        <div class="filter-grid">
+          <div class="field">
+            <label for="periodFilter">Report View</label>
+            <select id="periodFilter">
+              <option value="this_month">This Month</option>
+              <option value="this_week">This Week</option>
+              <option value="custom">Custom Range</option>
+              <option value="all">All Dates</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="dateFromFilter">Date From</label>
+            <input id="dateFromFilter" type="date">
+          </div>
+          <div class="field">
+            <label for="dateToFilter">Date To</label>
+            <input id="dateToFilter" type="date">
+          </div>
+          <div class="field">
+            <label for="adminFilter">Admin</label>
+            <select id="adminFilter"></select>
+          </div>
+          <div class="filter-actions">
+            <button id="applyFiltersBtn" type="button" class="primary-btn">Apply</button>
+            <button id="resetFiltersBtn" type="button" class="secondary-btn">Reset</button>
+          </div>
+        </div>
+
+        <div id="panelStatus" class="status">Loading pending payments...</div>
+      </section>
+    </section>
+
+    <section class="content-grid">
+      <section class="panel">
+        <div class="stack-header">
+          <div>
+            <p class="eyebrow">Admin Totals</p>
+            <h2>Pending By Admin</h2>
+            <p id="adminSummaryMeta" class="section-copy">Pending counts per admin, separated into Cubao and Pampanga.</p>
+          </div>
+        </div>
+
+        <div id="adminSummaryBody" class="admin-summary-grid">
+          <div class="empty">Loading admin pending totals...</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="stack-header">
+          <div>
+            <p class="eyebrow">Receipt View</p>
+            <h2>Pending Payment Receipts</h2>
+            <p id="pendingListMeta" class="section-copy">Receipt-style view ito ng non-LBC pending at partially paid orders.</p>
+          </div>
+        </div>
+
+        <div id="pendingListBody" class="pending-list">
+          <div class="empty">Loading pending payment list...</div>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <script src="../shared/app-client.js"></script>
+  <script src="pending_payments.js?v=20260325c"></script>
+</body>
+</html>

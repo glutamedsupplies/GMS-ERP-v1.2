@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     orders: {
         preview: (saleDate) => ipcRenderer.invoke('orders:preview', saleDate),
         get: (orderNumber) => ipcRenderer.invoke('orders:get', orderNumber),
+        checkPendingClient: (filters) => ipcRenderer.invoke('orders:check-pending-client', filters),
         update: () => undefined,
         create: () => undefined,
         delete: () => undefined

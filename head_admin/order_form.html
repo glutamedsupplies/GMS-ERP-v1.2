@@ -157,6 +157,26 @@
           <button id="addItemRowBtn" type="button" class="secondary-btn"><i class="fa-solid fa-plus"></i> Add Item</button>
         </div>
 
+        <div id="pendingClientAlert" class="client-pending-alert client-history-panel" hidden>
+          <div class="client-pending-banner">
+            <div class="client-pending-banner-head">
+              <div>
+                <p class="eyebrow">Client History</p>
+                <strong id="pendingClientAlertTitle">Checking previous pending receipts...</strong>
+                <p id="pendingClientAlertCopy" class="client-pending-banner-copy">Titingnan kung may old pending receipt ang client na ito.</p>
+              </div>
+              <span id="pendingClientAlertBadge" class="pending-check-badge">Checking</span>
+            </div>
+
+            <div id="pendingClientAlertStats" class="client-pending-stats"></div>
+            <div id="pendingClientAlertList" class="client-pending-list"></div>
+
+            <div class="client-pending-actions">
+              <button id="pendingClientRefreshBtn" type="button" class="secondary-btn secondary-btn-compact">Refresh History</button>
+            </div>
+          </div>
+        </div>
+
         <section id="quickPosSection" class="quick-pos-shell" hidden>
           <div class="quick-pos-header">
             <div class="quick-pos-heading">
@@ -335,6 +355,31 @@
     </div>
   </div>
 
+  <div id="pendingClientConfirmModal" class="receipt-modal" hidden>
+    <div class="receipt-dialog pending-client-dialog">
+      <div class="receipt-dialog-header">
+        <div>
+          <p class="eyebrow">Pending Confirmation</p>
+          <h2>Previous Pending Receipts Found</h2>
+        </div>
+        <button id="closePendingClientConfirmBtn" type="button" class="icon-danger-btn" title="Close pending confirmation">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="pending-client-modal-copy">
+        <p id="pendingClientConfirmCopy">Review the old pending receipts first before creating a new transaction for this client.</p>
+      </div>
+      <div id="pendingClientConfirmList" class="pending-client-modal-list"></div>
+      <div id="pendingClientConfirmStatus" class="status">Strong match found. Review the old receipt or continue only if already settled.</div>
+
+      <div class="receipt-modal-actions">
+        <button id="proceedPendingClientBtn" type="button" class="primary-btn">Proceed With New Order</button>
+        <button id="cancelPendingClientBtn" type="button" class="secondary-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <div id="receiptModal" class="receipt-modal" hidden>
     <div class="receipt-dialog">
       <div class="receipt-dialog-header">
@@ -361,6 +406,6 @@
   </div>
 
   <script src="../shared/app-client.js"></script>
-  <script src="order_form.js?v=20260313"></script>
+  <script src="order_form.js?v=20260325a"></script>
 </body>
 </html>

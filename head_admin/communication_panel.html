@@ -44,7 +44,10 @@
     </header>
 
     <section class="toolbar-card">
-      <div id="branchTabs" class="branch-tabs" role="tablist" aria-label="Branch Workflow"></div>
+      <div>
+        <p class="eyebrow">Live Workflow</p>
+        <h2>Chat-First Coordination</h2>
+      </div>
       <div class="toolbar-actions">
         <button id="refreshBtn" type="button" class="secondary-btn"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
         <p id="boardStatus" class="status-copy" role="status" aria-live="polite"></p>
@@ -196,79 +199,133 @@
       <datalist id="productNameList"></datalist>
     </section>
 
-    <section id="employeeBoardSection" class="surface-card" hidden>
-      <div class="section-head">
+    <section id="chatWorkspaceSection" class="surface-card workspace-card">
+      <div class="section-head workspace-head">
         <div>
-          <p class="eyebrow">My Orders</p>
-          <h2>Employee Status Board</h2>
-          <p class="section-copy">See if your order is waiting for confirmation, returned for correction, already in prep, or moved to delivery or shipping.</p>
+          <p id="workspaceEyebrow" class="eyebrow">Workflow Threads</p>
+          <h2 id="workspaceTitle">Communication Panel</h2>
+          <p id="workspaceCopy" class="section-copy">Each order now stays inside one conversation thread so you can follow confirmation, invoice, final receipt, prep, and dispatch without jumping between boards.</p>
+        </div>
+        <div class="workspace-summary">
+          <article class="metric-card compact-metric">
+            <span>Visible Threads</span>
+            <strong id="visibleThreadCount">0</strong>
+          </article>
         </div>
       </div>
-      <div id="myOrdersFeed" class="feed-grid"></div>
-    </section>
 
-    <section id="headAdminSection" class="surface-card" hidden>
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Head Admin</p>
-          <h2>Confirmation Queue</h2>
-          <p class="section-copy">Verify totals, payment method, and uploaded payment receipt before confirming the order into the staff workflow.</p>
-        </div>
-      </div>
-      <div id="confirmationFeed" class="feed-grid"></div>
-    </section>
+      <div class="chat-workspace">
+        <aside class="thread-sidebar">
+          <div class="thread-sidebar-top">
+            <div class="thread-branch-block">
+              <p class="eyebrow">Branch View</p>
+              <div id="branchTabs" class="branch-tabs sidebar-tabs" role="tablist" aria-label="Branch Workflow"></div>
+            </div>
 
-    <section id="staffSection" class="surface-card" hidden>
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Staff Workflow</p>
-          <h2>Receipt And Prep Panels</h2>
-          <p class="section-copy">Staff sends the final receipt first. After that, the same receipt becomes the basis of prep. Prep photo is optional, but inventory is deducted only when the receipt-based prep step is completed.</p>
-        </div>
-      </div>
-      <div class="dual-lanes">
-        <section class="lane-card">
-          <header class="lane-head">
-            <h3>Staff Receipt Panel</h3>
-            <p>Confirmed orders waiting for the final receipt from staff.</p>
-          </header>
-          <div id="receiptFeed" class="feed-grid"></div>
-        </section>
-        <section class="lane-card">
-          <header class="lane-head">
-            <h3>Prep By Receipt Panel</h3>
-            <p>Prepare using the attached final receipt. Prep photo is optional, then inventory is deducted automatically.</p>
-          </header>
-          <div id="prepFeed" class="feed-grid"></div>
-        </section>
-      </div>
-    </section>
+            <label class="thread-search" for="threadSearchInput">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input id="threadSearchInput" type="search" placeholder="Search client, order, receipt, courier">
+            </label>
+          </div>
 
-    <section id="dispatchBoardSection" class="surface-card" hidden>
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Final Dispatch</p>
-          <h2>Delivery And Shipping Panels</h2>
-          <p class="section-copy">Cubao and Pampanga stay separated through the branch filter above. Booking orders go to Delivery. Shipment orders go to Shipping.</p>
-        </div>
-      </div>
-      <div class="dual-lanes">
-        <section class="lane-card lane-delivery">
-          <header class="lane-head">
-            <h3>Delivery Panel</h3>
-            <p>Lalamove, Meet-Up, Client book, TOKTOK, MAXIM.</p>
-          </header>
-          <div id="deliveryFeed" class="feed-grid"></div>
-        </section>
-        <section class="lane-card lane-shipping">
-          <header class="lane-head">
-            <h3>Shipping Panel</h3>
-            <p>LBC, J&amp;T, SPX, Victory Liner, AP Cargo.</p>
-          </header>
-          <div id="shippingFeed" class="feed-grid"></div>
+          <div class="thread-sidebar-head">
+            <div>
+              <p class="eyebrow">Threads</p>
+              <h3 id="threadSidebarTitle">All Conversations</h3>
+            </div>
+            <span id="threadCountChip" class="role-chip">0</span>
+          </div>
+
+          <div id="threadList" class="thread-list"></div>
+        </aside>
+
+        <section class="thread-panel">
+          <div id="threadEmptyState" class="workspace-empty">
+            <i class="fa-regular fa-comments"></i>
+            <p>Select an order thread to open the conversation.</p>
+          </div>
+
+          <div id="threadPanelContent" class="thread-panel-content" hidden>
+            <header class="thread-header">
+              <div class="thread-header-copy">
+                <div id="threadHeaderBadges" class="badge-row"></div>
+                <h3 id="threadClientName">-</h3>
+                <p id="threadMeta" class="thread-meta">-</p>
+              </div>
+
+              <div class="thread-header-actions">
+                <button id="threadConfirmBtn" type="button" class="primary-btn" hidden><i class="fa-solid fa-circle-check"></i> Confirm</button>
+                <button id="threadCorrectionBtn" type="button" class="secondary-btn" hidden><i class="fa-solid fa-rotate-left"></i> Correction</button>
+                <button id="threadRejectBtn" type="button" class="secondary-btn" hidden><i class="fa-solid fa-ban"></i> Reject</button>
+                <button id="threadOpenPaymentReceiptBtn" type="button" class="secondary-btn" hidden><i class="fa-regular fa-image"></i> Payment Receipt</button>
+                <button id="threadRefreshBtn" type="button" class="secondary-btn"><i class="fa-solid fa-rotate-right"></i> Refresh Thread</button>
+                <button id="threadOpenInvoiceBtn" type="button" class="secondary-btn" hidden><i class="fa-regular fa-file-lines"></i> Open Invoice</button>
+              </div>
+            </header>
+
+            <section id="pinnedReceiptCard" class="pinned-receipt-card" hidden>
+              <div class="pinned-receipt-copy">
+                <p class="eyebrow">Pinned Receipt</p>
+                <h3 id="pinnedReceiptTitle">Final Staff Receipt</h3>
+                <p id="pinnedReceiptMeta" class="section-copy">-</p>
+                <p id="pinnedReceiptNote" class="pinned-receipt-note" hidden></p>
+              </div>
+
+              <div id="pinnedReceiptPreview" class="attachment-preview empty">Receipt preview appears here after staff sends the final receipt.</div>
+
+              <div class="action-row">
+                <button id="openPinnedReceiptBtn" type="button" class="secondary-btn">Open Receipt</button>
+              </div>
+            </section>
+
+            <div id="messageTimeline" class="message-timeline"></div>
+
+            <form id="messageComposer" class="composer-card">
+              <div class="composer-head">
+                <div>
+                  <p class="eyebrow">Thread Actions</p>
+                  <p id="composerHelp" class="field-hint">Send chat updates here. Invoice and receipt actions appear only when this thread is ready for them.</p>
+                </div>
+                <p id="composerStatus" class="status-copy" role="status" aria-live="polite"></p>
+              </div>
+
+              <textarea id="messageInput" rows="3" placeholder="Type your update..."></textarea>
+
+              <label id="composerAttachmentField" class="field composer-attachment" hidden>
+                <span id="composerAttachmentLabel">Attachment</span>
+                <input id="composerAttachmentInput" type="file" accept="image/*,.pdf">
+                <small id="composerAttachmentHint" class="field-hint">Attach a file.</small>
+                <div id="composerAttachmentPreview" class="attachment-preview empty">No attachment selected.</div>
+              </label>
+
+              <div class="composer-actions">
+                <button id="sendMessageBtn" type="submit" class="primary-btn">Send Message</button>
+                <button id="sendInvoiceBtn" type="button" class="secondary-btn" hidden>Send Invoice</button>
+                <button id="sendReceiptBtn" type="button" class="secondary-btn" hidden>Send Receipt</button>
+                <button id="completePrepBtn" type="button" class="secondary-btn" hidden>Complete Prep</button>
+              </div>
+            </form>
+          </div>
         </section>
       </div>
     </section>
+  </div>
+
+  <div id="invoiceModal" class="invoice-modal" hidden>
+    <div class="invoice-dialog">
+      <div class="invoice-dialog-header">
+        <div>
+          <p class="eyebrow">Invoice Preview</p>
+          <h3 id="invoiceModalTitle">-</h3>
+        </div>
+
+        <button id="closeInvoiceModalBtn" type="button" class="secondary-btn"><i class="fa-solid fa-xmark"></i> Close</button>
+      </div>
+
+      <div id="invoiceModalMeta" class="invoice-meta-grid"></div>
+      <div id="invoiceModalItems" class="invoice-items"></div>
+      <div id="invoiceModalTotals" class="invoice-totals-grid"></div>
+    </div>
   </div>
 
   <script src="../shared/app-client.js"></script>

@@ -62,6 +62,7 @@ if (!process.versions?.electron) {
         ipcMain.handle('sales:references', () => salesStore.getReferenceData());
         ipcMain.handle('orders:preview', (_event, saleDate) => salesStore.previewNextOrderNumber(saleDate || ''));
         ipcMain.handle('orders:get', (_event, orderNumber) => salesStore.getSaleOrder(orderNumber || ''));
+        ipcMain.handle('orders:check-pending-client', (_event, filters) => salesStore.checkPendingPaymentsByClient(filters || {}));
         ipcMain.handle('inventory-variants:list', (_event, filters) => inventoryVariantStore.listInventoryVariants(filters || {}));
         ipcMain.handle('inventory-variants:products', () => inventoryVariantStore.listInventoryProductNames());
         ipcMain.handle('inventory-variants:sets', (_event, productName) => inventoryVariantStore.listInventorySetsByProduct(productName || ''));

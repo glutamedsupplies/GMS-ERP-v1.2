@@ -12,6 +12,10 @@ const EXACT_REFS = {
 };
 
 const SEARCH_DEBOUNCE_MS = 60;
+const ORDER_FORM_DRAFT_STORAGE_PREFIX = 'gms:order-form-draft';
+const ORDER_FORM_DRAFT_NEW_SCOPE = 'new';
+const ORDER_FORM_DRAFT_VERSION = 1;
+const ORDER_FORM_DRAFT_SAVE_MS = 180;
 const MAX_SUGGESTIONS = 9;
 const TOTAL_PULSE_MS = 220;
 const NEAR_EXPIRY_DAYS = 7;
@@ -276,11 +280,25 @@ const fieldDeliveryFeeRule = document.getElementById('fieldDeliveryFeeRule');
 const fieldNote = document.getElementById('fieldNote');
 const fieldClientContact = document.getElementById('fieldClientContact');
 const fieldClientAddress = document.getElementById('fieldClientAddress');
+const pendingClientAlert = document.getElementById('pendingClientAlert');
+const pendingClientAlertTitle = document.getElementById('pendingClientAlertTitle');
+const pendingClientAlertCopy = document.getElementById('pendingClientAlertCopy');
+const pendingClientAlertBadge = document.getElementById('pendingClientAlertBadge');
+const pendingClientAlertStats = document.getElementById('pendingClientAlertStats');
+const pendingClientAlertList = document.getElementById('pendingClientAlertList');
+const pendingClientRefreshBtn = document.getElementById('pendingClientRefreshBtn');
 const openOrderFormSetupBtn = document.getElementById('openOrderFormSetupBtn');
 const orderFormSetupModal = document.getElementById('orderFormSetupModal');
 const closeOrderFormSetupBtn = document.getElementById('closeOrderFormSetupBtn');
 const dismissOrderFormSetupBtn = document.getElementById('dismissOrderFormSetupBtn');
 const saveOrderFormSetupBtn = document.getElementById('saveOrderFormSetupBtn');
+const pendingClientConfirmModal = document.getElementById('pendingClientConfirmModal');
+const closePendingClientConfirmBtn = document.getElementById('closePendingClientConfirmBtn');
+const pendingClientConfirmCopy = document.getElementById('pendingClientConfirmCopy');
+const pendingClientConfirmList = document.getElementById('pendingClientConfirmList');
+const pendingClientConfirmStatus = document.getElementById('pendingClientConfirmStatus');
+const proceedPendingClientBtn = document.getElementById('proceedPendingClientBtn');
+const cancelPendingClientBtn = document.getElementById('cancelPendingClientBtn');
 const orderSetupFields = {
     orderFormTitle: document.getElementById('ofsOrderFormTitle'),
     orderFormCopy: document.getElementById('ofsOrderFormCopy'),
@@ -316,6 +334,7 @@ const PDF_LIB_URLS = Object.freeze({
     html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
     jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
 });
+const PENDING_CLIENT_CHECK_DEBOUNCE_MS = 220;
 const DEFAULT_RECEIPT_TEMPLATE = Object.freeze({
     title: 'Sales Receipt',
     subtitle: 'Official transaction summary',
@@ -388,9 +407,48 @@ const state = {
         search: '',
         manualEditorExpanded: true
     },
+    pendingClientCheck: createPendingClientCheckState(),
     receiptSignatureSrc: RECEIPT_SIGNATURE_SRC,
-    receiptTemplate: { ...DEFAULT_RECEIPT_TEMPLATE }
+    receiptTemplate: { ...DEFAULT_RECEIPT_TEMPLATE },
+    draftState: createOrderFormDraftState()
 };
+
+function createOrderFormDraftState() {
+    return {
+        ready: false,
+        suspendCount: 0,
+        saveTimerId: 0,
+        lastStorageKey: '',
+        lastSerialized: ''
+    };
+}
+
+function createPendingClientCheckState() {
+    return {
+        timerId: 0,
+        requestId: 0,
+        lastSignature: '',
+        approvedSignature: '',
+        loading: false,
+        errorMessage: '',
+        items: [],
+        historyItems: [],
+        summary: {
+            totalMatches: 0,
+            strongCount: 0,
+            possibleCount: 0,
+            totalBalance: 0,
+            totalBalanceDisplay: formatMoney(0),
+            historyCount: 0,
+            pendingCount: 0,
+            settledCount: 0,
+            latestProduct: '',
+            latestSaleDate: '',
+            latestOrderNumber: ''
+        },
+        selectedProfile: null
+    };
+}
 
 initialize();
 
@@ -413,6 +471,7 @@ async function initialize() {
     await loadReceiptConfig();
     await hydrateReceiptSignatureAsset();
     const requestedOrderNumber = getRequestedOrderNumber();
+    let restoredDraft = false;
 
     bindStaticEvents();
     await loadBootstrapData();
@@ -420,7 +479,21 @@ async function initialize() {
 
     if (requestedOrderNumber) {
         await loadOrderForEditing(requestedOrderNumber);
+        restoredDraft = await restoreOrderFormDraft({ orderNumber: requestedOrderNumber });
+    } else {
+        restoredDraft = await restoreOrderFormDraft({ scope: ORDER_FORM_DRAFT_NEW_SCOPE });
     }
+
+    state.draftState.ready = true;
+    if (restoredDraft) {
+        setStatus(
+            requestedOrderNumber
+                ? `Restored unsaved changes for ${requestedOrderNumber}.`
+                : 'Restored your last order draft.',
+            false
+        );
+    }
+    scheduleOrderFormDraftSave();
 }
 
 function getWorkspaceLabels() {
@@ -721,6 +794,11 @@ function getReceiptSignatureSrc() {
 }
 
 function bindStaticEvents() {
+    document.addEventListener('input', handleOrderFormDraftInteraction, true);
+    document.addEventListener('change', handleOrderFormDraftInteraction, true);
+    window.addEventListener('pagehide', flushOrderFormDraftSave);
+    window.addEventListener('beforeunload', flushOrderFormDraftSave);
+
     addItemRowBtn.addEventListener('click', () => {
         addOrderRow();
         state.pendingFocus = { rowId: state.rows[state.rows.length - 1].id, field: 'product' };
@@ -736,10 +814,14 @@ function bindStaticEvents() {
         }
 
         if (state.editingOrderNumber) {
+            clearOrderFormDraft({
+                orderNumber: state.editingOrderNumber || state.editIntentOrderNumber || getRequestedOrderNumber()
+            });
             await loadOrderForEditing(state.editingOrderNumber, { statusMessage: 'Saved order reloaded.' });
             return;
         }
 
+        clearOrderFormDraft({ scope: ORDER_FORM_DRAFT_NEW_SCOPE });
         await resetOrderForm('Order form reset.');
     });
 
@@ -748,6 +830,10 @@ function bindStaticEvents() {
             return;
         }
 
+        clearOrderFormDraft({
+            orderNumber: state.editingOrderNumber || state.editIntentOrderNumber || getRequestedOrderNumber()
+        });
+        clearOrderFormDraft({ scope: ORDER_FORM_DRAFT_NEW_SCOPE });
         await resetOrderForm('Ready for a new order.');
     });
     viewReceiptBtn?.addEventListener('click', () => {
@@ -766,12 +852,27 @@ function bindStaticEvents() {
     deliveryFeeToggle.addEventListener('change', () => renderTotals());
     clientContactInput.addEventListener('input', () => {
         clientContactInput.value = clientContactInput.value.replace(/[^\d\s()+-]/g, '');
+        schedulePendingClientCheck();
     });
+    clientAddressInput.addEventListener('input', () => schedulePendingClientCheck());
     pastedOrderInput?.addEventListener('paste', () => {
         window.setTimeout(() => {
             handlePastedOrderApply({ auto: true });
         }, 0);
     });
+    pendingClientRefreshBtn?.addEventListener('click', () => {
+        runPendingClientCheck({ force: true });
+    });
+    pendingClientAlert?.addEventListener('click', handlePendingClientAlertClick);
+    pendingClientConfirmModal?.addEventListener('click', (event) => {
+        if (event.target === pendingClientConfirmModal) {
+            closePendingClientConfirmModal();
+        }
+    });
+    closePendingClientConfirmBtn?.addEventListener('click', closePendingClientConfirmModal);
+    cancelPendingClientBtn?.addEventListener('click', closePendingClientConfirmModal);
+    proceedPendingClientBtn?.addEventListener('click', handleProceedPendingClientSubmit);
+    pendingClientConfirmList?.addEventListener('click', handlePendingClientAlertClick);
     receiptModal?.addEventListener('click', (event) => {
         if (event.target === receiptModal) {
             closeReceiptModal();
@@ -1292,10 +1393,23 @@ function initializeStaticControls() {
         getOptions: () => buildClientSearchOptions(),
         onSelect: (option) => {
             if (option?.meta) {
+                state.pendingClientCheck.selectedProfile = option.meta;
                 applyClientProfile(option.meta);
             }
         },
-        onCommit: () => {
+        onCommit: (value, option) => {
+            if (option?.meta) {
+                state.pendingClientCheck.selectedProfile = option.meta;
+            } else if (
+                !normalizePendingClientLookup(value)
+                || normalizePendingClientLookup(value) !== normalizePendingClientLookup(
+                    state.pendingClientCheck.selectedProfile?.name || ''
+                )
+            ) {
+                state.pendingClientCheck.selectedProfile = null;
+            }
+            schedulePendingClientCheck({ immediate: true });
+
             if (state.rows.length) {
                 state.pendingFocus = { rowId: state.rows[0].id, field: 'product' };
                 focusPendingField();
@@ -1308,12 +1422,27 @@ function initializeStaticControls() {
             }
         }
     });
+    state.controls.clientName.input?.addEventListener('input', () => {
+        const typedName = normalizePendingClientLookup(state.controls.clientName.input.value || '');
+        const selectedProfileName = normalizePendingClientLookup(state.pendingClientCheck.selectedProfile?.name || '');
+
+        if (!typedName) {
+            resetPendingClientCheck({ clearSelectedProfile: true });
+            return;
+        }
+
+        if (typedName !== selectedProfileName) {
+            state.pendingClientCheck.selectedProfile = null;
+        }
+        schedulePendingClientCheck();
+    });
 }
 
 async function resetOrderForm(statusMessage = '') {
     clearEditState();
     state.editIntentOrderNumber = '';
     state.lastReceipt = null;
+    resetPendingClientCheck({ clearSelectedProfile: true });
     const today = new Date().toISOString().slice(0, 10);
     saleDateInput.value = today;
     noteInput.value = '';
@@ -1422,6 +1551,365 @@ function syncOrderQuery(orderNumber = '') {
 
     const nextValue = `${currentUrl.pathname}${currentUrl.search}`;
     window.history.replaceState({}, '', nextValue);
+}
+
+async function withDraftPersistenceSuspended(task) {
+    state.draftState.suspendCount += 1;
+    try {
+        return await task();
+    } finally {
+        state.draftState.suspendCount = Math.max(0, Number(state.draftState.suspendCount || 0) - 1);
+    }
+}
+
+function isDraftPersistenceSuspended() {
+    return Number(state.draftState.suspendCount || 0) > 0;
+}
+
+function getOrderFormDraftStorage() {
+    try {
+        return window.sessionStorage;
+    } catch (error) {
+        console.warn('Unable to access session draft storage:', error);
+        return null;
+    }
+}
+
+function getOrderFormDraftScope({ orderNumber = '', scope = '' } = {}) {
+    const explicitScope = String(scope || '').trim();
+    if (explicitScope) {
+        return explicitScope;
+    }
+
+    const explicitOrderNumber = String(orderNumber || '').trim();
+    if (explicitOrderNumber) {
+        return explicitOrderNumber;
+    }
+
+    return String(
+        state.editingOrderNumber
+        || state.editIntentOrderNumber
+        || getRequestedOrderNumber()
+        || ORDER_FORM_DRAFT_NEW_SCOPE
+    ).trim();
+}
+
+function getOrderFormDraftStorageKey({ orderNumber = '', scope = '' } = {}) {
+    const company = normalizeCompanyCode(state.companyCode || state.session?.companyCode || state.companyName || '') || 'default';
+    const user = normalizeCompanyCode(state.session?.userName || 'head_admin') || 'head_admin';
+    const draftScope = encodeURIComponent(getOrderFormDraftScope({ orderNumber, scope }));
+    return [ORDER_FORM_DRAFT_STORAGE_PREFIX, encodeURIComponent(company), encodeURIComponent(user), draftScope].join(':');
+}
+
+function captureSearchControlSnapshot(control) {
+    return {
+        value: String(control?.getValue?.() || '').trim(),
+        input: String(control?.input?.value || '').trim()
+    };
+}
+
+function serializeOrderFormDraftRow(row) {
+    return {
+        productName: String(row?.productName || '').trim(),
+        setName: String(row?.setName || '').trim(),
+        itemCode: String(row?.itemCode || '').trim(),
+        price: Math.max(0, Number(row?.price || 0)),
+        quantity: Math.max(1, Number(row?.quantity || 1)),
+        priceOverride: Boolean(row?.priceOverride)
+    };
+}
+
+function hasOrderFormDraftRowContent(row) {
+    return Boolean(
+        row?.productName
+        || row?.setName
+        || row?.itemCode
+        || Number(row?.price || 0) > 0
+        || Number(row?.quantity || 1) > 1
+    );
+}
+
+function buildOrderFormDraftSnapshot() {
+    const rows = (state.rows || [])
+        .map((row) => serializeOrderFormDraftRow(row))
+        .filter((row) => hasOrderFormDraftRowContent(row));
+
+    return {
+        version: ORDER_FORM_DRAFT_VERSION,
+        scope: getOrderFormDraftScope(),
+        saleDate: String(saleDateInput?.value || '').trim(),
+        deliveryFee: String(deliveryFeeInput?.value || '').trim(),
+        deliveryFeeToCollect: Boolean(deliveryFeeToggle?.checked),
+        inventoryDeducted: Boolean(inventoryDeductToggle?.checked ?? true),
+        clientContact: String(clientContactInput?.value || '').trim(),
+        clientAddress: String(clientAddressInput?.value || '').trim(),
+        note: String(noteInput?.value || '').trim(),
+        pastedOrderText: String(pastedOrderInput?.value || ''),
+        controls: {
+            branch: captureSearchControlSnapshot(state.controls.branch),
+            cashBranch: captureSearchControlSnapshot(state.controls.cashBranch),
+            courier: captureSearchControlSnapshot(state.controls.courier),
+            admin: captureSearchControlSnapshot(state.controls.admin),
+            salesRep: captureSearchControlSnapshot(state.controls.salesRep),
+            clientName: captureSearchControlSnapshot(state.controls.clientName)
+        },
+        paymentMethods: state.controls.paymentMethods?.getEntries?.() || [],
+        quickPos: {
+            search: String(quickPosSearchInput?.value || ''),
+            category: String(state.quickPos?.category || 'all').trim() || 'all',
+            manualEditorExpanded: Boolean(state.quickPos?.manualEditorExpanded)
+        },
+        rows
+    };
+}
+
+function hasOrderFormDraftSnapshotContent(snapshot = {}) {
+    const controls = Object.values(snapshot.controls || {});
+    return Boolean(
+        controls.some((entry) => String(entry?.value || '').trim() || String(entry?.input || '').trim())
+        || (snapshot.paymentMethods || []).length
+        || String(snapshot.clientContact || '').trim()
+        || String(snapshot.clientAddress || '').trim()
+        || String(snapshot.note || '').trim()
+        || String(snapshot.pastedOrderText || '').trim()
+        || String(snapshot.deliveryFee || '').trim()
+        || String(snapshot.quickPos?.search || '').trim()
+        || (snapshot.rows || []).length
+    );
+}
+
+function handleOrderFormDraftInteraction() {
+    scheduleOrderFormDraftSave();
+}
+
+function scheduleOrderFormDraftSave() {
+    if (!state.draftState.ready || isDraftPersistenceSuspended()) {
+        return;
+    }
+
+    window.clearTimeout(state.draftState.saveTimerId);
+    state.draftState.saveTimerId = window.setTimeout(() => {
+        persistOrderFormDraft();
+    }, ORDER_FORM_DRAFT_SAVE_MS);
+}
+
+function flushOrderFormDraftSave() {
+    window.clearTimeout(state.draftState.saveTimerId);
+    state.draftState.saveTimerId = 0;
+    persistOrderFormDraft();
+}
+
+function persistOrderFormDraft({ orderNumber = '', scope = '' } = {}) {
+    if (!state.draftState.ready || isDraftPersistenceSuspended()) {
+        return;
+    }
+
+    const storage = getOrderFormDraftStorage();
+    if (!storage) {
+        return;
+    }
+
+    const storageKey = getOrderFormDraftStorageKey({ orderNumber, scope });
+    const snapshot = buildOrderFormDraftSnapshot();
+    if (!hasOrderFormDraftSnapshotContent(snapshot)) {
+        storage.removeItem(storageKey);
+        if (state.draftState.lastStorageKey === storageKey) {
+            state.draftState.lastStorageKey = '';
+            state.draftState.lastSerialized = '';
+        }
+        return;
+    }
+
+    const serialized = JSON.stringify(snapshot);
+    if (state.draftState.lastStorageKey === storageKey && state.draftState.lastSerialized === serialized) {
+        return;
+    }
+
+    try {
+        storage.setItem(storageKey, JSON.stringify({
+            ...snapshot,
+            savedAt: new Date().toISOString()
+        }));
+        state.draftState.lastStorageKey = storageKey;
+        state.draftState.lastSerialized = serialized;
+    } catch (error) {
+        console.warn('Unable to persist order draft:', error);
+    }
+}
+
+function clearOrderFormDraft({ orderNumber = '', scope = '' } = {}) {
+    const storage = getOrderFormDraftStorage();
+    if (!storage) {
+        return;
+    }
+
+    const storageKey = getOrderFormDraftStorageKey({ orderNumber, scope });
+    storage.removeItem(storageKey);
+    if (state.draftState.lastStorageKey === storageKey) {
+        state.draftState.lastStorageKey = '';
+        state.draftState.lastSerialized = '';
+    }
+}
+
+function readOrderFormDraft({ orderNumber = '', scope = '' } = {}) {
+    const storage = getOrderFormDraftStorage();
+    if (!storage) {
+        return null;
+    }
+
+    const storageKey = getOrderFormDraftStorageKey({ orderNumber, scope });
+    const raw = storage.getItem(storageKey);
+    if (!raw) {
+        return null;
+    }
+
+    try {
+        const draft = JSON.parse(raw);
+        if (Number(draft?.version || 0) !== ORDER_FORM_DRAFT_VERSION) {
+            storage.removeItem(storageKey);
+            return null;
+        }
+
+        const comparable = { ...draft };
+        delete comparable.savedAt;
+        state.draftState.lastStorageKey = storageKey;
+        state.draftState.lastSerialized = JSON.stringify(comparable);
+        return draft;
+    } catch (error) {
+        console.warn('Unable to read saved order draft:', error);
+        storage.removeItem(storageKey);
+        return null;
+    }
+}
+
+function restoreSearchControlSnapshot(control, snapshot = {}) {
+    if (!control) {
+        return;
+    }
+
+    const value = String(snapshot?.value || '').trim();
+    const input = String(snapshot?.input || '').trim();
+    if (value) {
+        control.setValue(value, { silent: true });
+        return;
+    }
+
+    control.clear({ silent: true });
+    if (input) {
+        control.input.value = input;
+        if (control.allowCustom) {
+            control.value = input;
+        }
+    }
+}
+
+async function restoreOrderFormDraft({ orderNumber = '', scope = '' } = {}) {
+    const draft = readOrderFormDraft({ orderNumber, scope });
+    if (!draft) {
+        return false;
+    }
+
+    await withDraftPersistenceSuspended(async () => {
+        saleDateInput.value = draft.saleDate || saleDateInput.value;
+
+        const branchSnapshot = draft.controls?.branch || {};
+        const cashBranchSnapshot = draft.controls?.cashBranch || {};
+        const branchValue = String(branchSnapshot.value || '').trim();
+        const cashBranchValue = String(cashBranchSnapshot.value || '').trim() || branchValue;
+
+        if (branchValue) {
+            await ensureBranchStockLoaded(branchValue);
+        }
+        restoreSearchControlSnapshot(state.controls.branch, branchSnapshot);
+        state.lastBranchValue = state.controls.branch.getValue() || branchValue || '';
+
+        if (cashBranchValue) {
+            await ensureBranchStockLoaded(cashBranchValue);
+        }
+        restoreSearchControlSnapshot(state.controls.cashBranch, {
+            ...cashBranchSnapshot,
+            value: cashBranchSnapshot.value || cashBranchValue
+        });
+        restoreSearchControlSnapshot(state.controls.courier, draft.controls?.courier);
+        restoreSearchControlSnapshot(state.controls.admin, draft.controls?.admin);
+        restoreSearchControlSnapshot(state.controls.salesRep, draft.controls?.salesRep);
+        restoreSearchControlSnapshot(state.controls.clientName, draft.controls?.clientName);
+
+        syncClientDetailVisibility();
+
+        clientContactInput.value = draft.clientContact ? formatContactNumber(draft.clientContact) : '';
+        clientAddressInput.value = draft.clientAddress || '';
+        noteInput.value = draft.note || '';
+        deliveryFeeInput.value = draft.deliveryFee || '';
+        if (deliveryFeeToggle) {
+            deliveryFeeToggle.checked = parseBooleanLike(draft.deliveryFeeToCollect, true);
+        }
+        if (inventoryDeductToggle) {
+            inventoryDeductToggle.checked = parseBooleanLike(draft.inventoryDeducted, true);
+        }
+        if (pastedOrderInput) {
+            pastedOrderInput.value = draft.pastedOrderText || '';
+        }
+        if (quickPosSearchInput) {
+            quickPosSearchInput.value = draft.quickPos?.search || '';
+        }
+        state.quickPos.search = normalizeLooseLookup(draft.quickPos?.search || '');
+        state.quickPos.category = String(draft.quickPos?.category || 'all').trim() || 'all';
+        if (typeof draft.quickPos?.manualEditorExpanded === 'boolean') {
+            state.quickPos.manualEditorExpanded = draft.quickPos.manualEditorExpanded;
+        }
+
+        state.controls.paymentMethods.clear({ silent: true });
+        if (Array.isArray(draft.paymentMethods) && draft.paymentMethods.length) {
+            state.controls.paymentMethods.setEntries(draft.paymentMethods, { silent: true });
+        }
+
+        state.rows = [];
+        state.nextRowId = 1;
+        (Array.isArray(draft.rows) ? draft.rows : []).forEach((savedRow) => {
+            const nextRow = createEmptyRow(state.nextRowId);
+            state.nextRowId += 1;
+            nextRow.productName = String(savedRow?.productName || '').trim();
+            nextRow.setName = String(savedRow?.setName || '').trim();
+            nextRow.itemCode = String(savedRow?.itemCode || '').trim();
+            nextRow.quantity = Math.max(1, Number(savedRow?.quantity || 1));
+            nextRow.price = Math.max(0, Number(savedRow?.price || 0));
+            nextRow.priceOverride = Boolean(savedRow?.priceOverride);
+            state.rows.push(nextRow);
+        });
+        if (!state.rows.length) {
+            addOrderRow();
+        }
+
+        syncRowsForBranch();
+        state.rows.forEach((row, index) => {
+            const savedRow = draft.rows?.[index];
+            if (!savedRow || !row.priceOverride) {
+                return;
+            }
+            row.price = Math.max(0, Number(savedRow.price || 0));
+            updateRowSubtotal(row);
+        });
+
+        state.autoDeliveryFee = {
+            suggested: getSuggestedDeliveryFee(),
+            isManual: Boolean(String(draft.deliveryFee || '').trim())
+                && Number(draft.deliveryFee || 0) !== getSuggestedDeliveryFee()
+        };
+        if (!String(draft.deliveryFee || '').trim()) {
+            syncAutoDeliveryFee({ force: true });
+        }
+
+        syncPaymentMethodAvailability();
+        updateAdvancedRowsVisibility();
+        await updateOrderNumberPreview();
+        renderRows();
+        renderTotals();
+        resetItemsTableViewport();
+        schedulePendingClientCheck({ immediate: true });
+    });
+
+    return true;
 }
 
 function buildInventoryCache(rows) {
@@ -1871,72 +2359,76 @@ async function loadOrderForEditing(orderNumber, { statusMessage = '' } = {}) {
     }
 
     state.editIntentOrderNumber = lookupOrderNumber;
+    resetPendingClientCheck({ clearSelectedProfile: true });
     submitOrderBtn.disabled = true;
     setStatus(`Loading ${lookupOrderNumber}...`, false);
 
-    try {
-        const order = await appClient.getOrder(lookupOrderNumber);
-        const invoiceBranch = order.branch || state.references.branches[0] || '';
-        const cashBranch = order.cashBranch || invoiceBranch;
+    await withDraftPersistenceSuspended(async () => {
+        try {
+            const order = await appClient.getOrder(lookupOrderNumber);
+            const invoiceBranch = order.branch || state.references.branches[0] || '';
+            const cashBranch = order.cashBranch || invoiceBranch;
 
-        await ensureBranchStockLoaded(invoiceBranch);
-        await ensureBranchStockLoaded(cashBranch);
+            await ensureBranchStockLoaded(invoiceBranch);
+            await ensureBranchStockLoaded(cashBranch);
 
-        saleDateInput.value = order.saleDate || new Date().toISOString().slice(0, 10);
-        orderNumberInput.value = order.orderNumber || lookupOrderNumber;
-        noteInput.value = order.note || '';
-        amountPaidInput.value = Number(order.amountPaid || 0) > 0 ? formatNumberInputValue(Number(order.amountPaid)) : '';
-        deliveryFeeInput.value = Number(order.deliveryFee || 0) > 0 ? String(Number(order.deliveryFee)) : '';
-        deliveryFeeToggle.checked = Boolean(order.deliveryFeeToCollect);
-        if (inventoryDeductToggle) {
-            inventoryDeductToggle.checked = parseBooleanLike(order.inventoryDeducted, true);
+            saleDateInput.value = order.saleDate || new Date().toISOString().slice(0, 10);
+            orderNumberInput.value = order.orderNumber || lookupOrderNumber;
+            noteInput.value = order.note || '';
+            amountPaidInput.value = Number(order.amountPaid || 0) > 0 ? formatNumberInputValue(Number(order.amountPaid)) : '';
+            deliveryFeeInput.value = Number(order.deliveryFee || 0) > 0 ? String(Number(order.deliveryFee)) : '';
+            deliveryFeeToggle.checked = Boolean(order.deliveryFeeToCollect);
+            if (inventoryDeductToggle) {
+                inventoryDeductToggle.checked = parseBooleanLike(order.inventoryDeducted, true);
+            }
+            clientContactInput.value = formatContactNumber(order.clientContact || '');
+            clientAddressInput.value = order.clientAddress || '';
+            paymentTypeInput.value = order.paymentType || '';
+
+            state.controls.branch.setValue(invoiceBranch, { silent: true });
+            state.controls.cashBranch.setValue(cashBranch, { silent: true });
+            state.controls.courier.setValue(order.courier || '', { silent: true });
+            state.controls.admin.setValue(order.adminName || '', { silent: true });
+            state.controls.salesRep.setValue(order.salesRepresentative || '', { silent: true });
+            syncClientDetailVisibility();
+            state.controls.paymentMethods.setEntries(order.paymentMethodBreakdown || [], { silent: true });
+            state.controls.clientName.setValue(order.clientName || '', { silent: true });
+            state.autoDeliveryFee = {
+                suggested: getSuggestedDeliveryFee(),
+                isManual: Number(order.deliveryFee || 0) !== getSuggestedDeliveryFee()
+            };
+
+            state.rows = (order.items || []).map((item) => buildLoadedOrderRow(item));
+            state.nextRowId = state.rows.reduce((highest, row) => Math.max(highest, row.id), 0) + 1;
+            state.lastBranchValue = invoiceBranch;
+            if (!state.rows.length) {
+                addOrderRow();
+            }
+
+            syncPaymentMethodAvailability();
+            state.lastReceipt = buildReceiptSnapshotFromOrder(order);
+            setEditState({
+                orderNumber: order.orderNumber || lookupOrderNumber,
+                receiptNumber: order.receiptNumber || order.orderNumber || lookupOrderNumber
+            });
+            state.editIntentOrderNumber = order.orderNumber || lookupOrderNumber;
+            renderRows();
+            renderTotals();
+            resetItemsTableViewport();
+            schedulePendingClientCheck({ immediate: true });
+            setStatus(statusMessage || `Loaded ${order.orderNumber || lookupOrderNumber} for editing.`, false);
+        } catch (error) {
+            console.error('Failed to load saved order:', error);
+            clearEditState();
+            await updateOrderNumberPreview();
+            setStatus(
+                `${error.message || 'Unable to load saved order.'} Reload ${lookupOrderNumber} before saving so this edit does not create a new sale.`,
+                true
+            );
+        } finally {
+            submitOrderBtn.disabled = false;
         }
-        clientContactInput.value = formatContactNumber(order.clientContact || '');
-        clientAddressInput.value = order.clientAddress || '';
-        paymentTypeInput.value = order.paymentType || '';
-
-        state.controls.branch.setValue(invoiceBranch, { silent: true });
-        state.controls.cashBranch.setValue(cashBranch, { silent: true });
-        state.controls.courier.setValue(order.courier || '', { silent: true });
-        state.controls.admin.setValue(order.adminName || '', { silent: true });
-        state.controls.salesRep.setValue(order.salesRepresentative || '', { silent: true });
-        syncClientDetailVisibility();
-        state.controls.paymentMethods.setEntries(order.paymentMethodBreakdown || [], { silent: true });
-        state.controls.clientName.setValue(order.clientName || '', { silent: true });
-        state.autoDeliveryFee = {
-            suggested: getSuggestedDeliveryFee(),
-            isManual: Number(order.deliveryFee || 0) !== getSuggestedDeliveryFee()
-        };
-
-        state.rows = (order.items || []).map((item) => buildLoadedOrderRow(item));
-        state.nextRowId = state.rows.reduce((highest, row) => Math.max(highest, row.id), 0) + 1;
-        state.lastBranchValue = invoiceBranch;
-        if (!state.rows.length) {
-            addOrderRow();
-        }
-
-        syncPaymentMethodAvailability();
-        state.lastReceipt = buildReceiptSnapshotFromOrder(order);
-        setEditState({
-            orderNumber: order.orderNumber || lookupOrderNumber,
-            receiptNumber: order.receiptNumber || order.orderNumber || lookupOrderNumber
-        });
-        state.editIntentOrderNumber = order.orderNumber || lookupOrderNumber;
-        renderRows();
-        renderTotals();
-        resetItemsTableViewport();
-        setStatus(statusMessage || `Loaded ${order.orderNumber || lookupOrderNumber} for editing.`, false);
-    } catch (error) {
-        console.error('Failed to load saved order:', error);
-        clearEditState();
-        await updateOrderNumberPreview();
-        setStatus(
-            `${error.message || 'Unable to load saved order.'} Reload ${lookupOrderNumber} before saving so this edit does not create a new sale.`,
-            true
-        );
-    } finally {
-        submitOrderBtn.disabled = false;
-    }
+    });
 }
 
 function buildLoadedOrderRow(item) {
@@ -2089,6 +2581,7 @@ function renderRows() {
     state.rows.forEach((row) => attachRowCombos(row));
     focusPendingField();
     renderQuickPos();
+    scheduleOrderFormDraftSave();
 }
 
 function attachRowCombos(row) {
@@ -2504,6 +2997,454 @@ function applyClientProfile(client) {
     clientAddressInput.value = String(client.address || '').trim();
 }
 
+function normalizePendingClientLookup(value = '') {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ' ');
+}
+
+function normalizePendingClientContact(value = '') {
+    const digits = String(value || '').replace(/\D+/g, '');
+    if (digits.length === 12 && digits.startsWith('63')) {
+        return `0${digits.slice(2)}`;
+    }
+    return digits;
+}
+
+function getPendingClientContactValue() {
+    const typedContact = normalizePendingClientContact(clientContactInput.value || '');
+    if (typedContact) {
+        return typedContact;
+    }
+
+    const currentClientName = normalizePendingClientLookup(state.controls.clientName?.getValue?.() || '');
+    const selectedProfileName = normalizePendingClientLookup(state.pendingClientCheck.selectedProfile?.name || '');
+    if (!currentClientName || currentClientName !== selectedProfileName) {
+        return '';
+    }
+
+    return normalizePendingClientContact(
+        state.pendingClientCheck.selectedProfile?.contact_number
+        || state.pendingClientCheck.selectedProfile?.contactNumber
+        || ''
+    );
+}
+
+function getPendingClientAddressValue() {
+    const typedAddress = String(clientAddressInput.value || '').trim();
+    if (typedAddress) {
+        return typedAddress;
+    }
+
+    const currentClientName = normalizePendingClientLookup(state.controls.clientName?.getValue?.() || '');
+    const selectedProfileName = normalizePendingClientLookup(state.pendingClientCheck.selectedProfile?.name || '');
+    if (!currentClientName || currentClientName !== selectedProfileName) {
+        return '';
+    }
+
+    return String(
+        state.pendingClientCheck.selectedProfile?.address
+        || state.pendingClientCheck.selectedProfile?.client_address
+        || ''
+    ).trim();
+}
+
+function getPendingClientCheckPayload() {
+    return {
+        clientName: state.controls.clientName?.getValue?.() || '',
+        clientContact: getPendingClientContactValue(),
+        clientAddress: getPendingClientAddressValue(),
+        excludeOrderNumber: state.editingOrderNumber || ''
+    };
+}
+
+function buildPendingClientCheckSignature(payload = {}) {
+    return [
+        normalizePendingClientLookup(payload.clientName),
+        normalizePendingClientContact(payload.clientContact),
+        normalizePendingClientLookup(payload.clientAddress),
+        normalizePendingClientLookup(payload.excludeOrderNumber)
+    ].join('||');
+}
+
+function resetPendingClientCheck({ clearSelectedProfile = false } = {}) {
+    window.clearTimeout(state.pendingClientCheck.timerId);
+    state.pendingClientCheck.timerId = 0;
+    state.pendingClientCheck.requestId += 1;
+    state.pendingClientCheck.lastSignature = '';
+    state.pendingClientCheck.approvedSignature = '';
+    state.pendingClientCheck.loading = false;
+    state.pendingClientCheck.errorMessage = '';
+    state.pendingClientCheck.items = [];
+    state.pendingClientCheck.historyItems = [];
+    state.pendingClientCheck.summary = {
+        totalMatches: 0,
+        strongCount: 0,
+        possibleCount: 0,
+        totalBalance: 0,
+        totalBalanceDisplay: formatMoney(0),
+        historyCount: 0,
+        pendingCount: 0,
+        settledCount: 0,
+        latestProduct: '',
+        latestSaleDate: '',
+        latestOrderNumber: ''
+    };
+    if (clearSelectedProfile) {
+        state.pendingClientCheck.selectedProfile = null;
+    }
+    closePendingClientConfirmModal();
+    renderPendingClientAlert();
+}
+
+function schedulePendingClientCheck({ immediate = false, force = false } = {}) {
+    window.clearTimeout(state.pendingClientCheck.timerId);
+    state.pendingClientCheck.timerId = 0;
+
+    if (immediate) {
+        return runPendingClientCheck({ force });
+    }
+
+    state.pendingClientCheck.timerId = window.setTimeout(() => {
+        runPendingClientCheck({ force });
+    }, PENDING_CLIENT_CHECK_DEBOUNCE_MS);
+    return Promise.resolve(state.pendingClientCheck);
+}
+
+async function runPendingClientCheck({ force = false } = {}) {
+    const payload = getPendingClientCheckPayload();
+    const signature = buildPendingClientCheckSignature(payload);
+    if (!normalizePendingClientLookup(payload.clientName)) {
+        resetPendingClientCheck();
+        return state.pendingClientCheck;
+    }
+
+    if (!force && signature === state.pendingClientCheck.lastSignature && !state.pendingClientCheck.errorMessage) {
+        renderPendingClientAlert();
+        return state.pendingClientCheck;
+    }
+
+    if (state.pendingClientCheck.approvedSignature && state.pendingClientCheck.approvedSignature !== signature) {
+        state.pendingClientCheck.approvedSignature = '';
+    }
+
+    const requestId = state.pendingClientCheck.requestId + 1;
+    state.pendingClientCheck.requestId = requestId;
+    state.pendingClientCheck.loading = true;
+    state.pendingClientCheck.errorMessage = '';
+    renderPendingClientAlert();
+
+    try {
+        const result = await appClient.checkOrderClientPending({
+            ...payload,
+            limit: 8
+        });
+        if (requestId !== state.pendingClientCheck.requestId) {
+            return state.pendingClientCheck;
+        }
+
+        state.pendingClientCheck.lastSignature = signature;
+        state.pendingClientCheck.loading = false;
+        state.pendingClientCheck.errorMessage = '';
+        state.pendingClientCheck.items = Array.isArray(result?.items) ? result.items : [];
+        state.pendingClientCheck.historyItems = Array.isArray(result?.historyItems)
+            ? result.historyItems
+            : state.pendingClientCheck.items;
+        state.pendingClientCheck.summary = {
+            totalMatches: Number(result?.summary?.totalMatches || 0),
+            strongCount: Number(result?.summary?.strongCount || 0),
+            possibleCount: Number(result?.summary?.possibleCount || 0),
+            totalBalance: Number(result?.summary?.totalBalance || 0),
+            totalBalanceDisplay: result?.summary?.totalBalanceDisplay || formatMoney(0),
+            historyCount: Number(result?.summary?.historyCount || state.pendingClientCheck.historyItems.length || 0),
+            pendingCount: Number(result?.summary?.pendingCount || state.pendingClientCheck.items.length || 0),
+            settledCount: Number(result?.summary?.settledCount || 0),
+            latestProduct: String(result?.summary?.latestProduct || ''),
+            latestSaleDate: String(result?.summary?.latestSaleDate || ''),
+            latestOrderNumber: String(result?.summary?.latestOrderNumber || '')
+        };
+        renderPendingClientAlert();
+        return state.pendingClientCheck;
+    } catch (error) {
+        if (requestId !== state.pendingClientCheck.requestId) {
+            return state.pendingClientCheck;
+        }
+
+        console.error('Failed to check pending client receipts:', error);
+        state.pendingClientCheck.lastSignature = signature;
+        state.pendingClientCheck.loading = false;
+        state.pendingClientCheck.errorMessage = error.message || 'Unable to check previous pending receipts.';
+        state.pendingClientCheck.items = [];
+        state.pendingClientCheck.historyItems = [];
+        state.pendingClientCheck.summary = {
+            totalMatches: 0,
+            strongCount: 0,
+            possibleCount: 0,
+            totalBalance: 0,
+            totalBalanceDisplay: formatMoney(0),
+            historyCount: 0,
+            pendingCount: 0,
+            settledCount: 0,
+            latestProduct: '',
+            latestSaleDate: '',
+            latestOrderNumber: ''
+        };
+        renderPendingClientAlert();
+        return state.pendingClientCheck;
+    }
+}
+
+function renderPendingClientAlert() {
+    if (!pendingClientAlert) {
+        return;
+    }
+
+    const payload = getPendingClientCheckPayload();
+    const hasClientName = Boolean(normalizePendingClientLookup(payload.clientName));
+    const hasMatches = Array.isArray(state.pendingClientCheck.items) && state.pendingClientCheck.items.length > 0;
+    const historyItems = Array.isArray(state.pendingClientCheck.historyItems) ? state.pendingClientCheck.historyItems : [];
+    const hasHistory = historyItems.length > 0;
+    const banner = pendingClientAlert.querySelector('.client-pending-banner');
+    const hasStrongMatches = Number(state.pendingClientCheck.summary?.strongCount || 0) > 0;
+    const hasStrongHistory = historyItems.some((item) => item.matchLevel === 'strong');
+    const hasPendingHistory = Number(state.pendingClientCheck.summary?.pendingCount || 0) > 0 || hasMatches;
+
+    if (!hasClientName || (!state.pendingClientCheck.loading && !state.pendingClientCheck.errorMessage && !hasMatches && !hasHistory)) {
+        pendingClientAlert.hidden = true;
+        if (banner) {
+            banner.classList.remove('is-possible', 'is-clear');
+        }
+        return;
+    }
+
+    pendingClientAlert.hidden = false;
+    if (banner) {
+        banner.classList.toggle('is-possible', !hasStrongHistory && hasHistory && !state.pendingClientCheck.loading);
+        banner.classList.toggle('is-clear', !hasPendingHistory && hasHistory && !state.pendingClientCheck.loading);
+    }
+
+    if (state.pendingClientCheck.loading) {
+        if (pendingClientAlertTitle) pendingClientAlertTitle.textContent = 'Checking client order history...';
+        if (pendingClientAlertCopy) pendingClientAlertCopy.textContent = 'Looking for previous orders and any unpaid or partially paid receipts under this client.';
+        if (pendingClientAlertBadge) {
+            pendingClientAlertBadge.textContent = 'Checking';
+            pendingClientAlertBadge.className = 'pending-check-badge is-loading';
+        }
+        if (pendingClientAlertStats) pendingClientAlertStats.innerHTML = '';
+        if (pendingClientAlertList) pendingClientAlertList.innerHTML = '<div class="client-pending-empty">Checking recent client order history...</div>';
+        return;
+    }
+
+    if (state.pendingClientCheck.errorMessage) {
+        if (pendingClientAlertTitle) pendingClientAlertTitle.textContent = 'Client history unavailable';
+        if (pendingClientAlertCopy) pendingClientAlertCopy.textContent = state.pendingClientCheck.errorMessage;
+        if (pendingClientAlertBadge) {
+            pendingClientAlertBadge.textContent = 'Check Failed';
+            pendingClientAlertBadge.className = 'pending-check-badge';
+        }
+        if (pendingClientAlertStats) pendingClientAlertStats.innerHTML = '';
+        if (pendingClientAlertList) pendingClientAlertList.innerHTML = '<div class="client-pending-empty">You can still continue, or refresh the check first.</div>';
+        return;
+    }
+
+    if (hasPendingHistory) {
+        if (pendingClientAlertTitle) pendingClientAlertTitle.textContent = 'This client has previous orders with pending balance.';
+        if (pendingClientAlertCopy) pendingClientAlertCopy.textContent = hasStrongHistory
+            ? `Pending balance: ${state.pendingClientCheck.summary?.totalBalanceDisplay || formatMoney(0)}. Recent past orders are listed below. Review the old receipt first before creating a new order.`
+            : `Possible pending balance: ${state.pendingClientCheck.summary?.totalBalanceDisplay || formatMoney(0)}. Name-only match lang ito, pero makikita mo rin sa ibaba ang recent past orders para ma-verify mo agad.`;
+        if (pendingClientAlertBadge) {
+            pendingClientAlertBadge.textContent = 'Pending Found';
+            pendingClientAlertBadge.className = 'pending-check-badge is-strong';
+        }
+    } else {
+        if (pendingClientAlertTitle) pendingClientAlertTitle.textContent = 'Latest saved order found for this client.';
+        if (pendingClientAlertCopy) pendingClientAlertCopy.textContent = hasStrongHistory
+            ? `No pending balance found. Ipinapakita lang sa ibaba ang pinaka-latest na saved order para makita mo agad ang product at petsa.`
+            : `Name-only match lang ito. Ipinapakita lang sa ibaba ang pinaka-latest na saved order para ma-check mo agad ang product at petsa.`;
+        if (pendingClientAlertBadge) {
+            pendingClientAlertBadge.textContent = 'No Pending';
+            pendingClientAlertBadge.className = 'pending-check-badge is-clear';
+        }
+    }
+
+    if (pendingClientAlertStats) {
+        pendingClientAlertStats.innerHTML = buildPendingClientStatsHtml(state.pendingClientCheck.summary);
+    }
+    if (pendingClientAlertList) {
+        pendingClientAlertList.innerHTML = buildPendingClientMatchListHtml(
+            state.pendingClientCheck.historyItems,
+            { limit: 6 }
+        );
+    }
+}
+
+function buildPendingClientStatsHtml(summary = {}) {
+    const hasPending = Number(summary.pendingCount || 0) > 0;
+    const statEntries = hasPending
+        ? [
+            { label: 'Past Orders', value: `${Number(summary.historyCount || 0)}` },
+            { label: 'With Pending', value: `${Number(summary.pendingCount || 0)}` },
+            { label: 'Settled', value: `${Number(summary.settledCount || 0)}` },
+            { label: 'Pending Balance', value: String(summary.totalBalanceDisplay || formatMoney(0)) }
+        ]
+        : [
+            { label: 'Past Orders', value: `${Number(summary.historyCount || 0)}` },
+            { label: 'Last Product', value: String(summary.latestProduct || 'No saved product') },
+            { label: 'Last Order Date', value: summary.latestSaleDate ? formatDisplayDate(summary.latestSaleDate) : '-' },
+            { label: 'Pending Balance', value: String(summary.totalBalanceDisplay || formatMoney(0)) }
+        ];
+
+    return statEntries.map((entry) => `
+        <div class="client-pending-stat">
+            <span>${appClient.escapeHtml(entry.label)}</span>
+            <strong>${appClient.escapeHtml(entry.value)}</strong>
+        </div>
+    `).join('');
+}
+
+function buildPendingClientMatchListHtml(items = [], { limit = 8 } = {}) {
+    const safeItems = Array.isArray(items) ? items.slice(0, limit) : [];
+    if (!safeItems.length) {
+        return '<div class="client-pending-empty">No previous client orders found.</div>';
+    }
+
+    return safeItems.map((item) => {
+        const orderLookup = String(item.orderNumber || item.receiptNumber || '').trim();
+        const orderLabel = item.receiptNumber && item.orderNumber && item.receiptNumber !== item.orderNumber
+            ? `${item.receiptNumber} / ${item.orderNumber}`
+            : (item.receiptNumber || item.orderNumber || 'Saved order');
+        const metaLine = [
+            formatDisplayDate(item.saleDate),
+            item.cashBranch || item.branch || '-',
+            item.paymentMethod || 'Unspecified'
+        ].filter(Boolean).join(' | ');
+        const productLine = item.productSummary
+            ? `Product: ${item.productSummary}`
+            : 'Product: No saved product';
+        const detailLine = item.hasPending
+            ? [
+                `Remaining ${formatMoney(item.remainingAmount || 0)}`,
+                `Paid ${formatMoney(item.amountPaid || 0)} / ${formatMoney(item.orderTotal || 0)}`,
+                item.adminName || 'No admin'
+            ].join(' | ')
+            : [
+                `Paid ${formatMoney(item.amountPaid || 0)} / ${formatMoney(item.orderTotal || 0)}`,
+                item.settledByCashIncome ? 'Cleared via confirmed cash income' : (item.adminName || 'No admin')
+            ].join(' | ');
+        const statusClass = item.hasPending ? 'is-pending' : 'is-settled';
+        const statusLabel = item.hasPending
+            ? (item.statusLabel || 'Pending')
+            : (item.statusLabel || 'Settled');
+        const amountPillLabel = item.hasPending ? formatMoney(item.remainingAmount || 0) : 'No Balance';
+        const actionButtonHtml = orderLookup ? `
+                    <button
+                        type="button"
+                        class="secondary-btn secondary-btn-compact"
+                        data-review-pending-order="${appClient.escapeHtml(orderLookup)}"
+                    >
+                        ${appClient.escapeHtml(item.hasPending ? 'Review Old Receipt' : 'Open Receipt')}
+                    </button>
+                ` : '';
+
+        return `
+            <div class="client-pending-item ${appClient.escapeHtml(statusClass)}">
+                <div class="client-pending-item-copy">
+                    <strong>${appClient.escapeHtml(orderLabel)}</strong>
+                    <small>${appClient.escapeHtml(item.matchLabel || 'Possible match')}</small>
+                    <span>${appClient.escapeHtml(metaLine)}</span>
+                    <span>${appClient.escapeHtml(productLine)}</span>
+                    <span>${appClient.escapeHtml(detailLine)}</span>
+                </div>
+                <div class="client-pending-item-actions">
+                    <span class="history-status-pill ${appClient.escapeHtml(statusClass)}">
+                        ${appClient.escapeHtml(statusLabel)}
+                    </span>
+                    <span class="pending-amount-pill ${appClient.escapeHtml(statusClass)}">${appClient.escapeHtml(amountPillLabel)}</span>
+                    ${actionButtonHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function openPendingClientConfirmModal() {
+    if (!pendingClientConfirmModal || !pendingClientConfirmList || !pendingClientConfirmCopy || !pendingClientConfirmStatus) {
+        return;
+    }
+
+    const summary = state.pendingClientCheck.summary || {};
+    const strongCount = Number(summary.strongCount || 0);
+    pendingClientConfirmCopy.textContent = strongCount > 1
+        ? `There are ${strongCount} strong matches with previous pending receipts. Review the old receipt first if the past balance was already paid.`
+        : 'There is a strong match with a previous pending receipt. Review the old receipt first if the past balance was already paid.';
+    pendingClientConfirmStatus.textContent = `Pending balance found: ${summary.totalBalanceDisplay || formatMoney(0)}. Continue only if you already verified the old balance.`;
+    pendingClientConfirmList.innerHTML = buildPendingClientMatchListHtml(
+        state.pendingClientCheck.items.filter((item) => item.matchLevel === 'strong')
+    );
+    pendingClientConfirmModal.hidden = false;
+}
+
+function closePendingClientConfirmModal() {
+    if (pendingClientConfirmModal) {
+        pendingClientConfirmModal.hidden = true;
+    }
+}
+
+function handlePendingClientAlertClick(event) {
+    const button = event.target.closest('[data-review-pending-order]');
+    if (!button) {
+        return;
+    }
+
+    const orderLookup = String(button.dataset.reviewPendingOrder || '').trim();
+    if (!orderLookup) {
+        return;
+    }
+
+    handleReviewPendingClientOrder(orderLookup);
+}
+
+async function handleReviewPendingClientOrder(orderLookup = '') {
+    if (!orderLookup) {
+        return;
+    }
+
+    const hasDraft = hasDraftContent({ ignorePasteText: true });
+    const shouldOpen = !hasDraft || window.confirm(
+        `Open ${orderLookup} first? This will replace the current draft so you can review and update the old pending payment.`
+    );
+    if (!shouldOpen) {
+        return;
+    }
+
+    flushOrderFormDraftSave();
+    closePendingClientConfirmModal();
+    await loadOrderForEditing(orderLookup, { statusMessage: `Loaded ${orderLookup} for pending payment review.` });
+}
+
+function handleProceedPendingClientSubmit() {
+    state.pendingClientCheck.approvedSignature = state.pendingClientCheck.lastSignature
+        || buildPendingClientCheckSignature(getPendingClientCheckPayload());
+    closePendingClientConfirmModal();
+    submitOrder();
+}
+
+async function ensurePendingClientSubmitAllowed() {
+    if (state.editingOrderNumber) {
+        return true;
+    }
+
+    const result = await runPendingClientCheck({ force: true });
+    const currentSignature = buildPendingClientCheckSignature(getPendingClientCheckPayload());
+    if (Number(result.summary?.strongCount || 0) > 0 && state.pendingClientCheck.approvedSignature !== currentSignature) {
+        openPendingClientConfirmModal();
+        return false;
+    }
+
+    return true;
+}
+
 function hasDraftContent({ ignorePasteText = false } = {}) {
     const items = getPreparedItems({ allowIncomplete: true });
     return Boolean(
@@ -2722,6 +3663,7 @@ async function applyParsedOrder(parsed) {
     clientContactInput.value = parsed.clientContact ? formatContactNumber(parsed.clientContact) : '';
     clientAddressInput.value = parsed.clientAddress || '';
     noteInput.value = parsed.note || '';
+    schedulePendingClientCheck({ immediate: true });
 
     if (parsed.paymentEntries.length) {
         state.controls.paymentMethods.setEntries(parsed.paymentEntries, { silent: true });
@@ -4495,6 +5437,7 @@ function renderTotals() {
     pulseCard(heroTotalCard);
     pulseCard(heroCollectionCard);
     renderQuickPos();
+    scheduleOrderFormDraftSave();
 }
 
 function computeSummary() {
@@ -4617,6 +5560,11 @@ async function submitOrder() {
         return;
     }
 
+    if (!(await ensurePendingClientSubmitAllowed())) {
+        setStatus('Review the previous pending receipt first, or continue only after confirming the old balance.', true);
+        return;
+    }
+
     const summary = computeSummary();
     const preparedItems = getPreparedItems({ allowIncomplete: true }).map((entry) => ({
         itemSold: entry.row.productName,
@@ -4678,6 +5626,10 @@ async function submitOrder() {
             ? await appClient.updateOrder(state.editingOrderNumber, payload)
             : await appClient.createOrder(payload);
         invalidateStockCache();
+        clearOrderFormDraft({
+            orderNumber: isEditing ? (state.editingOrderNumber || state.editIntentOrderNumber) : '',
+            scope: isEditing ? '' : ORDER_FORM_DRAFT_NEW_SCOPE
+        });
         const receiptSnapshot = buildReceiptSnapshot(payload, result);
         await loadClientsFresh();
         openReceiptModal(receiptSnapshot);
@@ -4720,6 +5672,7 @@ async function deleteEditingOrder() {
     try {
         const result = await appClient.deleteOrder(orderNumber);
         invalidateStockCache();
+        clearOrderFormDraft({ orderNumber });
         await resetOrderForm('');
         setStatus(`Deleted ${result.orderNumber || result.receiptNumber || orderNumber}.`, false);
     } catch (error) {

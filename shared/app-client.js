@@ -1862,6 +1862,9 @@
         listSales: ({ dateFrom = '', dateTo = '', branch = '', cashBranch = '', paymentOption = '', adminName = '', salesRepresentative = '', search = '', limit = 500, offset = 0 } = {}) => request(
             `/api/sales?dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}&branch=${encodeURIComponent(branch)}&cashBranch=${encodeURIComponent(cashBranch)}&paymentOption=${encodeURIComponent(paymentOption)}&adminName=${encodeURIComponent(adminName)}&salesRepresentative=${encodeURIComponent(salesRepresentative)}&search=${encodeURIComponent(search)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`
         ),
+        listPendingPayments: ({ dateFrom = '', dateTo = '', branch = '', cashBranch = '', paymentOption = '', adminName = '', salesRepresentative = '', search = '', status = '', limit = 500, offset = 0 } = {}) => request(
+            `/api/sales/pending-payments?dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}&branch=${encodeURIComponent(branch)}&cashBranch=${encodeURIComponent(cashBranch)}&paymentOption=${encodeURIComponent(paymentOption)}&adminName=${encodeURIComponent(adminName)}&salesRepresentative=${encodeURIComponent(salesRepresentative)}&search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`
+        ),
         addSale: (payload) => request('/api/sales', {
             method: 'POST',
             body: payload
@@ -1870,6 +1873,13 @@
             `/api/communication-workflow?branch=${encodeURIComponent(branch)}&search=${encodeURIComponent(search)}`
         ),
         createCommunicationWorkflowEntry: (payload) => request('/api/communication-workflow', {
+            method: 'POST',
+            body: payload
+        }),
+        getCommunicationWorkflowThread: (entryId, { limit = 200 } = {}) => request(
+            `/api/communication-workflow/${encodeURIComponent(entryId)}/thread?limit=${encodeURIComponent(limit)}`
+        ),
+        sendCommunicationWorkflowMessage: (entryId, payload) => request(`/api/communication-workflow/${encodeURIComponent(entryId)}/messages`, {
             method: 'POST',
             body: payload
         }),
@@ -1952,6 +1962,32 @@
             () => window.electronAPI?.orders?.preview(saleDate),
             () => request(`/api/orders/next-number?saleDate=${encodeURIComponent(saleDate)}`)
         ),
+        checkOrderClientPending: ({ clientName = '', clientContact = '', clientAddress = '', excludeOrderNumber = '', limit = 12 } = {}) => {
+            const query = `clientName=${encodeURIComponent(clientName)}&clientContact=${encodeURIComponent(clientContact)}&clientAddress=${encodeURIComponent(clientAddress)}&excludeOrderNumber=${encodeURIComponent(excludeOrderNumber)}&limit=${encodeURIComponent(limit)}`;
+            return requestWithSessionCache(
+                `orders:pending-client:${query}`,
+                8000,
+                () => callElectronOrHttp(
+                    () => window.electronAPI?.orders?.checkPendingClient?.({
+                        clientName,
+                        clientContact,
+                        clientAddress,
+                        excludeOrderNumber,
+                        limit
+                    }),
+                    async () => {
+                        try {
+                            return await request(`/api/order-client-pending-check?${query}`);
+                        } catch (error) {
+                            if (error.code === 'HTTP_404' || /order not found/i.test(String(error.message || ''))) {
+                                return request(`/api/orders/pending-client-check?${query}`);
+                            }
+                            throw error;
+                        }
+                    }
+                )
+            );
+        },
         login: async (idOrPayload, password = '') => {
             const payload = typeof idOrPayload === 'object' && idOrPayload
                 ? {
