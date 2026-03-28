@@ -483,9 +483,9 @@ async function loadSalesReport() {
         renderBreakdownList(adminBreakdownBody, payload.summary?.adminBreakdown || []);
         renderBreakdownList(salesRepBreakdownBody, payload.summary?.salesRepBreakdown || []);
         renderBranchFinanceList(payload.summary?.branchFinancialBreakdown || []);
-        renderSalesTable(payload.items || []);
+        const renderedReceiptCount = renderSalesTable(payload.items || []);
         activeDateLabel.textContent = buildActiveDateLabel();
-        setReportStatus(`Loaded ${payload.summary?.totalOrders || 0} order(s) / ${(payload.items || []).length} sales row(s).`, false);
+        setReportStatus(`Loaded ${payload.summary?.totalOrders || 0} order(s) / ${renderedReceiptCount} receipt card(s) from ${(payload.items || []).length} sales row(s).`, false);
     } catch (error) {
         console.error('Failed to load sales report:', error);
         renderSummary({});
@@ -620,41 +620,277 @@ function renderBranchFinanceList(rows) {
     `).join('');
 }
 
-function renderSalesTable(rows) {
-    if (!rows.length) {
-        salesTableBody.innerHTML = '<tr><td colspan="19" class="empty">No sales records found for the selected filters.</td></tr>';
-        scheduleSalesTableScrollHelperSync();
-        return;
+function normalizeSalesText(value) {
+    return String(value ?? '').trim();
+}
+
+function parseSalesNumber(value) {
+    const parsed = Number(value || 0);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getSalesCardGroupKey(row = {}, index = 0) {
+    const orderLookup = normalizeSalesText(row.order_number || row.receipt_number || '');
+    if (orderLookup) {
+        return `order:${orderLookup.toLowerCase()}`;
     }
 
-    salesTableBody.innerHTML = rows.map((row) => `
-        <tr>
-            <td>${appClient.escapeHtml(formatDate(row.sale_date))}</td>
-            <td>${appClient.escapeHtml(row.receipt_number || '-')}</td>
-            <td>${appClient.escapeHtml(row.order_number || '-')}</td>
-            <td>${appClient.escapeHtml(row.client_name || '-')}</td>
-            <td>${appClient.escapeHtml(row.branch || '-')}</td>
-            <td>${appClient.escapeHtml(row.cash_branch || row.branch || '-')}</td>
-            <td>${appClient.escapeHtml(formatMoney(row.order_total || row.line_subtotal || 0))}</td>
-            <td>${appClient.escapeHtml(formatMoney(row.line_cost_total || 0))}</td>
-            <td>${appClient.escapeHtml(formatMoney(row.line_profit || 0))}</td>
-            <td>${appClient.escapeHtml(row.report_payment_label || row.payment_method || row.payment_option || '-')}</td>
-            <td>${appClient.escapeHtml(formatMoney(row.payment_amount || 0))}</td>
-            <td>${appClient.escapeHtml(formatMoney(row.collection_amount || 0))}</td>
-            <td>${appClient.escapeHtml(row.admin_name || '-')}</td>
-            <td>${appClient.escapeHtml(row.sales_representative || '-')}</td>
-            <td>${appClient.escapeHtml(row.courier || '-')}</td>
-            <td>${appClient.escapeHtml(row.item_sold || '-')}</td>
-            <td>${appClient.escapeHtml(String(row.quantity || 0))}</td>
-            <td class="note-cell">${appClient.escapeHtml(row.note || '-')}</td>
-            <td class="action-cell">
-                <div class="action-group">
+    const importKey = normalizeSalesText(row.import_key || '');
+    if (importKey) {
+        return `import:${importKey.toLowerCase()}`;
+    }
+
+    return [
+        'row',
+        normalizeSalesText(row.sale_date || ''),
+        normalizeSalesText(row.client_name || '').toLowerCase(),
+        normalizeSalesText(row.item_sold || '').toLowerCase(),
+        index
+    ].join(':');
+}
+
+function getSalesCardHeaderScore(row = {}) {
+    let score = 0;
+    if (Number(row.line_index || 0) === 1) {
+        score += 1000;
+    }
+    if (normalizeSalesText(row.order_number || row.receipt_number || '')) {
+        score += 200;
+    }
+    if (parseSalesNumber(row.order_total || 0) > 0) {
+        score += 100;
+    }
+    if (parseSalesNumber(row.payment_amount || 0) > 0) {
+        score += 20;
+    }
+    if (normalizeSalesText(row.note || '')) {
+        score += 5;
+    }
+    score += parseSalesNumber(row.id || 0) / 100000;
+    return score;
+}
+
+function selectSalesCardHeader(currentRow, candidateRow) {
+    if (!currentRow) {
+        return candidateRow;
+    }
+
+    return getSalesCardHeaderScore(candidateRow) >= getSalesCardHeaderScore(currentRow)
+        ? candidateRow
+        : currentRow;
+}
+
+function buildSalesCardItems(rows = []) {
+    const itemMap = new Map();
+
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+        const itemSold = normalizeSalesText(row.item_sold || '');
+        const itemSet = normalizeSalesText(row.item_set || '');
+        const itemCode = normalizeSalesText(row.item_code || '');
+        const unitPrice = parseSalesNumber(row.unit_price || 0);
+        const itemKey = [
+            itemSold.toLowerCase(),
+            itemSet.toLowerCase(),
+            itemCode.toLowerCase(),
+            unitPrice.toFixed(2)
+        ].join('::');
+        if (!itemSold && !itemSet && !itemCode) {
+            return;
+        }
+
+        const current = itemMap.get(itemKey) || {
+            itemSold,
+            itemSet,
+            itemCode,
+            unitPrice,
+            quantity: 0,
+            subtotal: 0
+        };
+        current.quantity += parseSalesNumber(row.quantity || 0);
+        current.subtotal += parseSalesNumber(row.line_subtotal || 0);
+        itemMap.set(itemKey, current);
+    });
+
+    return Array.from(itemMap.values())
+        .map((item) => ({
+            ...item,
+            unitPrice: Number(item.unitPrice || 0),
+            quantity: Number(item.quantity || 0),
+            subtotal: Number(item.subtotal || 0)
+        }))
+        .sort((left, right) => right.subtotal - left.subtotal || String(left.itemSold || '').localeCompare(String(right.itemSold || '')));
+}
+
+function groupSalesRows(rows = []) {
+    const groups = new Map();
+
+    (Array.isArray(rows) ? rows : []).forEach((row, index) => {
+        const key = getSalesCardGroupKey(row, index);
+        const currentGroup = groups.get(key) || {
+            header: null,
+            rows: []
+        };
+        currentGroup.header = selectSalesCardHeader(currentGroup.header, row);
+        currentGroup.rows.push(row);
+        groups.set(key, currentGroup);
+    });
+
+    return Array.from(groups.values()).map(({ header, rows: groupRows }) => {
+        const items = buildSalesCardItems(groupRows);
+        const lineSubtotalSum = groupRows.reduce((sum, row) => sum + parseSalesNumber(row.line_subtotal || 0), 0);
+        const costTotal = groupRows.reduce((sum, row) => sum + parseSalesNumber(row.line_cost_total || 0), 0);
+        const profitTotal = groupRows.reduce((sum, row) => sum + parseSalesNumber(row.line_profit || 0), 0);
+        const quantityTotal = groupRows.reduce((sum, row) => sum + parseSalesNumber(row.quantity || 0), 0);
+        const orderTotal = Math.max(
+            parseSalesNumber(header?.order_total || 0),
+            parseSalesNumber(header?.base_total || 0),
+            lineSubtotalSum
+        );
+        const paymentAmount = Math.max(...groupRows.map((row) => parseSalesNumber(row.payment_amount || 0)), parseSalesNumber(header?.payment_amount || 0));
+        const collectionAmount = Math.max(...groupRows.map((row) => parseSalesNumber(row.collection_amount || 0)), parseSalesNumber(header?.collection_amount || 0));
+        const paymentLabel = normalizeSalesText(header?.report_payment_label || header?.payment_method || header?.payment_option || '') || 'Unspecified';
+        const note = normalizeSalesText(
+            groupRows.map((row) => normalizeSalesText(row.note || '')).find(Boolean) || ''
+        );
+        const orderLookup = normalizeSalesText(header?.order_number || header?.receipt_number || '');
+
+        return {
+            header: header || groupRows[0] || {},
+            rows: groupRows,
+            items,
+            itemCount: items.length,
+            quantityTotal,
+            orderTotal,
+            costTotal,
+            profitTotal,
+            paymentAmount,
+            collectionAmount,
+            paymentLabel,
+            note,
+            orderLookup
+        };
+    }).sort((left, right) => {
+        const rightDate = normalizeSalesText(right.header?.sale_date || '');
+        const leftDate = normalizeSalesText(left.header?.sale_date || '');
+        if (rightDate !== leftDate) {
+            return rightDate.localeCompare(leftDate);
+        }
+
+        const rightReceipt = normalizeSalesText(right.header?.receipt_number || right.header?.order_number || '');
+        const leftReceipt = normalizeSalesText(left.header?.receipt_number || left.header?.order_number || '');
+        return rightReceipt.localeCompare(leftReceipt);
+    });
+}
+
+function renderSalesReceiptCard(group = {}) {
+    const header = group.header || {};
+    const orderLookup = normalizeSalesText(group.orderLookup || header.order_number || header.receipt_number || '');
+    const safeOrderLookup = appClient.escapeHtml(orderLookup);
+    const customerName = normalizeSalesText(header.client_name || '') || 'Unknown customer';
+    const invoiceBranch = normalizeSalesText(header.branch || '') || '-';
+    const cashBranch = normalizeSalesText(header.cash_branch || header.branch || '') || '-';
+    const courier = normalizeSalesText(header.courier || '') || 'No courier';
+    const receiptNumber = normalizeSalesText(header.receipt_number || header.order_number || '') || '-';
+    const orderNumber = normalizeSalesText(header.order_number || header.receipt_number || '') || '-';
+    const adminName = normalizeSalesText(header.admin_name || '') || '-';
+    const salesRep = normalizeSalesText(header.sales_representative || '') || '-';
+    const clientAddress = normalizeSalesText(header.client_address || '') || 'No address saved';
+    const clientContact = normalizeSalesText(header.client_contact || '') || 'No contact';
+    const itemMarkup = group.items.length
+        ? group.items.slice(0, 6).map((item) => `
+            <div class="sales-receipt-item-chip">
+                <strong>${appClient.escapeHtml(item.itemSold || 'Item')}</strong>
+                <small>${appClient.escapeHtml(`${Number(item.quantity || 0)} pc(s)${item.itemSet ? ` | ${item.itemSet}` : ''}${item.itemCode ? ` | ${item.itemCode}` : ''}`)}</small>
+                <small>${appClient.escapeHtml(`Price ${formatMoney(item.unitPrice || 0)} each | Total ${formatMoney(item.subtotal || 0)}`)}</small>
+            </div>
+        `).join('')
+        : '<div class="sales-receipt-item-chip"><strong>No item details</strong><small>Sales row only</small><small>Price unavailable</small></div>';
+
+    return `
+        <article class="sales-receipt-card">
+            <div class="sales-receipt-top">
+                <div class="sales-receipt-meta">
+                    <div class="sales-receipt-kicker">
+                        <span>${appClient.escapeHtml(formatDate(header.sale_date))}</span>
+                        <span>${appClient.escapeHtml(invoiceBranch)}</span>
+                        <span>${appClient.escapeHtml(`${group.rows.length} row(s) grouped`)}</span>
+                    </div>
+                    <h3 class="sales-receipt-title">${appClient.escapeHtml(customerName)}</h3>
+                    <div class="sales-receipt-chips">
+                        <div class="sales-receipt-chip"><strong>Receipt:</strong> ${appClient.escapeHtml(receiptNumber)}</div>
+                        <div class="sales-receipt-chip"><strong>Order:</strong> ${appClient.escapeHtml(orderNumber)}</div>
+                        <div class="sales-receipt-chip courier"><strong>Courier:</strong> ${appClient.escapeHtml(courier)}</div>
+                        <div class="sales-receipt-chip payment"><strong>Payment:</strong> ${appClient.escapeHtml(group.paymentLabel)}</div>
+                        <div class="sales-receipt-chip people"><strong>Admin:</strong> ${appClient.escapeHtml(adminName)}</div>
+                        <div class="sales-receipt-chip people"><strong>Sales Rep:</strong> ${appClient.escapeHtml(salesRep)}</div>
+                    </div>
+                </div>
+                <div class="sales-receipt-summary">
+                    <div class="sales-receipt-summary-card">
+                        <span>Total Due</span>
+                        <strong>${appClient.escapeHtml(formatMoney(group.orderTotal || 0))}</strong>
+                        <small>Paid ${appClient.escapeHtml(formatMoney(group.paymentAmount || 0))} | Collection ${appClient.escapeHtml(formatMoney(group.collectionAmount || 0))}</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sales-receipt-body">
+                <div class="sales-receipt-stat-grid">
+                    <div class="sales-receipt-stat">
+                        <span>Cost</span>
+                        <strong>${appClient.escapeHtml(formatMoney(group.costTotal || 0))}</strong>
+                    </div>
+                    <div class="sales-receipt-stat">
+                        <span>Profit</span>
+                        <strong>${appClient.escapeHtml(formatMoney(group.profitTotal || 0))}</strong>
+                    </div>
+                    <div class="sales-receipt-stat">
+                        <span>Total Qty</span>
+                        <strong>${appClient.escapeHtml(String(Number(group.quantityTotal || 0)))}</strong>
+                    </div>
+                    <div class="sales-receipt-stat">
+                        <span>Items</span>
+                        <strong>${appClient.escapeHtml(String(Number(group.itemCount || 0)))}</strong>
+                    </div>
+                </div>
+
+                <div class="sales-receipt-detail-grid">
+                    <div class="sales-receipt-detail">
+                        <span>Branches</span>
+                        <strong>${appClient.escapeHtml(invoiceBranch)}</strong>
+                        <small>Cash branch: ${appClient.escapeHtml(cashBranch)}</small>
+                    </div>
+                    <div class="sales-receipt-detail">
+                        <span>Contact</span>
+                        <strong>${appClient.escapeHtml(clientContact)}</strong>
+                        <small>${appClient.escapeHtml(clientAddress)}</small>
+                    </div>
+                    <div class="sales-receipt-detail">
+                        <span>Source</span>
+                        <strong>${appClient.escapeHtml(normalizeSalesText(header.source || '') || 'manual')}</strong>
+                        <small>${appClient.escapeHtml(normalizeSalesText(header.delivery_label || '') || courier)}</small>
+                    </div>
+                </div>
+
+                <div class="sales-receipt-item-block">
+                    <div class="sales-receipt-section-label">Items Included</div>
+                    <div class="sales-receipt-item-list">
+                        ${itemMarkup}
+                    </div>
+                </div>
+
+                <div class="sales-receipt-note">
+                    <div class="sales-receipt-section-label">Notes</div>
+                    <div class="sales-receipt-note-copy">${appClient.escapeHtml(group.note || 'No note attached to this receipt.')}</div>
+                </div>
+
+                <div class="sales-receipt-actions">
                     <button
                         type="button"
                         class="table-action-btn receipt-btn"
                         data-order-action="receipt"
-                        data-order-number="${appClient.escapeHtml(row.order_number || row.receipt_number || '')}"
-                        ${canViewReceiptRow(row) ? '' : 'disabled'}
+                        data-order-number="${safeOrderLookup}"
+                        ${canViewReceiptRow(header) ? '' : 'disabled'}
                     >
                         Receipt
                     </button>
@@ -662,8 +898,8 @@ function renderSalesTable(rows) {
                         type="button"
                         class="table-action-btn"
                         data-order-action="edit"
-                        data-order-number="${appClient.escapeHtml(row.order_number || row.receipt_number || '')}"
-                        ${canEditRow(row) ? '' : 'disabled'}
+                        data-order-number="${safeOrderLookup}"
+                        ${canEditRow(header) ? '' : 'disabled'}
                     >
                         Edit
                     </button>
@@ -671,21 +907,33 @@ function renderSalesTable(rows) {
                         type="button"
                         class="table-action-btn delete-btn"
                         data-order-action="delete"
-                        data-order-number="${appClient.escapeHtml(row.order_number || row.receipt_number || '')}"
-                        ${canDeleteRow(row) ? '' : 'disabled'}
+                        data-order-number="${safeOrderLookup}"
+                        ${canDeleteRow(header) ? '' : 'disabled'}
                     >
                         Delete
                     </button>
                 </div>
-            </td>
-        </tr>
-    `).join('');
+            </div>
+        </article>
+    `;
+}
+
+function renderSalesTable(rows) {
+    if (!rows.length) {
+        salesTableBody.innerHTML = '<div class="empty">No sales records found for the selected filters.</div>';
+        scheduleSalesTableScrollHelperSync();
+        return 0;
+    }
+
+    const groupedRows = groupSalesRows(rows);
+    salesTableBody.innerHTML = groupedRows.map((group) => renderSalesReceiptCard(group)).join('');
 
     if (rows.length >= SALES_REPORT_PAGE_SIZE) {
         setReportStatus(`Showing first ${SALES_REPORT_PAGE_SIZE} rows. Refine filters for faster load or load fewer rows.`, false);
     }
 
     scheduleSalesTableScrollHelperSync();
+    return groupedRows.length;
 }
 
 function resetFilters() {

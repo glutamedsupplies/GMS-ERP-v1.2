@@ -499,6 +499,134 @@
       align-items: center;
     }
 
+    .tracking-summary-stack {
+      display: grid;
+      gap: 2px;
+    }
+
+    .tracking-subnote {
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.35;
+    }
+
+    .tracking-order-row td {
+      vertical-align: top;
+    }
+
+    .tracking-detail-row td {
+      padding: 0 10px 12px;
+      background: #f8fbff;
+      border-bottom: 1px solid #e2ebf5;
+    }
+
+    .tracking-detail-card {
+      border: 1px solid #d7e5f3;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05);
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .tracking-detail-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed #d7e5f3;
+    }
+
+    .tracking-detail-title {
+      font-size: 15px;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: 0.12px;
+    }
+
+    .tracking-detail-meta {
+      margin-top: 4px;
+      font-size: 12px;
+      color: #526174;
+      line-height: 1.45;
+    }
+
+    .tracking-detail-summary {
+      display: grid;
+      gap: 4px;
+      text-align: right;
+      font-size: 12px;
+      font-weight: 800;
+      color: #0f766e;
+      white-space: nowrap;
+    }
+
+    .tracking-detail-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .tracking-entry-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .tracking-entry-card {
+      border: 1px solid #d8e4f2;
+      border-radius: 12px;
+      background: #fff;
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .tracking-entry-card.editing {
+      background: #ecfeff;
+      border-color: #99f6e4;
+    }
+
+    .tracking-entry-info-grid,
+    .tracking-entry-edit-grid {
+      display: grid;
+      grid-template-columns: minmax(180px, 1.4fr) minmax(130px, 0.9fr) minmax(150px, 1fr) minmax(160px, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .tracking-entry-field {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .tracking-entry-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.42px;
+      text-transform: uppercase;
+      color: #5d6d80;
+    }
+
+    .tracking-entry-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .tracking-empty-state {
+      border: 1px dashed #d3deeb;
+      border-radius: 12px;
+      padding: 14px;
+      background: #fbfdff;
+      color: #64748b;
+      font-size: 12px;
+      text-align: center;
+    }
+
     .pill {
       display: inline-flex;
       align-items: center;
@@ -854,6 +982,23 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
+      .tracking-detail-header {
+        flex-direction: column;
+      }
+
+      .tracking-detail-summary {
+        text-align: left;
+      }
+
+      .tracking-detail-actions {
+        justify-content: flex-start;
+      }
+
+      .tracking-entry-info-grid,
+      .tracking-entry-edit-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
       .collection-table-wrap {
         margin: 0 8px 8px;
       }
@@ -869,6 +1014,11 @@
       }
 
       .collection-summary-cards {
+        grid-template-columns: 1fr;
+      }
+
+      .tracking-entry-info-grid,
+      .tracking-entry-edit-grid {
         grid-template-columns: 1fr;
       }
 

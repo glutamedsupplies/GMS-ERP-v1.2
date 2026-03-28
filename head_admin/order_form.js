@@ -259,6 +259,7 @@ const heroPaymentMeta = document.getElementById('heroPaymentMeta');
 const footerTotalValue = document.getElementById('footerTotalValue');
 const footerCollectionValue = document.getElementById('footerCollectionValue');
 const statusText = document.getElementById('statusText');
+const backToTopBtn = document.getElementById('backToTopBtn');
 const aiUsageHint = document.getElementById('aiUsageHint');
 const aiUsageTopIndicator = document.getElementById('aiUsageTopIndicator');
 const aiUsageBottomIndicator = document.getElementById('aiUsageBottomIndicator');
@@ -798,6 +799,11 @@ function bindStaticEvents() {
     document.addEventListener('change', handleOrderFormDraftInteraction, true);
     window.addEventListener('pagehide', flushOrderFormDraftSave);
     window.addEventListener('beforeunload', flushOrderFormDraftSave);
+    window.addEventListener('scroll', updateBackToTopButtonVisibility, { passive: true });
+
+    backToTopBtn?.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
 
     addItemRowBtn.addEventListener('click', () => {
         addOrderRow();
@@ -911,6 +917,18 @@ function bindStaticEvents() {
         state.quickPos.manualEditorExpanded = !state.quickPos.manualEditorExpanded;
         updateAdvancedRowsVisibility();
     });
+    updateBackToTopButtonVisibility();
+}
+
+function updateBackToTopButtonVisibility() {
+    if (!backToTopBtn) {
+        return;
+    }
+
+    const shouldShow = window.scrollY > 320;
+    backToTopBtn.classList.toggle('is-visible', shouldShow);
+    backToTopBtn.tabIndex = shouldShow ? 0 : -1;
+    backToTopBtn.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
 }
 
 function openOrderFormSetupModal() {
@@ -6487,6 +6505,21 @@ function getDaysUntilInventoryExpiry(expirationDate) {
     return Math.floor(diffMs / 86400000);
 }
 
+function isInventoryExpiryWithinCurrentYear(expirationDate) {
+    const expiryKey = normalizeInventoryDateKey(expirationDate);
+    if (!expiryKey) {
+        return false;
+    }
+
+    const expiryDate = parseInventoryDateKey(expiryKey);
+    const todayDate = parseInventoryDateKey(getTodayDateKey());
+    if (!expiryDate || !todayDate) {
+        return false;
+    }
+
+    return expiryDate >= todayDate && expiryDate.getFullYear() === todayDate.getFullYear();
+}
+
 function getDirectStockMetaFromEntry(stockEntry = null) {
     if (!stockEntry) {
         return { label: 'Not tracked', className: 'na', disableSelection: false };
@@ -6506,11 +6539,13 @@ function getDirectStockMetaFromEntry(stockEntry = null) {
     if (quantity <= 0) {
         return { label: 'Out of stock', className: 'out', disableSelection: false };
     }
-    if (expirationDate && daysUntilExpiry <= NEAR_EXPIRY_DAYS) {
+    if (expirationDate && isInventoryExpiryWithinCurrentYear(expirationDate)) {
         return {
             label: daysUntilExpiry === 0
                 ? `Near expiry today (${formatDisplayDate(expirationDate)})`
-                : `Near expiry ${daysUntilExpiry}d (${formatDisplayDate(expirationDate)})`,
+                : (daysUntilExpiry <= NEAR_EXPIRY_DAYS
+                    ? `Near expiry ${daysUntilExpiry}d (${formatDisplayDate(expirationDate)})`
+                    : `Expires this year (${formatDisplayDate(expirationDate)})`),
             className: 'near-expired',
             disableSelection: false
         };

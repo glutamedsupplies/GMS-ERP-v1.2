@@ -149,8 +149,9 @@ const state = {
         collectionStatus: 'all'
     },
     workspaceView: 'tracking',
-    editingOrderKey: '',
-    savingOrderKey: '',
+    expandedOrderKeys: new Set(),
+    editingTrackingKey: '',
+    savingTrackingKey: '',
     loading: false,
     locked: false
 };
@@ -300,7 +301,14 @@ function bindEvents() {
         }
 
         const action = normalizeText(target.getAttribute('data-action') || '');
-        if (!action.startsWith('edit-tracking-row') && action !== 'save-tracking-row' && action !== 'cancel-tracking-row') {
+        if (
+            action !== 'toggle-tracking-details'
+            && action !== 'add-tracking-entry'
+            && action !== 'edit-tracking-entry'
+            && action !== 'delete-tracking-entry'
+            && action !== 'save-tracking-entry'
+            && action !== 'cancel-tracking-entry'
+        ) {
             return;
         }
 
@@ -310,19 +318,40 @@ function bindEvents() {
             return;
         }
 
-        if (action === 'edit-tracking-row') {
-            startTrackingRowEdit(orderLookup);
+        if (action === 'toggle-tracking-details') {
+            toggleTrackingDetails(orderLookup);
             return;
         }
 
-        if (action === 'cancel-tracking-row') {
-            cancelTrackingRowEdit();
+        if (action === 'add-tracking-entry') {
+            startTrackingEntryAdd(orderLookup);
             return;
         }
 
-        if (action === 'save-tracking-row') {
-            const rowElement = target.closest('tr');
-            await handleTrackingRowEditSave(orderLookup, rowElement);
+        const trackingEntryId = normalizeText(
+            target.getAttribute('data-tracking-entry-id')
+            || target.getAttribute('data-entry-id')
+            || ''
+        );
+
+        if (action === 'edit-tracking-entry') {
+            startTrackingEntryEdit(orderLookup, trackingEntryId);
+            return;
+        }
+
+        if (action === 'delete-tracking-entry') {
+            await handleTrackingEntryDelete(orderLookup, trackingEntryId);
+            return;
+        }
+
+        if (action === 'cancel-tracking-entry') {
+            cancelTrackingEntryEdit();
+            return;
+        }
+
+        if (action === 'save-tracking-entry') {
+            const rowElement = target.closest('[data-tracking-entry-row="true"]');
+            await handleTrackingEntrySave(orderLookup, trackingEntryId, rowElement);
         }
     });
 
@@ -332,25 +361,26 @@ function bindEvents() {
         }
 
         const rowElement = event.target instanceof Element
-            ? event.target.closest('tr[data-editing="true"]')
+            ? event.target.closest('[data-tracking-entry-row="true"][data-editing="true"]')
             : null;
         if (!rowElement) {
             return;
         }
 
         const orderLookup = decodeOrderLookup(rowElement.getAttribute('data-order-key') || '');
+        const trackingEntryId = normalizeText(rowElement.getAttribute('data-tracking-entry-id') || '');
         if (!orderLookup) {
             return;
         }
 
         if (event.key === 'Escape') {
             event.preventDefault();
-            cancelTrackingRowEdit();
+            cancelTrackingEntryEdit();
             return;
         }
 
         event.preventDefault();
-        await handleTrackingRowEditSave(orderLookup, rowElement);
+        await handleTrackingEntrySave(orderLookup, trackingEntryId, rowElement);
     });
 
     trackingTableBody?.addEventListener('change', (event) => {
@@ -538,6 +568,57 @@ function resolveOrderLookup(row = {}) {
     return normalizeText(row.orderKey || row.orderNumber || row.receiptNumber);
 }
 
+function resolveTrackingEntries(row = {}) {
+    if (Array.isArray(row.trackingEntries) && row.trackingEntries.length) {
+        return row.trackingEntries;
+    }
+    const trackingNumber = normalizeText(row.trackingNumber || '');
+    const amountToCollect = Number(row.amountToCollect || 0);
+    const deliveryStatus = normalizeDeliveryStatus(row.deliveryStatus, trackingNumber ? 'In Transit' : 'Pending');
+    if (!trackingNumber && !(amountToCollect > 0) && deliveryStatus === 'Pending') {
+        return [];
+    }
+    return [{
+        trackingEntryId: 'legacy-primary',
+        trackingNumber,
+        amountToCollect,
+        amountToCollectDisplay: formatAmount(amountToCollect),
+        deliveryStatus,
+        dateMonitored: normalizeText(row.dateMonitored || ''),
+        updatedBy: normalizeText(row.updatedBy || ''),
+        createdAt: normalizeText(row.updatedAt || ''),
+        updatedAt: normalizeText(row.updatedAt || '')
+    }];
+}
+
+function buildTrackingEditKey(orderLookup = '', trackingEntryId = '') {
+    return `${normalizeText(orderLookup)}::${normalizeText(trackingEntryId || 'new')}`;
+}
+
+function getEditingTrackingEntryParts(key = '') {
+    const normalized = normalizeText(key);
+    if (!normalized) {
+        return { orderLookup: '', trackingEntryId: '' };
+    }
+    const [orderLookup, trackingEntryId = ''] = normalized.split('::');
+    return {
+        orderLookup: normalizeText(orderLookup),
+        trackingEntryId: normalizeText(trackingEntryId)
+    };
+}
+
+function trackingSummaryText(row = {}) {
+    const summary = normalizeText(row.trackingSummary || row.trackingNumber || '');
+    if (summary) {
+        return summary;
+    }
+    const entryCount = Number(row.trackingEntryCount || 0);
+    if (entryCount > 1) {
+        return `${entryCount} tracking rows`;
+    }
+    return '';
+}
+
 function normalizeDeliveryStatusToken(value) {
     return normalizeText(value)
         .toLowerCase()
@@ -673,11 +754,14 @@ async function loadRows({ keepStatus = false } = {}) {
         state.summary = payload?.summary || state.summary;
         state.collectionItems = Array.isArray(collectionPayload?.items) ? collectionPayload.items : [];
         state.collectionSummary = collectionPayload?.summary || state.collectionSummary;
-        if (
-            state.editingOrderKey
-            && !state.items.some((item) => resolveOrderLookup(item) === state.editingOrderKey)
-        ) {
-            state.editingOrderKey = '';
+        const visibleOrderLookups = new Set(state.items.map((item) => resolveOrderLookup(item)).filter(Boolean));
+        state.expandedOrderKeys = new Set(
+            [...state.expandedOrderKeys].filter((orderLookup) => visibleOrderLookups.has(orderLookup))
+        );
+        const editingState = getEditingTrackingEntryParts(state.editingTrackingKey);
+        if (editingState.orderLookup && !visibleOrderLookups.has(editingState.orderLookup)) {
+            state.editingTrackingKey = '';
+            state.savingTrackingKey = '';
         }
 
         renderBranchCounts();
@@ -758,59 +842,414 @@ function renderRows() {
         return;
     }
 
-    trackingTableBody.innerHTML = state.items.map((row) => {
-        const orderLookup = resolveOrderLookup(row);
-        const encodedOrderLookup = encodeURIComponent(orderLookup);
-        const trackingNumber = normalizeText(row.trackingNumber);
-        const orderNumber = normalizeText(row.orderNumber || row.receiptNumber || row.orderKey || '-');
-        const missingTrackingRow = Boolean(row.missingTrackingAfterShipment);
-        const canEditRow = Boolean(orderLookup) && canEditTrackingRow(row);
-        const isEditing = canEditRow && state.editingOrderKey === orderLookup;
-        const isSaving = canEditRow && state.savingOrderKey === orderLookup;
-        const deliveryStatus = normalizeDeliveryStatus(row.deliveryStatus, 'In Transit');
-        const dateMonitoredValue = formatDateTimeLocal(row.dateMonitored || row.updatedAt);
-        const deliveryStatusOptions = LBC_DELIVERY_STATUS_OPTIONS.map((status) => {
-            const selected = status === deliveryStatus ? ' selected' : '';
-            return `<option value="${appClient.escapeHtml(status)}"${selected}>${appClient.escapeHtml(status)}</option>`;
-        }).join('');
+    trackingTableBody.innerHTML = state.items.map((row) => renderTrackingOrderRows(row)).join('');
+}
 
-        const trackingCell = isEditing
-            ? `<input class="field field-inline field-tracking-number" type="text" maxlength="12" data-field="tracking-number" value="${appClient.escapeHtml(trackingNumber)}" placeholder="Tracking #">`
-            : `<span class="tracking-text ${trackingNumber ? '' : 'empty'}">${appClient.escapeHtml(trackingNumber || 'NO TRACKING')}</span>`;
-        const amountCell = isEditing
-            ? `<input class="field field-inline field-amount" type="number" min="0" step="0.01" data-field="amount-to-collect" value="${appClient.escapeHtml(formatAmountInput(row.amountToCollect))}">`
-            : appClient.escapeHtml(formatAmount(row.amountToCollect));
-        const deliveryClass = deliveryClassName(deliveryStatus);
-        const deliveryCell = isEditing
-            ? `<select class="field field-inline field-status status-${deliveryClass}" data-field="delivery-status">${deliveryStatusOptions}</select>`
-            : `<span class="pill ${deliveryClass}">${appClient.escapeHtml(deliveryStatus)}</span>`;
-        const actionCell = !orderLookup
-            ? '<span class="collection-note">No order key</span>'
-            : !canEditRow
-            ? '<span class="collection-note">Read only</span>'
-            : (isEditing
-            ? `
-                <div class="row-action-group">
-                  <input class="field field-inline field-date-monitored" type="datetime-local" data-field="date-monitored" value="${appClient.escapeHtml(dateMonitoredValue)}">
-                  <button class="btn primary btn-inline" type="button" data-action="save-tracking-row" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}" ${isSaving ? 'disabled' : ''}>${isSaving ? 'Saving...' : 'Save'}</button>
-                  <button class="btn secondary btn-inline" type="button" data-action="cancel-tracking-row" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}" ${isSaving ? 'disabled' : ''}>Cancel</button>
-                </div>
-              `
-            : `<button class="btn secondary btn-inline" type="button" data-action="edit-tracking-row" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}">Edit</button>`);
-        return `
-            <tr class="${missingTrackingRow ? 'row-missing-tracking' : ''}" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}" data-editing="${isEditing ? 'true' : 'false'}">
-              <td>${appClient.escapeHtml(formatDate(row.saleDate))}</td>
-              <td>${trackingCell}</td>
-              <td>${appClient.escapeHtml(orderNumber)}</td>
-              <td>${appClient.escapeHtml(normalizeText(row.clientName) || '-')}</td>
-              <td>${amountCell}</td>
-              <td>${deliveryCell}</td>
-              <td><span class="pill ${branchClassName(row.branch)}">${appClient.escapeHtml(normalizeText(row.branch) || '-')}</span></td>
-              <td>${appClient.escapeHtml(normalizeText(row.assignedTo || row.salesRepresentative || row.adminName) || '-')}</td>
-              <td>${actionCell}</td>
-            </tr>
+function renderTrackingOrderRows(row = {}) {
+    const orderLookup = resolveOrderLookup(row);
+    const encodedOrderLookup = encodeURIComponent(orderLookup);
+    const orderNumber = normalizeText(row.orderNumber || row.receiptNumber || row.orderKey || '-');
+    const trackingSummary = trackingSummaryText(row);
+    const entryCount = Number(row.trackingEntryCount || resolveTrackingEntries(row).length || 0);
+    const deliveryStatus = normalizeDeliveryStatus(row.deliveryStatus, 'Pending');
+    const canEditRow = Boolean(orderLookup) && canEditTrackingRow(row);
+    const isExpanded = state.expandedOrderKeys.has(orderLookup);
+    const missingTrackingRow = Boolean(row.missingTrackingAfterShipment);
+    const statusNote = normalizeText(row.deliveryStatusSummary || '');
+    const trackingCell = trackingSummary
+        ? `
+            <div class="tracking-summary-stack">
+              <span class="tracking-text">${appClient.escapeHtml(trackingSummary)}</span>
+              ${entryCount > 1 ? `<span class="tracking-subnote">${entryCount} tracking rows</span>` : ''}
+            </div>
+          `
+        : '<span class="tracking-text empty">NO TRACKING</span>';
+    const amountCell = `
+        <div class="tracking-summary-stack">
+          <span>${appClient.escapeHtml(formatAmount(row.amountToCollect))}</span>
+          ${entryCount > 1 ? '<span class="tracking-subnote">Combined amount</span>' : ''}
+        </div>
+    `;
+    const deliveryCell = `
+        <div class="tracking-summary-stack">
+          <span class="pill ${deliveryClassName(deliveryStatus)}">${appClient.escapeHtml(deliveryStatus)}</span>
+          ${row.hasMixedTrackingStatuses && statusNote
+                ? `<span class="tracking-subnote">Mixed: ${appClient.escapeHtml(statusNote)}</span>`
+                : ''}
+        </div>
+    `;
+    const actionCell = !orderLookup
+        ? '<span class="collection-note">No order key</span>'
+        : `
+            <div class="row-action-group">
+              <button class="btn secondary btn-inline" type="button" data-action="toggle-tracking-details" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}">${isExpanded ? 'Hide' : 'Details'}</button>
+              ${canEditRow ? `<button class="btn primary btn-inline" type="button" data-action="add-tracking-entry" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}">Add Tracking</button>` : '<span class="collection-note">Read only</span>'}
+            </div>
         `;
+
+    const detailMarkup = isExpanded
+        ? `
+            <tr class="tracking-detail-row">
+              <td colspan="${TRACKING_TABLE_COLSPAN}">
+                ${renderTrackingDetails(row, { canEditRow, orderLookup })}
+              </td>
+            </tr>
+        `
+        : '';
+
+    return `
+        <tr class="${missingTrackingRow ? 'row-missing-tracking' : ''} tracking-order-row" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}">
+          <td>${appClient.escapeHtml(formatDate(row.saleDate))}</td>
+          <td>${trackingCell}</td>
+          <td>${appClient.escapeHtml(orderNumber)}</td>
+          <td>
+            <div class="tracking-summary-stack">
+              <span>${appClient.escapeHtml(normalizeText(row.clientName) || '-')}</span>
+              <span class="tracking-subnote">${appClient.escapeHtml(normalizeText(row.receiptNumber || row.orderKey || orderNumber) || '-')}</span>
+            </div>
+          </td>
+          <td>${amountCell}</td>
+          <td>${deliveryCell}</td>
+          <td><span class="pill ${branchClassName(row.branch)}">${appClient.escapeHtml(normalizeText(row.branch) || '-')}</span></td>
+          <td>${appClient.escapeHtml(normalizeText(row.assignedTo || row.salesRepresentative || row.adminName) || '-')}</td>
+          <td>${actionCell}</td>
+        </tr>
+        ${detailMarkup}
+    `;
+}
+
+function renderTrackingDetails(row = {}, { canEditRow = false, orderLookup = '' } = {}) {
+    const entries = resolveTrackingEntries(row);
+    const editingState = getEditingTrackingEntryParts(state.editingTrackingKey);
+    const shouldRenderDraft = editingState.orderLookup === orderLookup && editingState.trackingEntryId === 'new';
+    const allowDelete = canEditRow && entries.length > 1;
+    const encodedOrderLookup = encodeURIComponent(orderLookup);
+
+    return `
+        <div class="tracking-detail-card">
+          <div class="tracking-detail-header">
+            <div>
+              <div class="tracking-detail-title">${appClient.escapeHtml(normalizeText(row.clientName) || 'Unknown client')}</div>
+              <div class="tracking-detail-meta">Order ${appClient.escapeHtml(normalizeText(row.orderNumber || row.receiptNumber || row.orderKey || '-'))} • ${appClient.escapeHtml(normalizeText(row.branch) || '-')}</div>
+            </div>
+            <div class="tracking-detail-summary">
+              <span>${appClient.escapeHtml(`${Number(row.trackingEntryCount || entries.length || 0)} tracking row(s)`)}</span>
+              <span>${appClient.escapeHtml(formatAmount(row.amountToCollect))}</span>
+            </div>
+          </div>
+          ${canEditRow ? `<div class="tracking-detail-actions"><button class="btn primary btn-inline" type="button" data-action="add-tracking-entry" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}">Add Another Tracking</button></div>` : ''}
+          <div class="tracking-entry-list">
+            ${entries.length
+                ? entries.map((entry) => renderTrackingEntryCard(row, orderLookup, entry, { canEditRow, allowDelete })).join('')
+                : '<div class="tracking-empty-state">No tracking rows yet for this order.</div>'}
+            ${shouldRenderDraft
+                ? renderTrackingEntryCard(row, orderLookup, {
+                    trackingEntryId: 'new',
+                    trackingNumber: '',
+                    amountToCollect: 0,
+                    deliveryStatus: 'Pending',
+                    dateMonitored: new Date().toISOString(),
+                    updatedBy: '',
+                    updatedAt: ''
+                }, { canEditRow, isDraft: true })
+                : ''}
+          </div>
+        </div>
+    `;
+}
+
+function renderTrackingEntryCard(row = {}, orderLookup = '', entry = {}, { canEditRow = false, isDraft = false, allowDelete = false } = {}) {
+    const trackingEntryId = normalizeText(entry.trackingEntryId || entry.id || (isDraft ? 'new' : ''));
+    const encodedOrderLookup = encodeURIComponent(orderLookup);
+    const safeTrackingEntryId = appClient.escapeHtml(trackingEntryId || 'new');
+    const editKey = buildTrackingEditKey(orderLookup, trackingEntryId || 'new');
+    const isEditing = canEditRow && state.editingTrackingKey === editKey;
+    const isSaving = canEditRow && state.savingTrackingKey === editKey;
+    const trackingNumber = normalizeText(entry.trackingNumber || '');
+    const amountValue = formatAmountInput(entry.amountToCollect);
+    const deliveryStatus = normalizeDeliveryStatus(entry.deliveryStatus, trackingNumber ? 'In Transit' : 'Pending');
+    const dateMonitoredValue = formatDateTimeLocal(entry.dateMonitored || entry.updatedAt || '');
+    const deliveryStatusOptions = LBC_DELIVERY_STATUS_OPTIONS.map((status) => {
+        const selected = status === deliveryStatus ? ' selected' : '';
+        return `<option value="${appClient.escapeHtml(status)}"${selected}>${appClient.escapeHtml(status)}</option>`;
     }).join('');
+
+    if (isEditing) {
+        return `
+            <div class="tracking-entry-card editing" data-tracking-entry-row="true" data-editing="true" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}" data-tracking-entry-id="${safeTrackingEntryId}">
+              <div class="tracking-entry-edit-grid">
+                <label class="tracking-entry-field">
+                  <span class="tracking-entry-label">Tracking Number</span>
+                  <input class="field field-inline field-tracking-number" type="text" maxlength="12" data-field="tracking-number" value="${appClient.escapeHtml(trackingNumber)}" placeholder="Tracking #">
+                </label>
+                <label class="tracking-entry-field">
+                  <span class="tracking-entry-label">Amount</span>
+                  <input class="field field-inline field-amount" type="number" min="0" step="0.01" data-field="amount-to-collect" value="${appClient.escapeHtml(amountValue)}">
+                </label>
+                <label class="tracking-entry-field">
+                  <span class="tracking-entry-label">Status</span>
+                  <select class="field field-inline field-status status-${deliveryClassName(deliveryStatus)}" data-field="delivery-status">${deliveryStatusOptions}</select>
+                </label>
+                <label class="tracking-entry-field">
+                  <span class="tracking-entry-label">Date Monitored</span>
+                  <input class="field field-inline field-date-monitored" type="datetime-local" data-field="date-monitored" value="${appClient.escapeHtml(dateMonitoredValue)}">
+                </label>
+                <div class="tracking-entry-actions">
+                  <button class="btn primary btn-inline" type="button" data-action="save-tracking-entry" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}" data-tracking-entry-id="${safeTrackingEntryId}" ${isSaving ? 'disabled' : ''}>${isSaving ? 'Saving...' : 'Save'}</button>
+                  <button class="btn secondary btn-inline" type="button" data-action="cancel-tracking-entry" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}" data-tracking-entry-id="${safeTrackingEntryId}" ${isSaving ? 'disabled' : ''}>Cancel</button>
+                </div>
+              </div>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="tracking-entry-card" data-tracking-entry-row="true" data-editing="false" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}" data-tracking-entry-id="${safeTrackingEntryId}">
+          <div class="tracking-entry-info-grid">
+            <div class="tracking-entry-field">
+              <span class="tracking-entry-label">Tracking Number</span>
+              <span class="tracking-text ${trackingNumber ? '' : 'empty'}">${appClient.escapeHtml(trackingNumber || 'NO TRACKING')}</span>
+            </div>
+            <div class="tracking-entry-field">
+              <span class="tracking-entry-label">Amount</span>
+              <span>${appClient.escapeHtml(formatAmount(entry.amountToCollect))}</span>
+            </div>
+            <div class="tracking-entry-field">
+              <span class="tracking-entry-label">Status</span>
+              <span class="pill ${deliveryClassName(deliveryStatus)}">${appClient.escapeHtml(deliveryStatus)}</span>
+            </div>
+            <div class="tracking-entry-field">
+              <span class="tracking-entry-label">Updated</span>
+              <span>${appClient.escapeHtml(formatDateTime(entry.updatedAt || entry.dateMonitored || entry.createdAt) || '-')}</span>
+            </div>
+            <div class="tracking-entry-actions">
+              ${canEditRow ? `<button class="btn secondary btn-inline" type="button" data-action="edit-tracking-entry" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}" data-tracking-entry-id="${safeTrackingEntryId}" ${isSaving ? 'disabled' : ''}>Edit</button>` : '<span class="collection-note">Read only</span>'}
+              ${canEditRow && allowDelete && trackingEntryId && trackingEntryId !== 'new'
+        ? `<button class="btn warning btn-inline" type="button" data-action="delete-tracking-entry" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}" data-tracking-entry-id="${safeTrackingEntryId}" ${isSaving ? 'disabled' : ''}>Delete</button>`
+        : ''}
+            </div>
+          </div>
+        </div>
+    `;
+}
+
+function toggleTrackingDetails(orderLookup = '') {
+    const normalizedOrderLookup = normalizeText(orderLookup);
+    if (!normalizedOrderLookup) {
+        return;
+    }
+    if (state.expandedOrderKeys.has(normalizedOrderLookup)) {
+        state.expandedOrderKeys.delete(normalizedOrderLookup);
+        const editingState = getEditingTrackingEntryParts(state.editingTrackingKey);
+        if (editingState.orderLookup === normalizedOrderLookup) {
+            state.editingTrackingKey = '';
+            state.savingTrackingKey = '';
+        }
+    } else {
+        state.expandedOrderKeys.add(normalizedOrderLookup);
+    }
+    renderRows();
+}
+
+function startTrackingEntryEdit(orderLookup = '', trackingEntryId = '') {
+    if (state.locked || state.loading) {
+        return;
+    }
+
+    const normalizedOrderLookup = normalizeText(orderLookup);
+    if (!normalizedOrderLookup) {
+        setStatus('Order number is missing for edit action.', true);
+        return;
+    }
+
+    const targetRow = state.items.find((item) => resolveOrderLookup(item) === normalizedOrderLookup);
+    if (targetRow && !canEditTrackingRow(targetRow)) {
+        setStatus(getLbcEditRestrictionMessage(targetRow.branch), true);
+        return;
+    }
+
+    state.expandedOrderKeys.add(normalizedOrderLookup);
+    state.editingTrackingKey = buildTrackingEditKey(normalizedOrderLookup, trackingEntryId || 'new');
+    state.savingTrackingKey = '';
+    renderRows();
+}
+
+function startTrackingEntryAdd(orderLookup = '') {
+    startTrackingEntryEdit(orderLookup, 'new');
+}
+
+function cancelTrackingEntryEdit() {
+    state.editingTrackingKey = '';
+    state.savingTrackingKey = '';
+    renderRows();
+}
+
+async function handleTrackingEntryDelete(orderLookup = '', trackingEntryId = '') {
+    if (state.locked || state.loading) {
+        return;
+    }
+
+    const normalizedOrderLookup = normalizeText(orderLookup);
+    const normalizedTrackingEntryId = normalizeText(trackingEntryId);
+    if (!normalizedOrderLookup || !normalizedTrackingEntryId) {
+        setStatus('Tracking row is missing for delete action.', true);
+        return;
+    }
+
+    const currentRow = state.items.find((item) => resolveOrderLookup(item) === normalizedOrderLookup);
+    if (!currentRow) {
+        setStatus('Tracking row is no longer visible. Reload and try again.', true);
+        return;
+    }
+    if (!canEditTrackingRow(currentRow)) {
+        setStatus(getLbcEditRestrictionMessage(currentRow.branch), true);
+        return;
+    }
+
+    const currentEntries = resolveTrackingEntries(currentRow);
+    const targetEntry = currentEntries.find((entry) => normalizeText(entry.trackingEntryId || entry.id || '') === normalizedTrackingEntryId);
+    if (!targetEntry) {
+        setStatus('Tracking row could not be found for delete.', true);
+        return;
+    }
+    if (currentEntries.length <= 1) {
+        setStatus('Use Edit for the remaining tracking row. Delete is for extra rows only.', true);
+        return;
+    }
+
+    const trackingLabel = normalizeText(targetEntry.trackingNumber || 'this tracking row');
+    const confirmed = window.confirm(`Delete tracking ${trackingLabel} from ${normalizedOrderLookup}?`);
+    if (!confirmed) {
+        return;
+    }
+
+    const saveKey = buildTrackingEditKey(normalizedOrderLookup, normalizedTrackingEntryId);
+    setActionLoading(true);
+    state.savingTrackingKey = saveKey;
+    setStatus(`Deleting tracking ${trackingLabel} from ${normalizeText(currentRow.orderNumber || currentRow.receiptNumber || currentRow.orderKey || normalizedOrderLookup)}...`);
+
+    try {
+        const updatedRow = await appClient.updateLbcTracking(normalizedOrderLookup, {
+            trackingEntryId: normalizedTrackingEntryId,
+            deleteTracking: true
+        });
+        state.editingTrackingKey = '';
+        state.savingTrackingKey = '';
+        state.expandedOrderKeys.add(normalizedOrderLookup);
+        await loadRows({ keepStatus: true });
+        const remainingCount = Number(updatedRow?.trackingEntryCount || 0);
+        setStatus(`Deleted tracking ${trackingLabel} from ${normalizedOrderLookup}. ${remainingCount} tracking row(s) remaining.`);
+    } catch (error) {
+        console.error('Failed to delete tracking entry:', error);
+        setStatus(error.message || 'Failed to delete tracking row.', true);
+    } finally {
+        state.savingTrackingKey = '';
+        setActionLoading(false);
+        renderRows();
+    }
+}
+
+function normalizeDateMonitoredInput(value) {
+    const normalized = normalizeText(value);
+    if (!normalized) {
+        return '';
+    }
+
+    const parsed = new Date(normalized);
+    if (Number.isNaN(parsed.getTime())) {
+        return normalized;
+    }
+    return parsed.toISOString();
+}
+
+async function handleTrackingEntrySave(orderLookup = '', trackingEntryId = '', rowElement = null) {
+    if (state.locked || state.loading) {
+        return;
+    }
+
+    const normalizedOrderLookup = normalizeText(orderLookup);
+    if (!normalizedOrderLookup) {
+        setStatus('Order number is missing for save action.', true);
+        return;
+    }
+
+    const currentRow = state.items.find((item) => resolveOrderLookup(item) === normalizedOrderLookup);
+    if (!currentRow) {
+        setStatus('Tracking row is no longer visible. Reload and try again.', true);
+        return;
+    }
+    if (!canEditTrackingRow(currentRow)) {
+        setStatus(getLbcEditRestrictionMessage(currentRow.branch), true);
+        return;
+    }
+
+    const editRow = rowElement instanceof Element
+        ? rowElement
+        : null;
+    if (!(editRow instanceof Element)) {
+        setStatus('Unable to read editable tracking values.', true);
+        return;
+    }
+
+    const trackingInput = editRow.querySelector('input[data-field="tracking-number"]');
+    const amountInput = editRow.querySelector('input[data-field="amount-to-collect"]');
+    const statusInput = editRow.querySelector('select[data-field="delivery-status"]');
+    const dateMonitoredInput = editRow.querySelector('input[data-field="date-monitored"]');
+    const isDraft = normalizeText(trackingEntryId || '').toLowerCase() === 'new';
+
+    const trackingNumber = normalizeText(trackingInput?.value).toUpperCase();
+    if (!trackingNumber) {
+        setStatus('Tracking number is required.', true);
+        trackingInput?.focus();
+        return;
+    }
+    if (!TRACKING_NUMBER_REGEX.test(trackingNumber)) {
+        setStatus('Tracking number must be alphanumeric and up to 12 characters.', true);
+        trackingInput?.focus();
+        return;
+    }
+
+    const parsedAmount = Number(amountInput?.value);
+    if (!Number.isFinite(parsedAmount) || parsedAmount < 0) {
+        setStatus('Amount to collect must be a valid non-negative number.', true);
+        amountInput?.focus();
+        return;
+    }
+
+    const deliveryStatus = normalizeDeliveryStatus(statusInput?.value, 'Pending');
+    const payload = {
+        trackingNumber,
+        amountToCollect: Number(parsedAmount.toFixed(2)),
+        deliveryStatus,
+        dateMonitored: normalizeDateMonitoredInput(dateMonitoredInput?.value)
+    };
+    if (isDraft) {
+        payload.appendTracking = true;
+    } else {
+        payload.trackingEntryId = trackingEntryId;
+    }
+
+    const saveKey = buildTrackingEditKey(normalizedOrderLookup, isDraft ? 'new' : trackingEntryId);
+    setActionLoading(true);
+    state.savingTrackingKey = saveKey;
+    setStatus(`${isDraft ? 'Adding' : 'Saving'} tracking row for ${normalizeText(currentRow.orderNumber || currentRow.receiptNumber || currentRow.orderKey || normalizedOrderLookup)}...`);
+
+    try {
+        const updatedRow = await appClient.updateLbcTracking(normalizedOrderLookup, payload);
+        state.editingTrackingKey = '';
+        state.savingTrackingKey = '';
+        state.expandedOrderKeys.add(normalizedOrderLookup);
+        await loadRows({ keepStatus: true });
+        const orderLabel = normalizeText(updatedRow?.orderNumber || updatedRow?.receiptNumber || normalizedOrderLookup);
+        const nextStatus = normalizeDeliveryStatus(updatedRow?.deliveryStatus, deliveryStatus);
+        setStatus(`${isDraft ? 'Added' : 'Updated'} tracking ${trackingNumber} for ${orderLabel}. Overall status: ${nextStatus}.`);
+    } catch (error) {
+        console.error('Failed to save tracking entry:', error);
+        setStatus(error.message || 'Failed to save tracking row update.', true);
+    } finally {
+        state.savingTrackingKey = '';
+        setActionLoading(false);
+    }
 }
 
 function renderCollectionSummary() {
@@ -850,7 +1289,7 @@ function renderCollectionRows() {
     collectionTableBody.innerHTML = state.collectionItems.map((row) => {
         const orderLookup = resolveOrderLookup(row);
         const orderNumber = normalizeText(row.orderNumber || row.receiptNumber || row.orderKey || '-');
-        const trackingNumber = normalizeText(row.trackingNumber || '-');
+        const trackingNumber = trackingSummaryText(row) || '-';
         const collectionStatus = normalizeText(row.collectionStatus) || 'Pending';
         const encodedOrderLookup = encodeURIComponent(orderLookup);
         const confirmedBy = normalizeText(row.collectionConfirmedBy);
@@ -1015,125 +1454,6 @@ function formatAmount(value) {
     });
 }
 
-function startTrackingRowEdit(orderLookup = '') {
-    if (state.locked || state.loading) {
-        return;
-    }
-
-    const normalizedOrderLookup = normalizeText(orderLookup);
-    if (!normalizedOrderLookup) {
-        setStatus('Order number is missing for edit action.', true);
-        return;
-    }
-
-    const targetRow = state.items.find((item) => resolveOrderLookup(item) === normalizedOrderLookup);
-    if (targetRow && !canEditTrackingRow(targetRow)) {
-        setStatus(getLbcEditRestrictionMessage(targetRow.branch), true);
-        return;
-    }
-
-    state.editingOrderKey = normalizedOrderLookup;
-    state.savingOrderKey = '';
-    renderRows();
-}
-
-function cancelTrackingRowEdit() {
-    state.editingOrderKey = '';
-    state.savingOrderKey = '';
-    renderRows();
-}
-
-function normalizeDateMonitoredInput(value) {
-    const normalized = normalizeText(value);
-    if (!normalized) {
-        return '';
-    }
-
-    const parsed = new Date(normalized);
-    if (Number.isNaN(parsed.getTime())) {
-        return normalized;
-    }
-    return parsed.toISOString();
-}
-
-async function handleTrackingRowEditSave(orderLookup = '', rowElement = null) {
-    if (state.locked || state.loading) {
-        return;
-    }
-
-    const normalizedOrderLookup = normalizeText(orderLookup);
-    if (!normalizedOrderLookup) {
-        setStatus('Order number is missing for save action.', true);
-        return;
-    }
-
-    const currentRow = state.items.find((item) => resolveOrderLookup(item) === normalizedOrderLookup);
-    if (!currentRow) {
-        setStatus('Tracking row is no longer visible. Reload and try again.', true);
-        return;
-    }
-    if (!canEditTrackingRow(currentRow)) {
-        setStatus(getLbcEditRestrictionMessage(currentRow.branch), true);
-        return;
-    }
-
-    const editRow = rowElement instanceof Element
-        ? rowElement
-        : Array.from(trackingTableBody?.querySelectorAll('tr') || []).find(
-            (element) => decodeOrderLookup(element.getAttribute('data-order-key') || '') === normalizedOrderLookup
-        );
-    if (!(editRow instanceof Element)) {
-        setStatus('Unable to read editable row values.', true);
-        return;
-    }
-
-    const trackingInput = editRow.querySelector('input[data-field="tracking-number"]');
-    const amountInput = editRow.querySelector('input[data-field="amount-to-collect"]');
-    const statusInput = editRow.querySelector('select[data-field="delivery-status"]');
-    const dateMonitoredInput = editRow.querySelector('input[data-field="date-monitored"]');
-
-    const trackingNumber = normalizeText(trackingInput?.value).toUpperCase();
-    if (trackingNumber && !TRACKING_NUMBER_REGEX.test(trackingNumber)) {
-        setStatus('Tracking number must be alphanumeric and up to 12 characters.', true);
-        trackingInput?.focus();
-        return;
-    }
-
-    const parsedAmount = Number(amountInput?.value);
-    if (!Number.isFinite(parsedAmount) || parsedAmount < 0) {
-        setStatus('Amount to collect must be a valid non-negative number.', true);
-        amountInput?.focus();
-        return;
-    }
-
-    const deliveryStatus = normalizeDeliveryStatus(statusInput?.value, normalizeDeliveryStatus(currentRow.deliveryStatus, 'In Transit'));
-    const payload = {
-        trackingNumber,
-        amountToCollect: Number(parsedAmount.toFixed(2)),
-        deliveryStatus,
-        dateMonitored: normalizeDateMonitoredInput(dateMonitoredInput?.value)
-    };
-
-    setActionLoading(true);
-    state.savingOrderKey = normalizedOrderLookup;
-    setStatus(`Saving updates for ${normalizeText(currentRow.orderNumber || currentRow.receiptNumber || currentRow.orderKey || normalizedOrderLookup)}...`);
-
-    try {
-        const updatedRow = await appClient.updateLbcTracking(normalizedOrderLookup, payload);
-        state.editingOrderKey = '';
-        await loadRows({ keepStatus: true });
-        const orderLabel = normalizeText(updatedRow?.orderNumber || updatedRow?.receiptNumber || normalizedOrderLookup);
-        const nextStatus = normalizeDeliveryStatus(updatedRow?.deliveryStatus, deliveryStatus);
-        setStatus(`Updated ${orderLabel}: ${nextStatus}${trackingNumber ? ` / ${trackingNumber}` : ' / NO TRACKING'}.`);
-    } catch (error) {
-        console.error('Failed to update LBC tracking row:', error);
-        setStatus(error.message || 'Failed to save tracking row update.', true);
-    } finally {
-        state.savingOrderKey = '';
-        setActionLoading(false);
-    }
-}
-
 function canOwnerConfirmCollection() {
     const role = normalizeText(state.session?.role).toLowerCase();
     return role === 'head_admin' || role === 'company_admin' || role === 'super_admin';
@@ -1235,6 +1555,11 @@ async function handleSingleTrackingSave() {
         const targetRow = state.items.find((item) => resolveOrderLookup(item) === orderLookup);
         if (targetRow && !canEditTrackingRow(targetRow)) {
             setStatus(getLbcEditRestrictionMessage(targetRow.branch), true);
+            focusTrackingInput({ select: true });
+            return;
+        }
+        if (targetRow?.hasMultipleTrackingEntries) {
+            setStatus('This order already has multiple tracking rows. Open Details and use Add Tracking there.', true);
             focusTrackingInput({ select: true });
             return;
         }
@@ -1548,7 +1873,7 @@ function setActionLoading(isLoading) {
         button.disabled = disabled;
     });
 
-    document.querySelectorAll('button[data-action="edit-tracking-row"], button[data-action="save-tracking-row"], button[data-action="cancel-tracking-row"]').forEach((button) => {
+    document.querySelectorAll('button[data-action="toggle-tracking-details"], button[data-action="add-tracking-entry"], button[data-action="edit-tracking-entry"], button[data-action="delete-tracking-entry"], button[data-action="save-tracking-entry"], button[data-action="cancel-tracking-entry"]').forEach((button) => {
         button.disabled = disabled;
     });
     document.querySelectorAll('#trackingTableBody input[data-field], #trackingTableBody select[data-field]').forEach((field) => {

@@ -1001,7 +1001,8 @@ body.tenant-shell-chow .frame-loading-label {
   .dashboard-wrapper {
     min-height: 100vh;
     flex-direction: column;
-    padding: 12px;
+    padding: 10px;
+    gap: 10px;
   }
 
   .sidebar,
@@ -1011,7 +1012,8 @@ body.tenant-shell-chow .frame-loading-label {
   }
 
   .sidebar-shell {
-    padding: 16px 14px 14px;
+    gap: 10px;
+    padding: 14px 12px 12px;
   }
 
   .workspace-overview,
@@ -1020,8 +1022,98 @@ body.tenant-shell-chow .frame-loading-label {
     border-radius: 24px;
   }
 
+  .sidebar {
+    border-radius: 24px;
+  }
+
+  .sidebar .logo {
+    margin-bottom: 8px;
+    font-size: 20px;
+  }
+
+  .logo-mark {
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+  }
+
+  .workspace-overview {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    margin-bottom: 0;
+  }
+
+  .workspace-tag {
+    min-height: 28px;
+    padding: 0 10px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+  }
+
+  .workspace-name {
+    margin-top: 0;
+    font-size: 20px;
+  }
+
+  .workspace-copy {
+    margin-top: 0;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
   .workspace-meta {
-    grid-template-columns: 1fr;
+    margin-top: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .workspace-pill {
+    padding: 10px 12px;
+    border-radius: 16px;
+  }
+
+  .workspace-pill strong {
+    margin-top: 6px;
+    font-size: 13px;
+  }
+
+  .sidebar-nav-label,
+  .sidebar-footer {
+    display: none;
+  }
+
+  #groupNav,
+  #panelNav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    overflow: visible;
+    padding: 0;
+    flex: 0 0 auto;
+  }
+
+  #groupNav li,
+  #panelNav li {
+    width: 100%;
+    min-height: 42px;
+    margin-bottom: 0;
+    padding: 10px 12px;
+    border-radius: 16px;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.25;
+  }
+
+  .sidebar ul li.nav-section-label,
+  .sidebar ul li.nav-subitem::before,
+  .sidebar ul li.nav-subitem::after {
+    display: none;
+  }
+
+  .sidebar ul li.nav-subitem {
+    padding-left: 14px;
   }
 
   .workspace-hero {
@@ -1039,8 +1131,43 @@ body.tenant-shell-chow .frame-loading-label {
     justify-content: flex-start;
   }
 
+  .top-panel-nav {
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 20px;
+  }
+
+  .top-panel-title {
+    display: none;
+  }
+
+  .top-panel-items {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  .top-panel-button {
+    width: 100%;
+    min-height: 52px;
+    justify-content: center;
+    padding: 10px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.2;
+  }
+
+  .top-panel-button span {
+    overflow-wrap: anywhere;
+  }
+
   .frame-shell {
-    min-height: 72vh;
+    min-height: 68vh;
+    border-radius: 24px;
   }
 
   body.tenant-shell-chow .dashboard-wrapper {
@@ -1083,20 +1210,22 @@ body.tenant-shell-chow .frame-loading-label {
   }
 
   body.tenant-shell-chow #groupNav {
-    display: flex;
-    flex-wrap: nowrap;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    overflow-x: auto;
-    padding: 0 2px 2px;
+    overflow: visible;
+    padding: 0;
     flex: 0 0 auto;
   }
 
   body.tenant-shell-chow #groupNav li {
-    flex: 0 0 auto;
+    width: 100%;
     min-height: 42px;
     margin-bottom: 0;
-    padding: 10px 14px;
-    white-space: nowrap;
+    padding: 10px 12px;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
   }
 
   body.tenant-shell-chow .top-panel-nav {
@@ -1115,6 +1244,35 @@ body.tenant-shell-chow .frame-loading-label {
 }
 
 @media (max-width: 560px) {
+  .workspace-copy {
+    display: none;
+  }
+
+  .workspace-meta {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .workspace-pill {
+    padding: 9px 10px;
+  }
+
+  .workspace-pill span {
+    font-size: 10px;
+  }
+
+  .workspace-pill strong {
+    font-size: 12px;
+  }
+
+  .top-panel-button,
+  #groupNav li,
+  #panelNav li {
+    min-height: 48px;
+    padding: 8px 10px;
+    border-radius: 16px;
+    font-size: 11px;
+  }
+
   body.tenant-shell-chow .workspace-copy {
     display: none;
   }
@@ -1125,9 +1283,9 @@ body.tenant-shell-chow .frame-loading-label {
 
   body.tenant-shell-chow .top-panel-button,
   body.tenant-shell-chow #groupNav li {
-    min-height: 40px;
-    padding: 0 12px;
+    min-height: 48px;
+    padding: 8px 10px;
     border-radius: 16px;
-    font-size: 12px;
+    font-size: 11px;
   }
 }

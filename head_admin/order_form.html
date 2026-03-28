@@ -154,7 +154,37 @@
             <p class="eyebrow">Items</p>
             <h2 id="variantBuilderTitle">Variant Builder</h2>
           </div>
-          <button id="addItemRowBtn" type="button" class="secondary-btn"><i class="fa-solid fa-plus"></i> Add Item</button>
+        </div>
+
+        <div class="panel-action-dock">
+          <div class="panel-footer">
+            <div class="footer-summary">
+              <div>
+                <span class="footer-label">Grand Total</span>
+                <strong id="footerTotalValue">PHP 0.00</strong>
+              </div>
+              <div>
+                <span class="footer-label">Ready To Collect</span>
+                <strong id="footerCollectionValue">PHP 0.00</strong>
+              </div>
+            </div>
+            <div class="footer-actions">
+              <label class="footer-toggle" for="inventoryDeductToggle" title="Kapag naka-on, ibabawas ang quantity ng order sa inventory.">
+                <input id="inventoryDeductToggle" type="checkbox" checked>
+                <span>Ibawas sa inventory</span>
+              </label>
+              <button id="viewReceiptBtn" type="button" class="secondary-btn" hidden>View Receipt</button>
+              <button id="deleteOrderBtn" type="button" class="danger-btn" hidden>Delete Order</button>
+              <button id="newOrderBtn" type="button" class="secondary-btn" hidden>New Order</button>
+              <button id="resetOrderBtn" type="button" class="icon-danger-btn" title="Reset order">
+                <i class="fa-solid fa-rotate-left"></i>
+              </button>
+              <button id="submitOrderBtn" type="button" class="primary-btn">Create Order</button>
+            </div>
+          </div>
+
+          <div id="aiUsageBottomIndicator" class="ai-usage-indicator ai-usage-indicator-bottom">AI reads this month: -- / --</div>
+          <div id="statusText" class="status">Loading order form references...</div>
         </div>
 
         <div id="pendingClientAlert" class="client-pending-alert client-history-panel" hidden>
@@ -235,39 +265,18 @@
               </tbody>
             </table>
           </div>
-        </div>
-
-        <div class="panel-footer">
-          <div class="footer-summary">
-            <div>
-              <span class="footer-label">Grand Total</span>
-              <strong id="footerTotalValue">PHP 0.00</strong>
-            </div>
-            <div>
-              <span class="footer-label">Ready To Collect</span>
-              <strong id="footerCollectionValue">PHP 0.00</strong>
-            </div>
-          </div>
-          <div class="footer-actions">
-            <label class="footer-toggle" for="inventoryDeductToggle" title="Kapag naka-on, ibabawas ang quantity ng order sa inventory.">
-              <input id="inventoryDeductToggle" type="checkbox" checked>
-              <span>Ibawas sa inventory</span>
-            </label>
-            <button id="viewReceiptBtn" type="button" class="secondary-btn" hidden>View Receipt</button>
-            <button id="deleteOrderBtn" type="button" class="danger-btn" hidden>Delete Order</button>
-            <button id="newOrderBtn" type="button" class="secondary-btn" hidden>New Order</button>
-            <button id="resetOrderBtn" type="button" class="icon-danger-btn" title="Reset order">
-              <i class="fa-solid fa-rotate-left"></i>
-            </button>
-            <button id="submitOrderBtn" type="button" class="primary-btn">Create Order</button>
+          <div class="variant-builder-actions">
+            <button id="addItemRowBtn" type="button" class="secondary-btn"><i class="fa-solid fa-plus"></i> Add Item</button>
           </div>
         </div>
-
-        <div id="aiUsageBottomIndicator" class="ai-usage-indicator ai-usage-indicator-bottom">AI reads this month: -- / --</div>
-        <div id="statusText" class="status">Loading order form references...</div>
       </section>
     </div>
   </div>
+
+  <button id="backToTopBtn" type="button" class="back-to-top-btn" aria-label="Back to top">
+    <i class="fa-solid fa-arrow-up"></i>
+    <span>Back to Top</span>
+  </button>
 
   <div id="orderFormSetupModal" class="receipt-modal" hidden>
     <div class="receipt-dialog order-setup-dialog">
