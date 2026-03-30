@@ -2347,6 +2347,31 @@
                 code: String(code || '').trim()
             }
         }),
+        requestAccountDeletion: async ({ companyCode = '', email = '' } = {}) => request('/api/account/delete/request', {
+            method: 'POST',
+            body: {
+                companyCode: String(companyCode || '').trim(),
+                email: String(email || '').trim()
+            },
+            skipAuthRedirect: true
+        }),
+        confirmAccountDeletion: async ({ companyCode = '', email = '', code = '' } = {}) => {
+            const payload = await request('/api/account/delete/confirm', {
+                method: 'POST',
+                body: {
+                    companyCode: String(companyCode || '').trim(),
+                    email: String(email || '').trim(),
+                    code: String(code || '').trim()
+                },
+                skipAuthRedirect: true
+            });
+
+            if (payload?.deleted) {
+                clearStoredSession();
+            }
+
+            return payload;
+        },
         listSignupRequests: ({ status = 'open', filter = '', limit = 200 } = {}) => request(
             `/api/signup-requests?status=${encodeURIComponent(status)}&filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}`
         ),

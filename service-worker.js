@@ -1,4 +1,4 @@
-const STATIC_CACHE = 'attendance-static-v8';
+const STATIC_CACHE = 'attendance-static-v9';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -12,6 +12,9 @@ const STATIC_ASSETS = [
     '/shared/ai-assistant.js',
     '/shared/pwa.js',
     '/renderer/login.js',
+    '/renderer/account_delete.html',
+    '/renderer/account_delete.js',
+    '/account-delete.html',
     '/renderer/forgot_password.html',
     '/renderer/forgot_password.js'
 ];

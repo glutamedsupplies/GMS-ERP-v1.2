@@ -428,19 +428,23 @@ function run() {
         });
 
         const todayKey = store.getDateKey();
-        const previousDate = new Date(`${todayKey}T00:00:00`);
-        previousDate.setDate(previousDate.getDate() - 1);
-        const previousDateKey = `${previousDate.getFullYear()}-${String(previousDate.getMonth() + 1).padStart(2, '0')}-${String(previousDate.getDate()).padStart(2, '0')}`;
+        const [year, month] = todayKey.split('-').map((part) => Number(part));
+        const previousDateKey = store.getUserTimeCard('b_suspended_user', year, month)
+            .filter((row) => row.dateKey < todayKey && !row.isDayOff)
+            .sort((left, right) => right.dateKey.localeCompare(left.dateKey))[0]?.dateKey;
+
+        assert(previousDateKey, 'expected a prior working day in the current weekly time card');
 
         store.setDailyAttendanceStatus('b_suspended_user', 'Absent', previousDateKey);
         store.updateUser('b_suspended_user', {
             is_active: false
         });
 
+        const monthlyRows = store.getUserTimeCard('b_suspended_user', year, month);
+        const previousRow = monthlyRows.find((row) => row.dateKey === previousDateKey);
         const weeklyRows = store.getUserWeeklyTimeCard('b_suspended_user', todayKey);
-        const previousRow = weeklyRows.find((row) => row.dateKey === previousDateKey);
         const todayRow = weeklyRows.find((row) => row.dateKey === todayKey);
-        assert(previousRow, 'weekly time card should include the day before suspension');
+        assert(previousRow, 'monthly time card should include the day before suspension');
         assert(todayRow, 'weekly time card should include the suspension day');
         assert.strictEqual(previousRow.status, 'Absent', 'dates before suspension should keep their prior absent status');
         assert.strictEqual(todayRow.status, 'Suspended', 'suspension day should show Suspended');
@@ -466,6 +470,50 @@ function run() {
             () => store.setDailyAttendanceStatus('b_suspended_user', 'Absent'),
             /suspended/i,
             'manual attendance edit suspended account'
+        );
+    });
+
+    // Self-service account deletion should remove regular users and protect the sole company admin.
+    store.runWithTenantContextByCompany(companyBId, () => {
+        store.addUser({
+            id: 'b_delete_me',
+            username: 'b_delete_me',
+            name: 'B Delete Me',
+            password: 'Password123!',
+            role: 'employee'
+        });
+        store.setUserLoginEmail({
+            userId: 'b_delete_me',
+            email: 'delete.me@company-b.test',
+            verified: true
+        });
+
+        const deletionRequest = store.requestUserAccountDeletion({
+            userId: 'b_delete_me',
+            ttlMinutes: 15
+        });
+        assert.strictEqual(deletionRequest.email, 'delete.me@company-b.test', 'deletion request should target the verified email');
+
+        const deletionResult = store.confirmUserAccountDeletion({
+            userId: 'b_delete_me',
+            email: deletionRequest.email,
+            code: deletionRequest.code
+        });
+        assert.strictEqual(deletionResult.deleted, true, 'account deletion should confirm the removal');
+        assert.strictEqual(store.getUserById('b_delete_me'), null, 'deleted user should no longer be returned');
+
+        store.setUserLoginEmail({
+            userId: 'admin_b',
+            email: 'admin.b@company-b.test',
+            verified: true
+        });
+        expectThrows(
+            () => store.requestUserAccountDeletion({
+                userId: 'admin_b',
+                ttlMinutes: 15
+            }),
+            /Assign another active company admin/i,
+            'sole company admin self deletion request'
         );
     });
 

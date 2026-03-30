@@ -7,6 +7,7 @@ const profilePic = document.getElementById('profilePic');
 const statusText = document.getElementById('statusText');
 const fileInput = document.getElementById('fileInput');
 const saveBtn = document.getElementById('saveBtn');
+const deleteAccountBtn = document.getElementById('deleteAccountBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const loginEmailInput = document.getElementById('loginEmailInput');
 const loginEmailCodeInput = document.getElementById('loginEmailCodeInput');
@@ -57,6 +58,7 @@ async function initialize() {
     });
 
     saveBtn.addEventListener('click', saveSettings);
+    deleteAccountBtn?.addEventListener('click', openAccountDeletionPage);
     logoutBtn.addEventListener('click', logout);
     sendEmailCodeBtn?.addEventListener('click', requestEmailCode);
     verifyEmailCodeBtn?.addEventListener('click', verifyEmailCode);
@@ -142,6 +144,36 @@ async function saveSettings() {
 async function logout() {
     await appClient.clearSession();
     appClient.redirectToLogin?.();
+}
+
+function getPreferredDeletionEmail() {
+    if (connectionState.login_email_verified && connectionState.login_email) {
+        return connectionState.login_email;
+    }
+    if (connectionState.google_email_verified && connectionState.google_email) {
+        return connectionState.google_email;
+    }
+    return '';
+}
+
+function buildAccountDeletionUrl() {
+    const params = new URLSearchParams();
+    const companyCode = String(session?.companyCode || window.localStorage?.getItem('companyCode') || '').trim();
+    const email = getPreferredDeletionEmail();
+
+    if (companyCode) {
+        params.set('companyCode', companyCode);
+    }
+    if (email) {
+        params.set('email', email);
+    }
+
+    const query = params.toString();
+    return `/account-delete.html${query ? `?${query}` : ''}`;
+}
+
+function openAccountDeletionPage() {
+    window.location.assign(buildAccountDeletionUrl());
 }
 
 async function loadProfile() {

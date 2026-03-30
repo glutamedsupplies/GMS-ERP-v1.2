@@ -242,7 +242,7 @@
 
         .settings-action-row {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 8px;
         }
 
@@ -622,7 +622,8 @@
         }
 
         .save-btn,
-        .logout-btn {
+        .logout-btn,
+        .delete-btn {
             width: 100%;
             border: none;
             border-radius: 12px;
@@ -649,15 +650,26 @@
             border: 1px solid rgba(220, 38, 38, 0.26);
         }
 
+        .delete-btn {
+            height: 40px;
+            margin-top: 0;
+            background: linear-gradient(180deg, rgba(254, 226, 226, 0.98), rgba(254, 242, 242, 0.94));
+            color: #991b1b;
+            border: 1px solid rgba(220, 38, 38, 0.34);
+            box-shadow: 0 12px 24px rgba(220, 38, 38, 0.1);
+        }
+
         .save-btn:hover,
         .logout-btn:hover,
+        .delete-btn:hover,
         .secondary-btn:hover,
         .google-btn:hover {
             transform: translateY(-1px);
         }
 
         .save-btn:disabled,
-        .logout-btn:disabled {
+        .logout-btn:disabled,
+        .delete-btn:disabled {
             opacity: 0.7;
             cursor: wait;
             transform: none;
@@ -922,6 +934,7 @@
                 <div class="settings-actions">
                     <div class="settings-action-row">
                         <button class="save-btn" id="saveBtn" type="button">Save Changes</button>
+                        <button class="delete-btn" id="deleteAccountBtn" type="button">Delete Account</button>
                         <button class="logout-btn" id="logoutBtn" type="button">Log Out</button>
                     </div>
                     <div class="status-msg" id="statusText">Ready for changes.</div>
