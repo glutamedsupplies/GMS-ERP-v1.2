@@ -353,6 +353,70 @@ function run() {
         );
     });
 
+    // Company bulletin data stays tenant-scoped and appears in bootstrap feeds.
+    store.runWithTenantContextByCompany(companyAId, () => {
+        const todayKey = store.getDateKey();
+        const tomorrowDate = new Date(`${todayKey}T12:00:00`);
+        tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+        const tomorrowKey = `${tomorrowDate.getFullYear()}-${String(tomorrowDate.getMonth() + 1).padStart(2, '0')}-${String(tomorrowDate.getDate()).padStart(2, '0')}`;
+        const holidayBulletin = store.addCompanyHoliday({
+            start_date: '2030-12-24',
+            end_date: '2030-12-25',
+            name: 'Christmas Break',
+            type: 'regular_holiday',
+            note: 'Office closed.'
+        });
+        const eventBulletin = store.addCompanyHoliday({
+            start_date: todayKey,
+            end_date: tomorrowKey,
+            name: 'Annual Planning',
+            type: 'company_event',
+            note: 'Department leads should prepare updated targets.'
+        });
+
+        const newsBulletin = store.addCompanyHoliday({
+            start_date: todayKey,
+            end_date: todayKey,
+            name: 'Warehouse Meeting',
+            type: 'news_update',
+            time_label: '9:00 AM',
+            note: 'All employees should check the updated loading schedule.'
+        });
+
+        assert.strictEqual(holidayBulletin.holidays.length, 1, 'company bulletin should store the new holiday');
+        assert.strictEqual(holidayBulletin.holidays[0].start_date, '2030-12-24', 'company bulletin should store the holiday start date');
+        assert.strictEqual(holidayBulletin.holidays[0].end_date, '2030-12-25', 'company bulletin should store the holiday end date');
+        assert.strictEqual(holidayBulletin.upcomingHolidays[0].name, 'Christmas Break', 'upcoming holiday should include the saved holiday');
+        assert(
+            eventBulletin.todayItems.some((item) => item.name === 'Annual Planning'),
+            'today items should include range-based company events'
+        );
+        assert.strictEqual(newsBulletin.todayItems.length, 2, 'today items should include both the range event and date-based news update');
+        assert.strictEqual(newsBulletin.notificationItems[0].type, 'news_update', 'notification feed should prioritize today calendar news');
+        assert.strictEqual(newsBulletin.notificationItems[0].time_label, '9:00 AM', 'notification feed should include time labels');
+
+        const announcementBulletin = store.updateCompanyAnnouncement({
+            title: 'Holiday Schedule',
+            message: 'Office closes early before Christmas Day.',
+            starts_on: '2030-12-20',
+            ends_on: '2030-12-26'
+        });
+
+        assert.strictEqual(announcementBulletin.announcement.title, 'Holiday Schedule', 'announcement title should persist');
+        assert.strictEqual(announcementBulletin.announcement.is_scheduled, true, 'future announcement should be marked as scheduled');
+
+        const bootstrap = store.getTenantBootstrap('admin_a');
+        assert.strictEqual(bootstrap.companyBulletin.upcomingHolidays.length, 3, 'bootstrap should expose upcoming calendar items');
+        assert.strictEqual(bootstrap.companyBulletin.notificationItems[0].type, 'news_update', 'bootstrap should expose notification items');
+        assert.strictEqual(bootstrap.companyBulletin.announcement.title, 'Holiday Schedule', 'bootstrap should expose announcement data');
+    });
+
+    store.runWithTenantContextByCompany(companyBId, () => {
+        const bulletin = store.getCompanyBulletin();
+        assert.strictEqual(bulletin.holidays.length, 0, 'company B should not see company A holidays');
+        assert.strictEqual(Boolean(bulletin.activeAnnouncement), false, 'company B should not see company A announcement');
+    });
+
     // Suspended attendance accounts should stay visible in attendance views and reject attendance actions.
     store.runWithTenantContextByCompany(companyBId, () => {
         store.addUser({

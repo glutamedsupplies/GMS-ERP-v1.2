@@ -245,6 +245,9 @@
   min-height:44px;
   max-height:140px;
   resize:none;
+  overflow-y:hidden;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
   border-radius:12px;
   border:1px solid rgba(255,255,255,0.12);
   background:rgba(255,255,255,0.05);
@@ -253,6 +256,10 @@
   font-size:13px;
   line-height:1.45;
   font-family:inherit;
+}
+.gms-ai-textarea::-webkit-scrollbar{
+  width:0;
+  height:0;
 }
 .gms-ai-send{
   border:none;
@@ -307,7 +314,9 @@
             return;
         }
         textarea.style.height = 'auto';
-        textarea.style.height = `${Math.min(textarea.scrollHeight, 140)}px`;
+        const nextHeight = Math.min(textarea.scrollHeight, 140);
+        textarea.style.height = `${nextHeight}px`;
+        textarea.style.overflowY = textarea.scrollHeight > 140 ? 'auto' : 'hidden';
     }
 
     function addMessage(role, text) {

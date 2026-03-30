@@ -272,6 +272,47 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
+  .panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .summary-card {
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid #dbe8e0;
+    background: linear-gradient(180deg, #fcfffd 0%, #f2f8f4 100%);
+  }
+  .summary-card span,
+  .summary-card strong,
+  .summary-card small {
+    display: block;
+  }
+  .summary-card span {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .summary-card strong {
+    margin-top: 8px;
+    font-size: 22px;
+    line-height: 1.08;
+  }
+  .summary-card small {
+    margin-top: 8px;
+    color: var(--muted);
+    font-weight: 700;
+    line-height: 1.5;
+  }
   .table-shell {
     overflow: auto;
     border: 1px solid var(--line);
@@ -474,9 +515,19 @@
         <small>Inventory rows with quantity still on hand.</small>
       </article>
       <article class="metric-card slow">
-        <span>Slow Movers</span>
+        <span>Unsold Products</span>
         <strong id="slowMoverValue">0</strong>
-        <small>Items with no sales or weak movement versus current stock.</small>
+        <small>Product rows with stock still on hand in the selected branch scope.</small>
+      </article>
+      <article class="metric-card stock">
+        <span>Remaining Qty</span>
+        <strong id="unsoldQtyValue">0</strong>
+        <small>Total quantity still on hand for product rows.</small>
+      </article>
+      <article class="metric-card slow">
+        <span>Remaining Value</span>
+        <strong id="unsoldValueValue">PHP 0.00</strong>
+        <small>Estimated value based on current Product Pricing amount.</small>
       </article>
       <article class="metric-card expired">
         <span>Expired</span>
@@ -524,10 +575,20 @@
       <article class="panel">
         <div class="panel-header">
           <div>
-            <h2>Hindi Mabenta</h2>
-            <p class="section-copy">Items with stock on hand but weak or zero movement versus the selected sales period.</p>
+            <h2>Unsold Products</h2>
+            <p class="section-copy">Product stock na may natitira pa sa branch. Kita rito ang remaining quantity, nabenta sa selected period, at estimated remaining value.</p>
           </div>
-          <div class="panel-meta"><i class="fa-solid fa-box-open"></i> Slow Movers</div>
+          <div class="panel-actions">
+            <div class="panel-meta"><i class="fa-solid fa-box-open"></i> On Hand by Branch</div>
+            <button id="copyUnsoldReportBtn" type="button" class="secondary-btn" disabled>Copy Report</button>
+          </div>
+        </div>
+        <div id="slowMoverSummary" class="summary-grid">
+          <div class="summary-card">
+            <span>Loading</span>
+            <strong>0</strong>
+            <small>Preparing unsold product summary.</small>
+          </div>
         </div>
         <div class="table-shell">
           <table>
@@ -535,8 +596,10 @@
               <tr>
                 <th>Item</th>
                 <th>Branch</th>
-                <th>On Hand</th>
+                <th>Remaining Qty</th>
                 <th>Qty Sold</th>
+                <th>Unit Price</th>
+                <th>Remaining Value</th>
                 <th>Signal</th>
               </tr>
             </thead>

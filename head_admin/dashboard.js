@@ -94,6 +94,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         settings: 'settings.html',
         users: 'users.html',
         branches: 'branches.html',
+        company_bulletin: 'company_bulletin.html',
         company_profile: 'company_profile.html',
         invoice_template: 'invoice_template.html'
     };
@@ -118,6 +119,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         settings: [],
         users: [],
         branches: [],
+        company_bulletin: [],
         company_profile: [],
         invoice_template: ['invoicing']
     };
@@ -166,6 +168,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 'employees',
                 'users',
                 'branches',
+                'company_bulletin',
                 'company_profile',
                 'invoice_template',
                 'settings'
@@ -201,6 +204,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         settings: 'Adjust workspace settings and account preferences.',
         users: 'Control user access, feature permissions, and account setup.',
         branches: 'Manage branch structure, availability, and tenant branch data.',
+        company_bulletin: 'Set holidays, date-based news, and company events that appear in employee notifications.',
         company_profile: 'Customize tenant branding, logo, and company profile details.',
         invoice_template: 'Maintain invoice template visuals and output settings.'
     };

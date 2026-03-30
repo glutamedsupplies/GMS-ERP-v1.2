@@ -87,6 +87,13 @@ async function refreshState() {
             return;
         }
 
+        if (String(record.status || '').toLowerCase() === 'suspended') {
+            timeInBtn.disabled = true;
+            timeOutBtn.disabled = true;
+            setStatusMessage('Your attendance account is suspended.', true);
+            return;
+        }
+
         if (record.timeIn && !record.timeOut) {
             timeInBtn.disabled = true;
             timeOutBtn.disabled = false;

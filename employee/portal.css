@@ -71,6 +71,10 @@ body.employee-page {
   overflow-x: hidden;
 }
 
+body.employee-page.is-modal-open {
+  overflow: hidden;
+}
+
 body.employee-page::before,
 body.employee-page::after {
   content: "";
@@ -415,6 +419,688 @@ textarea:focus-visible {
 
 .card-grid > * {
   min-width: 0;
+}
+
+.updates-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.78fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.company-updates-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.company-updates-modal[hidden] {
+  display: none !important;
+}
+
+.company-updates-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(15, 23, 42, 0.56);
+  cursor: pointer;
+}
+
+.company-updates-modal-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(1180px, 100%);
+  max-height: min(90vh, 860px);
+  overflow: auto;
+  padding: 24px;
+  border-radius: 30px;
+  border: 1px solid var(--tenant-surface-border);
+  background:
+    radial-gradient(circle at top right, rgba(var(--tenant-primary-rgb), 0.16) 0%, transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 247, 255, 0.92));
+  box-shadow:
+    0 32px 80px rgba(15, 23, 42, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.company-updates-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.company-updates-modal-eyebrow {
+  color: var(--tenant-primary-strong);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.company-updates-modal-title {
+  margin: 8px 0 0;
+  font-family: "Sora", "Segoe UI", sans-serif;
+  font-size: clamp(26px, 4vw, 34px);
+  line-height: 1.12;
+  color: var(--tenant-surface-text-strong);
+}
+
+.company-updates-modal-close {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--tenant-surface-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--tenant-surface-text-strong);
+  cursor: pointer;
+}
+
+.company-updates-modal-layout {
+  margin-top: 6px;
+}
+
+.updates-sidebar {
+  display: grid;
+  gap: 18px;
+}
+
+.bulletin-card {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  padding: 22px;
+  border-radius: 28px;
+  border: 1px solid var(--tenant-surface-border);
+  background: var(--tenant-surface-card);
+  box-shadow:
+    0 24px 52px rgba(var(--tenant-primary-rgb), 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(20px) saturate(1.08);
+}
+
+.bulletin-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 82% 12%, rgba(var(--tenant-primary-rgb), 0.18) 0%, transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 46%);
+  pointer-events: none;
+}
+
+.bulletin-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.bulletin-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.bulletin-icon {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(var(--tenant-primary-rgb), 0.14);
+  background: var(--tenant-surface-icon);
+  color: var(--tenant-surface-text-strong);
+  box-shadow: 0 14px 28px rgba(var(--tenant-primary-rgb), 0.08);
+}
+
+.bulletin-icon i {
+  font-size: 22px;
+}
+
+.bulletin-title {
+  margin: 0;
+  font-family: "Sora", "Segoe UI", sans-serif;
+  font-size: 20px;
+  color: var(--tenant-surface-text-strong);
+}
+
+.bulletin-copy {
+  margin: 6px 0 0;
+  color: var(--tenant-surface-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.bulletin-highlight {
+  display: block;
+  margin-top: 18px;
+  font-family: "Sora", "Segoe UI", sans-serif;
+  font-size: clamp(22px, 3vw, 28px);
+  line-height: 1.2;
+  color: var(--tenant-surface-text-strong);
+}
+
+.bulletin-body {
+  margin: 12px 0 0;
+  color: var(--tenant-surface-text);
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.bulletin-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--tenant-primary-rgb), 0.14);
+  background: var(--tenant-surface-pill);
+  color: var(--tenant-surface-text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.bulletin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.bulletin-link-button {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid rgba(var(--tenant-primary-rgb), 0.16);
+  border-radius: 999px;
+  background: rgba(var(--tenant-primary-rgb), 0.08);
+  color: var(--tenant-primary-strong);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.bulletin-link-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(var(--tenant-primary-rgb), 0.28);
+  background: rgba(var(--tenant-primary-rgb), 0.14);
+}
+
+.holiday-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.holiday-item {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid var(--tenant-surface-border);
+  background: var(--tenant-surface-card-soft);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 16px 32px rgba(var(--tenant-primary-rgb), 0.1);
+}
+
+.holiday-date {
+  color: var(--tenant-primary-strong);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.holiday-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--tenant-surface-text-strong);
+}
+
+.holiday-note {
+  margin: 0;
+  color: var(--tenant-surface-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.holiday-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(var(--tenant-primary-rgb), 0.1);
+  color: var(--tenant-surface-text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.holiday-type.is-special {
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+
+.holiday-type.is-event {
+  background: rgba(15, 118, 110, 0.14);
+  color: var(--tenant-success);
+}
+
+.holiday-type.is-news {
+  background: rgba(236, 72, 153, 0.14);
+  color: #db2777;
+}
+
+.holiday-empty {
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px dashed var(--tenant-surface-border);
+  background: rgba(255, 255, 255, 0.48);
+  color: var(--tenant-surface-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.company-calendar-card {
+  padding: 24px;
+}
+
+.company-calendar-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.company-calendar-tip {
+  flex-shrink: 0;
+}
+
+.company-calendar-board {
+  display: grid;
+  gap: 18px;
+  align-items: start;
+}
+
+.company-calendar-shell {
+  padding: 20px;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top right, rgba(211, 140, 234, 0.16) 0%, transparent 28%),
+    linear-gradient(180deg, #26272e, #1c1d22);
+  color: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 26px 60px rgba(10, 10, 14, 0.3);
+}
+
+.company-calendar-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.company-calendar-title {
+  margin: 0;
+  font-family: "Sora", "Segoe UI", sans-serif;
+  font-size: 30px;
+  color: #ffffff;
+}
+
+.company-calendar-copy {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.company-calendar-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.company-calendar-nav button {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+}
+
+.company-calendar-nav button:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.company-calendar-weekdays,
+.company-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.company-calendar-weekdays {
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.company-calendar-weekdays span {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  font-weight: 700;
+  padding-bottom: 6px;
+}
+
+.company-calendar-grid {
+  gap: 6px;
+}
+
+.company-calendar-day {
+  position: relative;
+  min-height: 54px;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.94);
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 6px;
+  padding: 8px 0 6px;
+  cursor: pointer;
+}
+
+.company-calendar-day:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+.company-calendar-day.is-outside {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.company-calendar-day.is-today .company-calendar-day-number {
+  box-shadow: inset 0 0 0 1px rgba(114, 214, 165, 0.92);
+}
+
+.company-calendar-day.is-selected .company-calendar-day-number {
+  background: #d38cea;
+  color: #24152c;
+  box-shadow: 0 10px 24px rgba(211, 140, 234, 0.34);
+}
+
+.company-calendar-day-number {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.company-calendar-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 6px;
+}
+
+.company-calendar-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.company-calendar-dot.is-holiday {
+  background: #f59e0b;
+}
+
+.company-calendar-dot.is-event {
+  background: #60a5fa;
+}
+
+.company-calendar-dot.is-news {
+  background: #f472b6;
+}
+
+.company-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.company-calendar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notice-list {
+  display: grid;
+  gap: 10px;
+}
+
+.notice-button {
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--tenant-surface-border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 12px 24px rgba(var(--tenant-primary-rgb), 0.08);
+  text-align: left;
+  cursor: pointer;
+}
+
+.notice-button:hover {
+  transform: translateY(-2px);
+  border-color: var(--tenant-surface-border-strong);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 18px 32px rgba(var(--tenant-primary-rgb), 0.12);
+}
+
+.notice-button-meta {
+  color: var(--tenant-primary-strong);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.notice-button-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.notice-button-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--tenant-surface-text-strong);
+}
+
+.company-calendar-empty {
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px dashed var(--tenant-surface-border);
+  background: rgba(255, 255, 255, 0.48);
+  color: var(--tenant-surface-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.announcement-card .bulletin-highlight {
+  max-width: 16ch;
+}
+
+.announcement-card .bulletin-body {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.upcoming-calendar-card .holiday-list {
+  margin-top: 18px;
+}
+
+.updates-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.updates-modal[hidden] {
+  display: none !important;
+}
+
+.updates-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(15, 23, 42, 0.56);
+  cursor: pointer;
+}
+
+.updates-modal-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 620px);
+  max-height: min(88vh, 760px);
+  overflow: auto;
+  padding: 24px;
+  border-radius: 28px;
+  border: 1px solid var(--tenant-surface-border);
+  background:
+    radial-gradient(circle at top right, rgba(var(--tenant-primary-rgb), 0.16) 0%, transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 247, 255, 0.92));
+  box-shadow:
+    0 32px 80px rgba(15, 23, 42, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.updates-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.updates-modal-eyebrow {
+  color: var(--tenant-primary-strong);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.updates-modal-title {
+  margin: 8px 0 0;
+  font-family: "Sora", "Segoe UI", sans-serif;
+  font-size: clamp(24px, 4vw, 32px);
+  line-height: 1.15;
+  color: var(--tenant-surface-text-strong);
+}
+
+.updates-modal-close {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--tenant-surface-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--tenant-surface-text-strong);
+  cursor: pointer;
+}
+
+.updates-modal-meta {
+  margin-top: 14px;
+  color: var(--tenant-primary-strong);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.updates-modal-type {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 14px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(var(--tenant-primary-rgb), 0.12);
+  color: var(--tenant-surface-text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.updates-modal-type[hidden] {
+  display: none !important;
+}
+
+.updates-modal-type.is-special,
+.updates-modal-type.is-regular {
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+
+.updates-modal-type.is-event {
+  background: rgba(15, 118, 110, 0.14);
+  color: var(--tenant-success);
+}
+
+.updates-modal-type.is-news,
+.updates-modal-type.is-announcement {
+  background: rgba(236, 72, 153, 0.14);
+  color: #db2777;
+}
+
+.updates-modal-body {
+  margin-top: 18px;
+  color: var(--tenant-surface-text);
+  font-size: 15px;
+  line-height: 1.8;
+  white-space: pre-wrap;
 }
 
 .action-card {
@@ -1246,7 +1932,8 @@ tbody tr:hover td {
 @media (max-width: 980px) {
   .hero-grid,
   .stats-grid,
-  .action-row {
+  .action-row,
+  .updates-layout {
     grid-template-columns: 1fr;
   }
 
@@ -1267,14 +1954,19 @@ tbody tr:hover td {
   .table-card,
   .attendance-card,
   .settings-card,
-  .section-surface {
+  .section-surface,
+  .company-calendar-card {
     border-radius: 24px;
     padding: 20px;
   }
 
   .page-topbar,
   .section-head,
-  .table-head {
+  .table-head,
+  .company-updates-modal-head,
+  .company-calendar-card-head,
+  .updates-modal-head,
+  .notice-button-row {
     flex-direction: column;
     align-items: stretch;
   }
@@ -1286,6 +1978,35 @@ tbody tr:hover td {
 
   .card-grid {
     grid-template-columns: 1fr;
+  }
+
+  .company-calendar-shell {
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .company-calendar-day-number {
+    width: 38px;
+    height: 38px;
+    font-size: 16px;
+  }
+
+  .updates-modal {
+    padding: 14px;
+  }
+
+  .updates-modal-dialog {
+    padding: 20px;
+    border-radius: 24px;
+  }
+
+  .company-updates-modal {
+    padding: 14px;
+  }
+
+  .company-updates-modal-dialog {
+    padding: 20px;
+    border-radius: 24px;
   }
 
   .action-card {

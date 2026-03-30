@@ -48,6 +48,98 @@
       </div>
     </section>
 
+    <div id="companyUpdatesPanel" class="company-updates-modal" hidden>
+      <button type="button" class="company-updates-modal-backdrop" data-company-updates-close="true" aria-label="Close company updates"></button>
+      <div class="company-updates-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="companyUpdatesPanelTitle">
+        <div class="company-updates-modal-head">
+          <div>
+            <div class="company-updates-modal-eyebrow">Company Workspace</div>
+            <h2 id="companyUpdatesPanelTitle" class="company-updates-modal-title">Company Updates</h2>
+          </div>
+          <button id="companyUpdatesCloseBtn" type="button" class="company-updates-modal-close" aria-label="Close company updates">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="updates-layout company-updates-modal-layout">
+          <article class="bulletin-card company-calendar-card">
+            <div class="company-calendar-card-head">
+              <div class="bulletin-head">
+                <span class="bulletin-icon"><i class="fa-regular fa-calendar-days"></i></span>
+                <div>
+                  <h3 class="bulletin-title">Company Calendar</h3>
+                  <p class="bulletin-copy">Holiday, event, at news schedule ng company sa isang mas malinaw na workspace view.</p>
+                </div>
+              </div>
+              <span class="surface-note company-calendar-tip"><i class="fa-regular fa-hand-pointer"></i> Click a day to view details</span>
+            </div>
+
+            <div class="company-calendar-board">
+              <section class="company-calendar-shell">
+                <div class="company-calendar-header">
+                  <div>
+                    <h3 id="employeeCalendarMonthLabel" class="company-calendar-title">Calendar</h3>
+                    <p class="company-calendar-copy">Highlighted ang holiday, event, at company news na sinet ng admin.</p>
+                  </div>
+                  <div class="company-calendar-nav">
+                    <button id="employeeCalendarPrevBtn" type="button" aria-label="Previous month"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button id="employeeCalendarTodayBtn" type="button" aria-label="Current month"><i class="fa-solid fa-circle"></i></button>
+                    <button id="employeeCalendarNextBtn" type="button" aria-label="Next month"><i class="fa-solid fa-chevron-right"></i></button>
+                  </div>
+                </div>
+
+                <div class="company-calendar-weekdays">
+                  <span>Su</span>
+                  <span>Mo</span>
+                  <span>Tu</span>
+                  <span>We</span>
+                  <span>Th</span>
+                  <span>Fr</span>
+                  <span>Sa</span>
+                </div>
+                <div id="employeeCalendarGrid" class="company-calendar-grid"></div>
+
+                <div class="company-calendar-legend">
+                  <span><i class="company-calendar-dot is-holiday"></i> Holiday</span>
+                  <span><i class="company-calendar-dot is-event"></i> Event</span>
+                  <span><i class="company-calendar-dot is-news"></i> News</span>
+                </div>
+              </section>
+            </div>
+          </article>
+
+          <div class="updates-sidebar">
+            <article class="bulletin-card announcement-card">
+              <div class="bulletin-head">
+                <span class="bulletin-icon"><i class="fa-solid fa-bullhorn"></i></span>
+                <div>
+                  <h3 class="bulletin-title">Announcement</h3>
+                  <p class="bulletin-copy">Visible across employee pages while active.</p>
+                </div>
+              </div>
+              <strong id="announcementTitle" class="bulletin-highlight">No active announcement yet.</strong>
+              <p id="announcementMessage" class="bulletin-body">Company-wide notices from head admin will appear here.</p>
+              <div id="announcementMeta" class="bulletin-meta">Waiting for company notice</div>
+              <div class="bulletin-actions">
+                <button id="announcementOpenBtn" type="button" class="bulletin-link-button" hidden>Open Full Announcement</button>
+              </div>
+            </article>
+
+            <article class="bulletin-card upcoming-calendar-card">
+              <div class="bulletin-head">
+                <span class="bulletin-icon"><i class="fa-regular fa-calendar-days"></i></span>
+                <div>
+                  <h3 class="bulletin-title">Upcoming Company Calendar</h3>
+                  <p class="bulletin-copy">Quick list ng susunod na holidays, events, at news posts.</p>
+                </div>
+              </div>
+              <div id="holidayList" class="holiday-list"></div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <section class="section-block">
       <div class="section-head">
         <div>
@@ -58,6 +150,16 @@
       </div>
 
       <div class="card-grid">
+        <button type="button" class="action-card" id="companyUpdatesCardBtn">
+          <span class="action-icon"><i class="fa-solid fa-bullhorn"></i></span>
+          <h3 class="action-title">Company Updates</h3>
+          <p id="bulletinSummary" class="action-copy">Open holidays, events, and company announcements only when you need them.</p>
+          <div class="action-footer">
+            <span>Open company board</span>
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          </div>
+        </button>
+
         <button type="button" class="action-card" id="timeCardBtn">
           <span class="action-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
           <h3 class="action-title">Time Card</h3>
@@ -102,6 +204,24 @@
       <div id="featureCards" class="card-grid"></div>
     </section>
   </main>
+
+  <div id="updatesModal" class="updates-modal" hidden>
+    <button type="button" class="updates-modal-backdrop" data-modal-close="true" aria-label="Close details"></button>
+    <div class="updates-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="updatesModalTitle">
+      <div class="updates-modal-head">
+        <div>
+          <div id="updatesModalEyebrow" class="updates-modal-eyebrow">Details</div>
+          <h3 id="updatesModalTitle" class="updates-modal-title">Company Update</h3>
+        </div>
+        <button id="updatesModalCloseBtn" type="button" class="updates-modal-close" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div id="updatesModalMeta" class="updates-modal-meta"></div>
+      <div id="updatesModalType" class="updates-modal-type" hidden></div>
+      <div id="updatesModalBody" class="updates-modal-body"></div>
+    </div>
+  </div>
 
   <script src="../shared/app-client.js"></script>
   <script src="employee_dashboard.js"></script>

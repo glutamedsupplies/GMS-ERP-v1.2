@@ -15,6 +15,7 @@
     const DEFAULT_PRIMARY_COLOR = '#2575fc';
     const BRAND_THEME_STORAGE_KEY = 'appBrandThemeV1';
     const SUPPORT_SESSION_BANNER_ID = 'appSupportSessionBanner';
+    const COMPANY_ANNOUNCEMENT_BANNER_ID = 'appCompanyAnnouncementBanner';
     const REQUEST_CACHE_STORAGE_PREFIX = 'appRequestCacheV1';
     const CURRENT_SESSION_CACHE_KEY = 'current-session';
     const inFlightRequestCache = new Map();
@@ -936,6 +937,7 @@
 
     function clearStoredSession() {
         clearSupportSessionBanner();
+        clearEmployeeAnnouncementBanner();
         SESSION_KEYS.forEach((key) => {
             localStorage.removeItem(key);
         });
@@ -1144,6 +1146,288 @@
         return mountBanner();
     }
 
+    function formatDisplayDate(value, fallback = '') {
+        const text = String(value || '').trim();
+        if (!text) {
+            return fallback;
+        }
+
+        const parsed = /^\d{4}-\d{2}-\d{2}$/.test(text)
+            ? new Date(`${text}T12:00:00`)
+            : new Date(text);
+        if (Number.isNaN(parsed.getTime())) {
+            return text;
+        }
+
+        return parsed.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    }
+
+    function normalizeCompanyAnnouncement(value = null) {
+        if (!value || typeof value !== 'object') {
+            return null;
+        }
+
+        const title = String(value.title || value.subject || '').trim();
+        const message = String(value.message || value.body || '').trim();
+        if (!title && !message) {
+            return null;
+        }
+
+        return {
+            title: title || 'Company Announcement',
+            message,
+            startsOn: String(value.starts_on || value.startsOn || '').trim(),
+            endsOn: String(value.ends_on || value.endsOn || '').trim(),
+            windowLabel: String(value.window_label || value.windowLabel || '').trim(),
+            isActive: value.is_active !== false
+        };
+    }
+
+    function normalizeCompanyCalendarItem(value = null) {
+        if (!value || typeof value !== 'object') {
+            return null;
+        }
+
+        const name = String(value.name || value.title || '').trim();
+        if (!name) {
+            return null;
+        }
+
+        const startDate = String(value.start_date || value.startDate || value.date || '').trim();
+        const endDate = String(value.end_date || value.endDate || value.date || value.start_date || value.startDate || '').trim() || startDate;
+
+        return {
+            id: String(value.id || '').trim(),
+            name,
+            note: String(value.note || value.description || '').trim(),
+            date: startDate,
+            startDate,
+            endDate,
+            timeLabel: String(value.time_label || value.timeLabel || value.when || '').trim(),
+            type: String(value.type || '').trim().toLowerCase()
+        };
+    }
+
+    function getCompanyCalendarItemStartDate(item = {}) {
+        return String(item?.startDate || item?.start_date || item?.date || '').trim();
+    }
+
+    function getCompanyCalendarItemEndDate(item = {}) {
+        return String(item?.endDate || item?.end_date || item?.date || item?.startDate || item?.start_date || '').trim();
+    }
+
+    function doesCompanyCalendarItemCoverDate(item = {}, dateKey = '') {
+        const normalizedDate = String(dateKey || '').trim();
+        const startDate = getCompanyCalendarItemStartDate(item);
+        const endDate = getCompanyCalendarItemEndDate(item) || startDate;
+        if (!normalizedDate || !startDate) {
+            return false;
+        }
+
+        return normalizedDate >= startDate && normalizedDate <= endDate;
+    }
+
+    function getCompanyCalendarItemTypeLabel(type = '') {
+        const normalized = String(type || '').trim().toLowerCase();
+        if (normalized === 'news_update') {
+            return 'Company News';
+        }
+        if (normalized === 'company_event') {
+            return 'Company Event';
+        }
+        if (normalized === 'special_holiday') {
+            return 'Special Holiday';
+        }
+        return 'Regular Holiday';
+    }
+
+    function getCompanyAnnouncementWindowLabel(announcement = null) {
+        if (!announcement) {
+            return '';
+        }
+
+        if (announcement.windowLabel) {
+            return announcement.windowLabel;
+        }
+
+        if (announcement.startsOn && announcement.endsOn) {
+            return `${formatDisplayDate(announcement.startsOn)} to ${formatDisplayDate(announcement.endsOn)}`;
+        }
+
+        if (announcement.startsOn) {
+            return `Starts ${formatDisplayDate(announcement.startsOn)}`;
+        }
+
+        if (announcement.endsOn) {
+            return `Until ${formatDisplayDate(announcement.endsOn)}`;
+        }
+
+        return 'Visible until cleared';
+    }
+
+    function getCompanyCalendarItemWindowLabel(item = null) {
+        if (!item) {
+            return '';
+        }
+
+        const startDate = getCompanyCalendarItemStartDate(item);
+        const endDate = getCompanyCalendarItemEndDate(item) || startDate;
+        const dateLabel = startDate && endDate && startDate !== endDate
+            ? `${formatDisplayDate(startDate)} to ${formatDisplayDate(endDate)}`
+            : formatDisplayDate(startDate || endDate);
+
+        return [
+            dateLabel,
+            item.timeLabel
+        ].filter(Boolean).join(' | ');
+    }
+
+    function clearEmployeeAnnouncementBanner() {
+        const existing = document.getElementById(COMPANY_ANNOUNCEMENT_BANNER_ID);
+        if (existing) {
+            existing.remove();
+        }
+    }
+
+    function syncEmployeeAnnouncementBanner(value = null) {
+        if (getPathMetadata().section !== 'employee') {
+            clearEmployeeAnnouncementBanner();
+            return null;
+        }
+
+        const source = (value && typeof value === 'object') ? value : {};
+        const notificationItems = Array.isArray(source.notificationItems)
+            ? source.notificationItems.map((item) => normalizeCompanyCalendarItem(item)).filter(Boolean)
+            : [];
+        const activeAnnouncement = normalizeCompanyAnnouncement(
+            source.activeAnnouncement
+            || (source.announcement?.is_active ? source.announcement : null)
+        );
+
+        if (!notificationItems.length && (!activeAnnouncement || !activeAnnouncement.isActive)) {
+            clearEmployeeAnnouncementBanner();
+            return null;
+        }
+
+        const mountBanner = () => {
+            if (!(document.body instanceof HTMLElement)) {
+                return null;
+            }
+
+            let banner = document.getElementById(COMPANY_ANNOUNCEMENT_BANNER_ID);
+            if (!(banner instanceof HTMLElement)) {
+                banner = document.createElement('section');
+                banner.id = COMPANY_ANNOUNCEMENT_BANNER_ID;
+                banner.dataset.appCompanyAnnouncement = 'true';
+                Object.assign(banner.style, {
+                    margin: '14px auto 0',
+                    width: 'min(calc(100% - 28px), 1180px)',
+                    padding: '16px 18px',
+                    borderRadius: '24px',
+                    border: '1px solid rgba(37, 99, 235, 0.18)',
+                    background: 'linear-gradient(135deg, rgba(239, 246, 255, 0.96), rgba(219, 234, 254, 0.9))',
+                    boxShadow: '0 20px 38px rgba(37, 99, 235, 0.12)',
+                    color: '#0f172a',
+                    display: 'grid',
+                    gap: '8px',
+                    position: 'relative',
+                    zIndex: '2'
+                });
+
+                const label = document.createElement('div');
+                label.dataset.role = 'announcement-label';
+                label.style.fontSize = '12px';
+                label.style.fontWeight = '800';
+                label.style.letterSpacing = '0.12em';
+                label.style.textTransform = 'uppercase';
+                label.style.color = '#1d4ed8';
+
+                const title = document.createElement('strong');
+                title.dataset.role = 'announcement-title';
+                title.style.fontSize = '18px';
+                title.style.lineHeight = '1.35';
+
+                const message = document.createElement('div');
+                message.dataset.role = 'announcement-message';
+                message.style.fontSize = '14px';
+                message.style.lineHeight = '1.65';
+                message.style.color = '#1e293b';
+                message.style.whiteSpace = 'pre-wrap';
+
+                const meta = document.createElement('div');
+                meta.dataset.role = 'announcement-meta';
+                meta.style.fontSize = '12px';
+                meta.style.fontWeight = '700';
+                meta.style.color = '#475569';
+
+                banner.appendChild(label);
+                banner.appendChild(title);
+                banner.appendChild(message);
+                banner.appendChild(meta);
+                document.body.prepend(banner);
+            }
+
+            const label = banner.querySelector('[data-role="announcement-label"]');
+            const title = banner.querySelector('[data-role="announcement-title"]');
+            const message = banner.querySelector('[data-role="announcement-message"]');
+            const meta = banner.querySelector('[data-role="announcement-meta"]');
+            const primaryCalendarItem = notificationItems[0] || null;
+            const hasCalendarNotification = Boolean(primaryCalendarItem);
+            const todayKey = String(source.todayKey || source.today_key || '').trim();
+            const isTodayCalendarItem = hasCalendarNotification
+                ? doesCompanyCalendarItemCoverDate(primaryCalendarItem, todayKey)
+                : false;
+
+            if (label instanceof HTMLElement) {
+                label.textContent = hasCalendarNotification
+                    ? (isTodayCalendarItem
+                        ? 'Today in Company Calendar'
+                        : 'Upcoming Company Notice')
+                    : 'Company Announcement';
+            }
+            if (title instanceof HTMLElement) {
+                title.textContent = hasCalendarNotification
+                    ? primaryCalendarItem.name
+                    : activeAnnouncement.title;
+            }
+            if (message instanceof HTMLElement) {
+                if (hasCalendarNotification) {
+                    const extraCount = Math.max(0, notificationItems.length - 1);
+                    const details = [
+                        primaryCalendarItem.note,
+                        extraCount > 0 ? `${extraCount} more item${extraCount === 1 ? '' : 's'} on the company calendar.` : ''
+                    ].filter(Boolean);
+                    message.textContent = details.join(' ') || 'Check the company calendar for details.';
+                } else {
+                    message.textContent = activeAnnouncement.message;
+                }
+            }
+            if (meta instanceof HTMLElement) {
+                if (hasCalendarNotification) {
+                    meta.textContent = [
+                        getCompanyCalendarItemWindowLabel(primaryCalendarItem),
+                        getCompanyCalendarItemTypeLabel(primaryCalendarItem.type)
+                    ].filter(Boolean).join(' | ');
+                } else {
+                    meta.textContent = getCompanyAnnouncementWindowLabel(activeAnnouncement);
+                }
+            }
+
+            return banner;
+        };
+
+        if (document.readyState === 'loading' || !(document.body instanceof HTMLElement)) {
+            document.addEventListener('DOMContentLoaded', mountBanner, { once: true });
+            return null;
+        }
+
+        return mountBanner();
+    }
+
     function buildAvatarUrl(name, background = '4e73df', color = 'ffffff') {
         return `https://ui-avatars.com/api/?background=${background}&color=${color}&name=${encodeURIComponent(name || 'User')}`;
     }
@@ -1258,6 +1542,7 @@
                 '/head_admin/employees.html',
                 '/head_admin/users.html',
                 '/head_admin/branches.html',
+                '/head_admin/company_bulletin.html',
                 '/head_admin/company_profile.html',
                 '/head_admin/invoice_template.html',
                 '/head_admin/timecards.html',
@@ -1305,6 +1590,7 @@
     function getBootstrapWithSessionCache() {
         return requestWithSessionCache('bootstrap', 30000, () => request('/api/bootstrap')).then((payload) => {
             syncSupportSessionBanner(payload?.support_session || payload?.user?.support_session || payload?.user?.supportSession || null);
+            syncEmployeeAnnouncementBanner(payload?.companyBulletin || payload?.company_bulletin || null);
             return payload;
         });
     }
@@ -2084,6 +2370,45 @@
             body: payload
         }).then((result) => {
             invalidateReferenceCaches(['bootstrap']);
+            return result;
+        }),
+        getCompanyBulletin: () => requestWithSessionCache('company-bulletin', 30000, () => request('/api/company/bulletin')).then((result) => {
+            syncEmployeeAnnouncementBanner(result);
+            return result;
+        }),
+        updateCompanyAnnouncement: (payload) => request('/api/company/bulletin/announcement', {
+            method: 'PUT',
+            body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['bootstrap', 'company-bulletin']);
+            syncEmployeeAnnouncementBanner(result);
+            return result;
+        }),
+        clearCompanyAnnouncement: () => request('/api/company/bulletin/announcement', {
+            method: 'DELETE'
+        }).then((result) => {
+            invalidateReferenceCaches(['bootstrap', 'company-bulletin']);
+            syncEmployeeAnnouncementBanner(result);
+            return result;
+        }),
+        createCompanyHoliday: (payload) => request('/api/company/bulletin/holidays', {
+            method: 'POST',
+            body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['bootstrap', 'company-bulletin']);
+            return result;
+        }),
+        updateCompanyHoliday: (holidayId, payload) => request(`/api/company/bulletin/holidays/${encodeURIComponent(holidayId)}`, {
+            method: 'PUT',
+            body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['bootstrap', 'company-bulletin']);
+            return result;
+        }),
+        deleteCompanyHoliday: (holidayId) => request(`/api/company/bulletin/holidays/${encodeURIComponent(holidayId)}`, {
+            method: 'DELETE'
+        }).then((result) => {
+            invalidateReferenceCaches(['bootstrap', 'company-bulletin']);
             return result;
         }),
         getCompanyWorkspaceConfig: () => request('/api/company/workspace-config'),

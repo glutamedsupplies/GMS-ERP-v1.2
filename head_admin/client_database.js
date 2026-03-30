@@ -4,10 +4,12 @@ const searchInput = document.getElementById('searchInput');
 const refreshBtn = document.getElementById('refreshBtn');
 const openModalBtn = document.getElementById('openModalBtn');
 const closeModalBtn = document.getElementById('closeModalBtn');
+const modalCloseIconBtn = document.getElementById('modalCloseIconBtn');
 const saveClientBtn = document.getElementById('saveClientBtn');
 const clientModal = document.getElementById('clientModal');
 const clientModalTitle = document.getElementById('clientModalTitle');
 const clientModalDescription = document.getElementById('clientModalDescription');
+const clientModalStatus = document.getElementById('clientModalStatus');
 const clientNameInput = document.getElementById('clientNameInput');
 const contactNumberInput = document.getElementById('contactNumberInput');
 const clientTableBody = document.getElementById('clientTableBody');
@@ -22,7 +24,8 @@ const state = {
     clients: [],
     filter: '',
     editingClientId: null,
-    loadRequestToken: 0
+    loadRequestToken: 0,
+    lastFocusedElement: null
 };
 
 initialize();
@@ -47,6 +50,7 @@ async function initialize() {
     });
     openModalBtn.addEventListener('click', openModal);
     closeModalBtn.addEventListener('click', closeModal);
+    modalCloseIconBtn.addEventListener('click', closeModal);
     saveClientBtn.addEventListener('click', saveClient);
 
     contactNumberInput.addEventListener('input', () => {
@@ -59,6 +63,7 @@ async function initialize() {
         }
     });
     clientTableBody.addEventListener('click', handleClientRowClick);
+    window.addEventListener('keydown', handleWindowKeydown);
 
     [clientNameInput, contactNumberInput].forEach((input) => {
         input.addEventListener('keydown', (event) => {
@@ -183,6 +188,7 @@ function updateSummary(filter, rows) {
 }
 
 function openModal(client = null) {
+    state.lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     state.editingClientId = client?.id ?? null;
     clientNameInput.value = client?.name || '';
     contactNumberInput.value = formatContactNumber(client?.contact_number || '');
@@ -191,13 +197,29 @@ function openModal(client = null) {
         ? 'I-update ang napiling client record. Kapag binago ang number sa existing number ng ibang client, magpapakita ito ng malinaw na validation error.'
         : 'Mag-add ng bagong client record. Kapag existing na ang number, io-update ang existing record sa halip na mag-error.';
     saveClientBtn.textContent = state.editingClientId ? 'Update Client' : 'Save Client';
-    clientModal.style.display = 'flex';
+    setModalStatus('', false);
+    clientModal.classList.add('is-open');
+    clientModal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
     clientNameInput.focus();
 }
 
 function closeModal() {
     state.editingClientId = null;
-    clientModal.style.display = 'none';
+    setModalStatus('', false);
+    clientModal.classList.remove('is-open');
+    clientModal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+
+    if (state.lastFocusedElement && typeof state.lastFocusedElement.focus === 'function') {
+        try {
+            state.lastFocusedElement.focus();
+        } catch (_error) {
+            // Ignore focus restore failures when the trigger is no longer in the DOM.
+        }
+    }
+
+    state.lastFocusedElement = null;
 }
 
 async function saveClient() {
@@ -206,11 +228,14 @@ async function saveClient() {
     const isEditing = state.editingClientId !== null && state.editingClientId !== undefined;
 
     if (!name || !contactNumber) {
+        setModalStatus('Client name and contact number are required.', true);
         setStatus('Client name and contact number are required.', true);
+        (!name ? clientNameInput : contactNumberInput).focus();
         return;
     }
 
     saveClientBtn.disabled = true;
+    setModalStatus(isEditing ? 'Updating client record...' : 'Saving client record...', false);
     setStatus(isEditing ? 'Updating client record...' : 'Saving client record...', false);
 
     try {
@@ -223,6 +248,7 @@ async function saveClient() {
         setStatus(`Client "${name}" ${action} successfully.`, false);
     } catch (error) {
         console.error('Failed to add client:', error);
+        setModalStatus(error.message || 'Unable to save client record.', true);
         setStatus(error.message || 'Unable to save client record.', true);
     } finally {
         saveClientBtn.disabled = false;
@@ -345,6 +371,22 @@ function formatCreatedAt(value) {
 function setStatus(message, isError) {
     statusText.textContent = message;
     statusText.classList.toggle('error', Boolean(isError));
+}
+
+function setModalStatus(message, isError) {
+    if (!clientModalStatus) {
+        return;
+    }
+
+    clientModalStatus.textContent = message;
+    clientModalStatus.hidden = !message;
+    clientModalStatus.classList.toggle('error', Boolean(isError));
+}
+
+function handleWindowKeydown(event) {
+    if (event.key === 'Escape' && clientModal.classList.contains('is-open')) {
+        closeModal();
+    }
 }
 
 function debounce(callback, delay) {
