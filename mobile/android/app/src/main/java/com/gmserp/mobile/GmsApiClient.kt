@@ -18,7 +18,7 @@ class GmsApiClient(
             path = "/api/public-branding?companyCode=${encode(companyCode.trim())}",
             method = "GET",
             includeCookies = false
-        )
+        ) as? JSONObject ?: JSONObject()
         parseBranding(payload)
     }
 
