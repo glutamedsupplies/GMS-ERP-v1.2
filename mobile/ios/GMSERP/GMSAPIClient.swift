@@ -95,44 +95,6 @@ final class GMSAPIClient {
         )
     }
 
-    func requestAccountDeletion(companyCode: String, email: String) async throws -> DeletionRequestResult {
-        let payload = try await request(
-            path: "/api/account/delete/request",
-            method: "POST",
-            body: [
-                "companyCode": companyCode.trimmingCharacters(in: .whitespacesAndNewlines),
-                "email": email.trimmingCharacters(in: .whitespacesAndNewlines)
-            ]
-        ) ?? [:]
-
-        return DeletionRequestResult(
-            email: payload["email"] as? String ?? "",
-            companyCode: payload["companyCode"] as? String ?? ""
-        )
-    }
-
-    func confirmAccountDeletion(companyCode: String, email: String, code: String) async throws -> DeletionConfirmResult {
-        let payload = try await request(
-            path: "/api/account/delete/confirm",
-            method: "POST",
-            body: [
-                "companyCode": companyCode.trimmingCharacters(in: .whitespacesAndNewlines),
-                "email": email.trimmingCharacters(in: .whitespacesAndNewlines),
-                "code": code.trimmingCharacters(in: .whitespacesAndNewlines)
-            ]
-        ) ?? [:]
-
-        if payload["deleted"] as? Bool == true {
-            sessionStore.clearSession()
-        }
-
-        return DeletionConfirmResult(
-            deleted: payload["deleted"] as? Bool ?? false,
-            companyCode: payload["companyCode"] as? String ?? "",
-            loginURL: payload["loginUrl"] as? String ?? ""
-        )
-    }
-
     func logout() async {
         _ = try? await request(path: "/api/logout", method: "POST", body: [:])
         sessionStore.clearSession()

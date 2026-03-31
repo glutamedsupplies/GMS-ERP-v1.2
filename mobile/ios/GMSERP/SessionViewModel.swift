@@ -55,30 +55,6 @@ final class SessionViewModel: ObservableObject {
         uiState.password = value
     }
 
-    func updateDeletionEmail(_ value: String) {
-        uiState.deletionEmail = value.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    func updateDeletionCode(_ value: String) {
-        uiState.deletionCode = value.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    func openDeleteAccount() {
-        uiState.screen = .deleteAccount
-        if uiState.deletionEmail.isEmpty, uiState.username.contains("@") {
-            uiState.deletionEmail = uiState.username
-        }
-        uiState.errorMessage = ""
-        uiState.infoMessage = ""
-    }
-
-    func closeDeleteAccount() {
-        uiState.screen = uiState.user == nil ? .login : .workspace
-        uiState.deletionCode = ""
-        uiState.errorMessage = ""
-        uiState.infoMessage = ""
-    }
-
     func submitLogin() async {
         guard !uiState.companyCode.isEmpty else {
             uiState.errorMessage = "Company ID is required."
@@ -117,9 +93,6 @@ final class SessionViewModel: ObservableObject {
             uiState.bootstrap = bootstrap
             uiState.branding = bootstrap.branding
             uiState.password = ""
-            if uiState.deletionEmail.isEmpty, uiState.username.contains("@") {
-                uiState.deletionEmail = uiState.username
-            }
             uiState.errorMessage = ""
             uiState.infoMessage = "Signed in successfully."
             uiState.lastUpdatedAtLabel = timestampLabel()
@@ -140,75 +113,6 @@ final class SessionViewModel: ObservableObject {
         uiState.infoMessage = "Wire Sign in with Apple into Firebase on iOS, then exchange the ID token through /api/login/firebase."
     }
 
-    func requestDeletionCode() async {
-        guard !uiState.companyCode.isEmpty else {
-            uiState.errorMessage = "Company ID is required."
-            uiState.infoMessage = ""
-            return
-        }
-        guard !uiState.deletionEmail.isEmpty else {
-            uiState.errorMessage = "Verified email is required."
-            uiState.infoMessage = ""
-            return
-        }
-
-        uiState.isBusy = true
-        uiState.errorMessage = ""
-        uiState.infoMessage = "Sending deletion code..."
-
-        do {
-            let result = try await apiClient.requestAccountDeletion(
-                companyCode: uiState.companyCode,
-                email: uiState.deletionEmail
-            )
-            uiState.isBusy = false
-            if !result.email.isEmpty {
-                uiState.deletionEmail = result.email
-            }
-            uiState.infoMessage = "Deletion code sent to \(uiState.deletionEmail)."
-            uiState.errorMessage = ""
-        } catch {
-            uiState.isBusy = false
-            uiState.errorMessage = error.localizedDescription
-            uiState.infoMessage = ""
-        }
-    }
-
-    func confirmDeletion() async {
-        guard !uiState.deletionCode.isEmpty else {
-            uiState.errorMessage = "Verification code is required."
-            uiState.infoMessage = ""
-            return
-        }
-
-        uiState.isBusy = true
-        uiState.errorMessage = ""
-        uiState.infoMessage = "Deleting account..."
-
-        do {
-            _ = try await apiClient.confirmAccountDeletion(
-                companyCode: uiState.companyCode,
-                email: uiState.deletionEmail,
-                code: uiState.deletionCode
-            )
-
-            sessionStore.clearSession()
-            uiState.isBusy = false
-            uiState.screen = .login
-            uiState.user = nil
-            uiState.bootstrap = nil
-            uiState.password = ""
-            uiState.deletionCode = ""
-            uiState.errorMessage = ""
-            uiState.infoMessage = "Account deleted."
-            uiState.lastUpdatedAtLabel = timestampLabel()
-        } catch {
-            uiState.isBusy = false
-            uiState.errorMessage = error.localizedDescription
-            uiState.infoMessage = ""
-        }
-    }
-
     func logout() async {
         uiState.isBusy = true
         uiState.errorMessage = ""
@@ -220,7 +124,6 @@ final class SessionViewModel: ObservableObject {
         uiState.user = nil
         uiState.bootstrap = nil
         uiState.password = ""
-        uiState.deletionCode = ""
         uiState.errorMessage = ""
         uiState.infoMessage = "Signed out."
         uiState.lastUpdatedAtLabel = timestampLabel()
@@ -244,9 +147,6 @@ final class SessionViewModel: ObservableObject {
                 uiState.bootstrap = bootstrap
                 uiState.branding = bootstrap.branding
                 uiState.companyCode = user.companyCode.isEmpty ? uiState.companyCode : user.companyCode
-                if uiState.deletionEmail.isEmpty, uiState.username.contains("@") {
-                    uiState.deletionEmail = uiState.username
-                }
                 uiState.errorMessage = ""
                 uiState.infoMessage = "Session restored."
                 uiState.lastUpdatedAtLabel = timestampLabel()

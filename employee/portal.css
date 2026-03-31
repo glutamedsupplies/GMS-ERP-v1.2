@@ -75,6 +75,10 @@ body.employee-page.is-modal-open {
   overflow: hidden;
 }
 
+body.employee-page.is-modal-open #appCompanyAnnouncementBanner {
+  display: none !important;
+}
+
 body.employee-page::before,
 body.employee-page::after {
   content: "";

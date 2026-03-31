@@ -6,7 +6,7 @@ Current scope:
 
 - Kotlin + Jetpack Compose app shell
 - Cookie-backed API client using the existing GMS HTTPS backend
-- Login, session restore, logout, branding preview, and account deletion
+- Login, session restore, logout, and branding preview
 - Role-aware workspace placeholder for employee, head admin, and super admin flows
 
 Next steps:

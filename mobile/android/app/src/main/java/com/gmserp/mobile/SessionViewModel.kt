@@ -59,34 +59,6 @@ class SessionViewModel(
         uiState.value = uiState.value.copy(password = value)
     }
 
-    fun updateDeletionEmail(value: String) {
-        uiState.value = uiState.value.copy(deletionEmail = value.trim())
-    }
-
-    fun updateDeletionCode(value: String) {
-        uiState.value = uiState.value.copy(deletionCode = value.trim())
-    }
-
-    fun openDeleteAccount() {
-        uiState.value = uiState.value.copy(
-            screen = MobileScreen.DELETE_ACCOUNT,
-            deletionEmail = uiState.value.deletionEmail.ifBlank {
-                uiState.value.username.takeIf { it.contains('@') }.orEmpty()
-            },
-            errorMessage = "",
-            infoMessage = ""
-        )
-    }
-
-    fun closeDeleteAccount() {
-        uiState.value = uiState.value.copy(
-            screen = if (uiState.value.user == null) MobileScreen.LOGIN else MobileScreen.WORKSPACE,
-            deletionCode = "",
-            errorMessage = "",
-            infoMessage = ""
-        )
-    }
-
     fun submitLogin() {
         val current = uiState.value
         if (current.companyCode.isBlank()) {
@@ -121,9 +93,6 @@ class SessionViewModel(
                     bootstrap = bootstrap,
                     branding = bootstrap.branding,
                     password = "",
-                    deletionEmail = uiState.value.deletionEmail.ifBlank {
-                        uiState.value.username.takeIf { it.contains('@') }.orEmpty()
-                    },
                     errorMessage = "",
                     infoMessage = "Signed in successfully.",
                     lastUpdatedAtLabel = buildTimestampLabel()
@@ -152,79 +121,6 @@ class SessionViewModel(
         )
     }
 
-    fun requestDeletionCode() {
-        val current = uiState.value
-        if (current.companyCode.isBlank()) {
-            uiState.value = current.copy(errorMessage = "Company ID is required.", infoMessage = "")
-            return
-        }
-        if (current.deletionEmail.isBlank()) {
-            uiState.value = current.copy(errorMessage = "Verified email is required.", infoMessage = "")
-            return
-        }
-
-        viewModelScope.launch {
-            uiState.value = uiState.value.copy(isBusy = true, errorMessage = "", infoMessage = "Sending deletion code...")
-            runCatching {
-                apiClient.requestAccountDeletion(
-                    companyCode = uiState.value.companyCode,
-                    email = uiState.value.deletionEmail
-                )
-            }.onSuccess { result ->
-                uiState.value = uiState.value.copy(
-                    isBusy = false,
-                    deletionEmail = result.email.ifBlank { uiState.value.deletionEmail },
-                    errorMessage = "",
-                    infoMessage = "Deletion code sent to ${result.email.ifBlank { uiState.value.deletionEmail }}."
-                )
-            }.onFailure { error ->
-                uiState.value = uiState.value.copy(
-                    isBusy = false,
-                    errorMessage = error.message ?: "Unable to send deletion code.",
-                    infoMessage = ""
-                )
-            }
-        }
-    }
-
-    fun confirmDeletion() {
-        val current = uiState.value
-        if (current.deletionCode.isBlank()) {
-            uiState.value = current.copy(errorMessage = "Verification code is required.", infoMessage = "")
-            return
-        }
-
-        viewModelScope.launch {
-            uiState.value = uiState.value.copy(isBusy = true, errorMessage = "", infoMessage = "Deleting account...")
-            runCatching {
-                apiClient.confirmAccountDeletion(
-                    companyCode = uiState.value.companyCode,
-                    email = uiState.value.deletionEmail,
-                    code = uiState.value.deletionCode
-                )
-            }.onSuccess {
-                sessionStore.clearSession()
-                uiState.value = uiState.value.copy(
-                    isBusy = false,
-                    screen = MobileScreen.LOGIN,
-                    user = null,
-                    bootstrap = null,
-                    deletionCode = "",
-                    password = "",
-                    errorMessage = "",
-                    infoMessage = "Account deleted. Sign in again only if you still have access.",
-                    lastUpdatedAtLabel = buildTimestampLabel()
-                )
-            }.onFailure { error ->
-                uiState.value = uiState.value.copy(
-                    isBusy = false,
-                    errorMessage = error.message ?: "Unable to delete account.",
-                    infoMessage = ""
-                )
-            }
-        }
-    }
-
     fun logout() {
         viewModelScope.launch {
             uiState.value = uiState.value.copy(isBusy = true, errorMessage = "", infoMessage = "Signing out...")
@@ -238,7 +134,6 @@ class SessionViewModel(
                     user = null,
                     bootstrap = null,
                     password = "",
-                    deletionCode = "",
                     errorMessage = "",
                     infoMessage = "Signed out.",
                     lastUpdatedAtLabel = buildTimestampLabel()
@@ -288,9 +183,6 @@ class SessionViewModel(
                     bootstrap = bootstrap,
                     branding = bootstrap.branding,
                     companyCode = user.companyCode.ifBlank { uiState.value.companyCode },
-                    deletionEmail = uiState.value.deletionEmail.ifBlank {
-                        uiState.value.username.takeIf { it.contains('@') }.orEmpty()
-                    },
                     errorMessage = "",
                     infoMessage = "Session restored.",
                     lastUpdatedAtLabel = buildTimestampLabel()

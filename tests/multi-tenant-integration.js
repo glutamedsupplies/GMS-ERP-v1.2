@@ -473,50 +473,6 @@ function run() {
         );
     });
 
-    // Self-service account deletion should remove regular users and protect the sole company admin.
-    store.runWithTenantContextByCompany(companyBId, () => {
-        store.addUser({
-            id: 'b_delete_me',
-            username: 'b_delete_me',
-            name: 'B Delete Me',
-            password: 'Password123!',
-            role: 'employee'
-        });
-        store.setUserLoginEmail({
-            userId: 'b_delete_me',
-            email: 'delete.me@company-b.test',
-            verified: true
-        });
-
-        const deletionRequest = store.requestUserAccountDeletion({
-            userId: 'b_delete_me',
-            ttlMinutes: 15
-        });
-        assert.strictEqual(deletionRequest.email, 'delete.me@company-b.test', 'deletion request should target the verified email');
-
-        const deletionResult = store.confirmUserAccountDeletion({
-            userId: 'b_delete_me',
-            email: deletionRequest.email,
-            code: deletionRequest.code
-        });
-        assert.strictEqual(deletionResult.deleted, true, 'account deletion should confirm the removal');
-        assert.strictEqual(store.getUserById('b_delete_me'), null, 'deleted user should no longer be returned');
-
-        store.setUserLoginEmail({
-            userId: 'admin_b',
-            email: 'admin.b@company-b.test',
-            verified: true
-        });
-        expectThrows(
-            () => store.requestUserAccountDeletion({
-                userId: 'admin_b',
-                ttlMinutes: 15
-            }),
-            /Assign another active company admin/i,
-            'sole company admin self deletion request'
-        );
-    });
-
     // Custom domain must be ignored if add-on inactive.
     const unresolved = store.getCompanyByCodeOrHost('', 'erp.company-a.example');
     assert(

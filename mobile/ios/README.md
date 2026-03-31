@@ -6,7 +6,7 @@ Current scope:
 
 - SwiftUI app shell for phone and tablet layouts
 - Existing backend contract reuse through `https://gmserp.com`
-- Company-aware login, session restore, runtime branding, logout, and account deletion
+- Company-aware login, session restore, runtime branding, and logout
 - Placeholder handoff points for Firebase Google login and Sign in with Apple token exchange
 
 Next steps:

@@ -82,44 +82,6 @@ class GmsApiClient(
         )
     }
 
-    suspend fun requestAccountDeletion(companyCode: String, email: String): DeletionRequestResult =
-        withContext(Dispatchers.IO) {
-            val payload = request(
-                path = "/api/account/delete/request",
-                method = "POST",
-                body = JSONObject()
-                    .put("companyCode", companyCode.trim())
-                    .put("email", email.trim())
-            ) as JSONObject
-
-            DeletionRequestResult(
-                email = payload.optString("email"),
-                companyCode = payload.optString("companyCode")
-            )
-        }
-
-    suspend fun confirmAccountDeletion(companyCode: String, email: String, code: String): DeletionConfirmResult =
-        withContext(Dispatchers.IO) {
-            val payload = request(
-                path = "/api/account/delete/confirm",
-                method = "POST",
-                body = JSONObject()
-                    .put("companyCode", companyCode.trim())
-                    .put("email", email.trim())
-                    .put("code", code.trim())
-            ) as JSONObject
-
-            if (payload.optBoolean("deleted")) {
-                sessionStore.clearSession()
-            }
-
-            DeletionConfirmResult(
-                deleted = payload.optBoolean("deleted"),
-                companyCode = payload.optString("companyCode"),
-                loginUrl = payload.optString("loginUrl")
-            )
-        }
-
     suspend fun logout() = withContext(Dispatchers.IO) {
         try {
             request(path = "/api/logout", method = "POST", body = JSONObject())

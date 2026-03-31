@@ -4,6 +4,8 @@ const timecardTableBody = document.getElementById('timecardTableBody');
 const employeeNameTitle = document.getElementById('employeeNameTitle');
 const weekDateInput = document.getElementById('weekDate');
 const weekRangeLabel = document.getElementById('weekRangeLabel');
+const DAILY_TARGET_HOURS = 8;
+const OVERTIME_THRESHOLD_HOURS = 1;
 
 let selectedEmployee = null;
 let serverDateKey = formatDateKey(new Date());
@@ -135,24 +137,31 @@ async function renderTimecard(employee) {
         timecardTableBody.innerHTML = '';
 
         if (!normalizedRows.length) {
-            timecardTableBody.innerHTML = '<tr><td colspan="5" class="empty-row">No logs found for this week.</td></tr>';
+            timecardTableBody.innerHTML = '<tr><td colspan="6" class="empty-row">No logs found for this week.</td></tr>';
             return;
         }
 
         normalizedRows.forEach((row) => {
+            const workHoursState = getWorkHoursState(row);
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td data-label="Date">${appClient.escapeHtml(row.displayDate)}</td>
                 <td data-label="Day">${appClient.escapeHtml(row.dayLabel)}</td>
                 <td data-label="Time In">${appClient.escapeHtml(appClient.formatDisplayTime(row.timeIn))}</td>
                 <td data-label="Time Out">${appClient.escapeHtml(appClient.formatDisplayTime(row.timeOut))}</td>
+                <td data-label="Work Hours" class="hours-cell">
+                    <div class="hours-stack">
+                        <span class="hours-value">${appClient.escapeHtml(workHoursState.valueLabel)}</span>
+                        <span class="hours-target ${workHoursState.tone}">${appClient.escapeHtml(workHoursState.targetLabel)}</span>
+                    </div>
+                </td>
                 <td data-label="Status" class="${statusClass(row.status)}">${appClient.escapeHtml(row.status)}</td>
             `;
             timecardTableBody.appendChild(tr);
         });
     } catch (error) {
         console.error('Failed to render employee time card:', error);
-        timecardTableBody.innerHTML = `<tr><td colspan="5" class="empty-row is-error">${appClient.escapeHtml(error.message)}</td></tr>`;
+        timecardTableBody.innerHTML = `<tr><td colspan="6" class="empty-row is-error">${appClient.escapeHtml(error.message)}</td></tr>`;
     }
 }
 
@@ -228,6 +237,63 @@ function formatShortDate(value) {
         day: 'numeric',
         year: 'numeric'
     });
+}
+
+function getWorkHoursState(row) {
+    const workedHours = parseWorkedHours(row?.workedHours);
+    const valueLabel = `${workedHours.toFixed(2)} hrs`;
+    const normalizedStatus = String(row?.status || '').trim().toLowerCase();
+    const hasTimeIn = Boolean(String(row?.timeIn || '').trim());
+    const hasTimeOut = Boolean(String(row?.timeOut || '').trim());
+
+    if (normalizedStatus === 'day off') {
+        return { valueLabel, targetLabel: 'Not scheduled', tone: 'neutral' };
+    }
+
+    if (normalizedStatus === 'suspended') {
+        return { valueLabel, targetLabel: 'Suspended', tone: 'neutral' };
+    }
+
+    if (normalizedStatus === 'excuse') {
+        return { valueLabel, targetLabel: 'Excused', tone: 'neutral' };
+    }
+
+    if (hasTimeIn && !hasTimeOut) {
+        return { valueLabel, targetLabel: 'In progress', tone: 'progress' };
+    }
+
+    if (normalizedStatus === 'absent') {
+        return { valueLabel, targetLabel: 'Absent', tone: 'missing' };
+    }
+
+    const overtimeHours = workedHours - DAILY_TARGET_HOURS;
+    if (overtimeHours >= OVERTIME_THRESHOLD_HOURS) {
+        return {
+            valueLabel,
+            targetLabel: `Overtime ${overtimeHours.toFixed(2)}h`,
+            tone: 'overtime'
+        };
+    }
+
+    if (workedHours >= DAILY_TARGET_HOURS) {
+        return { valueLabel, targetLabel: 'Met 8h target', tone: 'met' };
+    }
+
+    const shortHours = Math.max(DAILY_TARGET_HOURS - workedHours, 0);
+    const tone = !hasTimeIn && !hasTimeOut && normalizedStatus === 'absent'
+        ? 'missing'
+        : 'short';
+
+    return {
+        valueLabel,
+        targetLabel: `Short ${shortHours.toFixed(2)}h`,
+        tone
+    };
+}
+
+function parseWorkedHours(value) {
+    const parsed = Number.parseFloat(String(value ?? '').trim());
+    return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function statusClass(status) {

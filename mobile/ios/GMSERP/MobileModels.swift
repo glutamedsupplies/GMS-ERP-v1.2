@@ -36,22 +36,10 @@ struct BootstrapPayload: Equatable {
     var moduleNames: [String] = []
 }
 
-struct DeletionRequestResult: Equatable {
-    var email: String = ""
-    var companyCode: String = ""
-}
-
-struct DeletionConfirmResult: Equatable {
-    var deleted: Bool = false
-    var companyCode: String = ""
-    var loginURL: String = ""
-}
-
 enum MobileScreen {
     case splash
     case login
     case workspace
-    case deleteAccount
 }
 
 struct SessionUIState: Equatable {
@@ -62,8 +50,6 @@ struct SessionUIState: Equatable {
     var companyCode: String = ""
     var username: String = ""
     var password: String = ""
-    var deletionEmail: String = ""
-    var deletionCode: String = ""
     var isBusy: Bool = false
     var errorMessage: String = ""
     var infoMessage: String = ""

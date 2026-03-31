@@ -36,22 +36,10 @@ data class BootstrapPayload(
     val moduleNames: List<String> = emptyList()
 )
 
-data class DeletionRequestResult(
-    val email: String = "",
-    val companyCode: String = ""
-)
-
-data class DeletionConfirmResult(
-    val deleted: Boolean = false,
-    val companyCode: String = "",
-    val loginUrl: String = ""
-)
-
 enum class MobileScreen {
     SPLASH,
     LOGIN,
-    WORKSPACE,
-    DELETE_ACCOUNT
+    WORKSPACE
 }
 
 data class SessionUiState(
@@ -62,8 +50,6 @@ data class SessionUiState(
     val companyCode: String = "",
     val username: String = "",
     val password: String = "",
-    val deletionEmail: String = "",
-    val deletionCode: String = "",
     val isBusy: Boolean = false,
     val errorMessage: String = "",
     val infoMessage: String = "",

@@ -20,10 +20,6 @@ struct ContentView: View {
                 AdaptiveShell(branding: state.branding) {
                     WorkspaceView(viewModel: viewModel, state: state)
                 }
-            case .deleteAccount:
-                AdaptiveShell(branding: state.branding) {
-                    DeleteAccountView(viewModel: viewModel, state: state)
-                }
             }
         }
         .tint(Color(hex: state.branding.primaryColorHex))
@@ -97,7 +93,7 @@ private struct BrandPanel: View {
                 .foregroundStyle(Color.white.opacity(0.82))
                 Text(
                     branding.subtitle.isEmpty
-                    ? "Company-aware login, session restore, runtime branding, and public account deletion are already wired to the existing backend."
+                    ? "Company-aware login, session restore, and runtime branding are already wired to the existing backend."
                     : branding.subtitle
                 )
                 .font(.subheadline)
@@ -178,13 +174,6 @@ private struct LoginView: View {
                     .disabled(state.isBusy)
                 }
 
-                Button("Delete account") {
-                    viewModel.openDeleteAccount()
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(Color(hex: state.branding.primaryColorHex))
-                .disabled(state.isBusy)
-
                 InfoCard(
                     title: "Native auth handoff",
                     message: "Attach Firebase Google and Apple provider token acquisition in the iOS target, then send the ID token through /api/login/firebase."
@@ -222,7 +211,7 @@ private struct WorkspaceView: View {
 
                 InfoCard(
                     title: "Company routing",
-                    message: "Company code \(state.companyCode.ifEmpty("not set")) stays pinned for branding, session recovery, and public flows like account deletion."
+                    message: "Company code \(state.companyCode.ifEmpty("not set")) stays pinned for branding, login, and session recovery."
                 )
 
                 InfoCard(
@@ -232,95 +221,16 @@ private struct WorkspaceView: View {
                         : "Use this shell to attach employee workspace, attendance, inventory stock, team directory, settings, and head-admin screens."
                 )
 
-                HStack(spacing: 10) {
-                    Button("Account deletion") {
-                        viewModel.openDeleteAccount()
-                    }
-                    .buttonStyle(PrimaryFillButtonStyle())
-                    .disabled(state.isBusy)
-
-                    Button("Reload bootstrap") {
-                        Task { await viewModel.restoreSession() }
-                    }
-                    .buttonStyle(SecondaryOutlineButtonStyle())
-                    .disabled(state.isBusy)
+                Button("Reload bootstrap") {
+                    Task { await viewModel.restoreSession() }
                 }
+                .buttonStyle(SecondaryOutlineButtonStyle())
+                .disabled(state.isBusy)
 
                 Button("Logout") {
                     Task { await viewModel.logout() }
                 }
                 .buttonStyle(SecondaryOutlineButtonStyle())
-                .disabled(state.isBusy)
-            }
-        }
-    }
-}
-
-private struct DeleteAccountView: View {
-    @ObservedObject var viewModel: SessionViewModel
-    let state: SessionUIState
-
-    var body: some View {
-        CardShell {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Delete account")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-
-                StatusSection(state: state)
-
-                InfoCard(
-                    title: "Store compliance",
-                    message: "This screen uses the same deletion endpoints as the public deletion page, so App Store reviewers and real users have the same supported path."
-                )
-
-                LabeledField(title: "Company ID") {
-                    TextField("Company ID", text: Binding(
-                        get: { state.companyCode },
-                        set: viewModel.updateCompanyCode
-                    ))
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                }
-
-                LabeledField(title: "Verified email") {
-                    TextField("Verified email", text: Binding(
-                        get: { state.deletionEmail },
-                        set: viewModel.updateDeletionEmail
-                    ))
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-                    .autocorrectionDisabled()
-                }
-
-                LabeledField(title: "Verification code") {
-                    TextField("Verification code", text: Binding(
-                        get: { state.deletionCode },
-                        set: viewModel.updateDeletionCode
-                    ))
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                }
-
-                HStack(spacing: 10) {
-                    Button("Send code") {
-                        Task { await viewModel.requestDeletionCode() }
-                    }
-                    .buttonStyle(SecondaryOutlineButtonStyle())
-                    .disabled(state.isBusy)
-
-                    Button("Confirm delete") {
-                        Task { await viewModel.confirmDeletion() }
-                    }
-                    .buttonStyle(PrimaryFillButtonStyle())
-                    .disabled(state.isBusy)
-                }
-
-                Button("Back") {
-                    viewModel.closeDeleteAccount()
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(Color(hex: state.branding.primaryColorHex))
                 .disabled(state.isBusy)
             }
         }

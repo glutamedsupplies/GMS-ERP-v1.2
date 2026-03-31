@@ -6,9 +6,6 @@ This checklist turns the current mobile foundation into a store-submittable buil
 
 - Confirm production API base URL stays `https://gmserp.com`.
 - Publish privacy policy URL for both stores.
-- Publish public account deletion URL:
-  - `https://gmserp.com/account-delete.html`
-- Keep `POST /api/account/delete/request` and `POST /api/account/delete/confirm` enabled in production.
 
 ## Native app setup
 
@@ -49,4 +46,3 @@ This checklist turns the current mobile foundation into a store-submittable buil
 - Screenshots for phone and tablet.
 - Data safety / privacy answers for Play Console.
 - App Privacy answers for App Store Connect.
-- Confirmation that in-app deletion and public deletion URL both work.

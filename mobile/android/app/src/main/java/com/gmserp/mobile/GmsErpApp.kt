@@ -70,9 +70,6 @@ fun GmsErpApp() {
                 MobileScreen.WORKSPACE -> AdaptiveShell(uiState.branding) {
                     WorkspaceScreen(uiState, sessionViewModel)
                 }
-                MobileScreen.DELETE_ACCOUNT -> AdaptiveShell(uiState.branding) {
-                    DeleteAccountScreen(uiState, sessionViewModel)
-                }
             }
         }
     }
@@ -155,7 +152,7 @@ private fun BrandPanel(branding: Branding, modifier: Modifier = Modifier) {
             )
             Text(
                 text = branding.subtitle.ifBlank {
-                    "Company-aware login, session restore, runtime branding, and store-compliant account deletion."
+                    "Company-aware login, session restore, and runtime branding wired to the existing backend."
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -258,14 +255,6 @@ private fun LoginScreen(uiState: SessionUiState, viewModel: SessionViewModel) {
                 Text("Apple")
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        TextButton(
-            onClick = viewModel::openDeleteAccount,
-            enabled = !uiState.isBusy,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Delete account")
-        }
         Spacer(modifier = Modifier.height(10.dp))
         InfoCard(
             title = "Native auth handoff",
@@ -321,7 +310,7 @@ private fun WorkspaceScreen(uiState: SessionUiState, viewModel: SessionViewModel
             Spacer(modifier = Modifier.height(12.dp))
             InfoCard(
                 title = "Company routing",
-                body = "Company code ${uiState.companyCode.ifBlank { "not set" }} stays pinned for branding, session recovery, and public flows like account deletion."
+                body = "Company code ${uiState.companyCode.ifBlank { "not set" }} stays pinned for branding, login, and session recovery."
             )
             Spacer(modifier = Modifier.height(12.dp))
             InfoCard(
@@ -333,96 +322,13 @@ private fun WorkspaceScreen(uiState: SessionUiState, viewModel: SessionViewModel
                 }
             )
             Spacer(modifier = Modifier.height(14.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Button(
-                    onClick = viewModel::openDeleteAccount,
-                    modifier = Modifier.weight(1f),
-                    enabled = !uiState.isBusy
-                ) {
-                    Text("Account deletion")
-                }
-                OutlinedButton(
-                    onClick = viewModel::restoreSession,
-                    modifier = Modifier.weight(1f),
-                    enabled = !uiState.isBusy
-                ) {
-                    Text("Reload bootstrap")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DeleteAccountScreen(uiState: SessionUiState, viewModel: SessionViewModel) {
-    AppCard(title = "Delete account") {
-        StatusBanners(uiState)
-        InfoCard(
-            title = "Store compliance",
-            body = "This screen calls the same deletion endpoints added to the backend and mirrors the public deletion page for users who uninstall first."
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        OutlinedTextField(
-            value = uiState.companyCode,
-            onValueChange = viewModel::updateCompanyCode,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Company ID") },
-            singleLine = true,
-            enabled = !uiState.isBusy
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        OutlinedTextField(
-            value = uiState.deletionEmail,
-            onValueChange = viewModel::updateDeletionEmail,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Verified email") },
-            singleLine = true,
-            enabled = !uiState.isBusy,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Email,
-                imeAction = ImeAction.Next
-            )
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        OutlinedTextField(
-            value = uiState.deletionCode,
-            onValueChange = viewModel::updateDeletionCode,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Verification code") },
-            singleLine = true,
-            enabled = !uiState.isBusy,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
             OutlinedButton(
-                onClick = viewModel::requestDeletionCode,
-                modifier = Modifier.weight(1f),
+                onClick = viewModel::restoreSession,
+                modifier = Modifier.fillMaxWidth(),
                 enabled = !uiState.isBusy
             ) {
-                Text("Send code")
+                Text("Reload bootstrap")
             }
-            Button(
-                onClick = viewModel::confirmDeletion,
-                modifier = Modifier.weight(1f),
-                enabled = !uiState.isBusy
-            ) {
-                Text("Confirm delete")
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        TextButton(
-            onClick = viewModel::closeDeleteAccount,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !uiState.isBusy
-        ) {
-            Text("Back")
         }
     }
 }

@@ -795,157 +795,134 @@
   }
 </style>
 <style>
-  /* premium-login-overrides-start */
+  /* login-layout-refresh-start */
   body{
-    display:block;
     min-height:100dvh;
     height:auto;
     overflow-x:hidden;
     overflow-y:auto;
-    padding:clamp(16px, 3vw, 32px);
-  }
-
-  body::before{
-    background:
-      linear-gradient(135deg, rgba(2,6,23,0.12) 0%, rgba(2,6,23,0.78) 100%),
-      radial-gradient(circle at top, rgba(255,255,255,0.05) 0%, transparent 34%);
-  }
-
-  body::after{
-    opacity:.18;
-    background-image:
-      linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
-    background-size:48px 48px;
-    mask-image:linear-gradient(180deg, rgba(0,0,0,0.24), rgba(0,0,0,1) 24%, rgba(0,0,0,1) 76%, rgba(0,0,0,0.16));
+    padding:clamp(14px, 2vw, 24px);
   }
 
   body.is-welcome-active .login-shell{
-    transform:scale(0.97);
-    opacity:0.16;
-    filter:blur(16px);
+    transform:scale(0.96);
+    opacity:0.18;
+    filter:blur(14px);
   }
 
   .background-photo{
-    inset:-10%;
-    filter:blur(20px) saturate(1.08) brightness(0.58);
-  }
-
-  .ambient{
-    filter:blur(18px);
-  }
-
-  .ambient-a{
-    top:-84px;
-    left:-46px;
-    width:340px;
-    height:340px;
-  }
-
-  .ambient-b{
-    right:-84px;
-    bottom:-110px;
-    width:380px;
-    height:380px;
-    background:radial-gradient(circle, rgba(16,185,129,0.2) 0%, rgba(255,255,255,0) 72%);
+    inset:-8%;
+    filter:blur(18px) saturate(1.1) brightness(0.64);
   }
 
   .login-shell{
-    display:block;
     width:min(1180px, 100%);
-    max-height:none;
+    max-width:none;
+    display:block;
     margin:0 auto;
   }
 
   .login-stage{
     display:grid;
-    grid-template-columns:minmax(0, 1.08fr) minmax(370px, 430px);
+    grid-template-columns:minmax(0, 1fr) minmax(380px, 450px);
     grid-template-areas:"experience auth";
-    gap:24px;
+    gap:clamp(18px, 4vw, 36px);
     align-items:stretch;
-    width:100%;
   }
 
   .experience-panel,
   .login-card{
-    border:1px solid rgba(255,255,255,0.12);
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02)),
-      rgba(5, 10, 20, 0.58);
-    box-shadow:0 34px 88px rgba(1, 6, 20, 0.54);
-    backdrop-filter:blur(22px) saturate(1.04);
+    position:relative;
+    overflow:hidden;
+    border-radius:30px;
+    border:1px solid rgba(255,255,255,0.14);
+    background:linear-gradient(160deg, rgba(15,23,42,0.82), rgba(6,10,20,0.86));
+    box-shadow:var(--card-shadow);
+    backdrop-filter:blur(20px) saturate(1.08);
   }
 
   .experience-panel{
     grid-area:experience;
-    position:relative;
-    overflow:hidden;
-    min-height:720px;
-    padding:34px;
-    border-radius:34px;
+    min-height:680px;
+    padding:clamp(24px, 4vw, 34px);
   }
 
   .experience-panel::before,
-  .experience-panel::after{
+  .login-card::before{
     content:"";
     position:absolute;
+    inset:auto -18% 52% auto;
+    width:240px;
+    height:240px;
     border-radius:999px;
+    background:radial-gradient(circle, rgba(var(--brand-primary-rgb),0.32) 0%, rgba(var(--brand-primary-rgb),0) 72%);
+    filter:blur(8px);
     pointer-events:none;
   }
 
-  .experience-panel::before{
-    inset:auto auto -80px -90px;
-    width:260px;
-    height:260px;
-    background:radial-gradient(circle, rgba(var(--brand-primary-rgb),0.18) 0%, rgba(var(--brand-primary-rgb),0) 72%);
-  }
-
   .experience-panel::after{
-    inset:-86px -70px auto auto;
-    width:280px;
-    height:280px;
-    background:radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 72%);
+    content:"";
+    position:absolute;
+    inset:auto auto 8% -8%;
+    width:220px;
+    height:220px;
+    border-radius:999px;
+    background:radial-gradient(circle, rgba(251,191,36,0.18) 0%, rgba(251,191,36,0) 72%);
+    filter:blur(12px);
+    pointer-events:none;
   }
 
   .experience-content{
     position:relative;
     z-index:1;
-    display:flex;
-    flex-direction:column;
-    gap:24px;
     height:100%;
+    display:grid;
+    align-content:space-between;
+    gap:22px;
+  }
+
+  .experience-top,
+  .auth-header,
+  .auth-pills,
+  .section-head{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
   }
 
   .experience-top,
   .section-head{
-    display:flex;
-    align-items:flex-start;
     justify-content:space-between;
-    gap:12px;
-    flex-wrap:wrap;
+    align-items:flex-start;
   }
 
   .experience-chip,
   .auth-chip,
+  .auth-pill,
   .privacy-pill{
     display:inline-flex;
     align-items:center;
     gap:8px;
-    min-height:36px;
-    padding:0 14px;
+    min-height:34px;
+    padding:0 13px;
     border-radius:999px;
     border:1px solid rgba(255,255,255,0.12);
-    background:rgba(255,255,255,0.07);
-    color:#f8fbff;
-    font-size:12px;
+    background:rgba(255,255,255,0.06);
+    color:#f8fafc;
+    font-size:11px;
     font-weight:700;
-    letter-spacing:0.03em;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
   }
 
   .experience-chip.is-live{
-    background:rgba(var(--brand-primary-rgb),0.12);
+    background:rgba(var(--brand-primary-rgb),0.14);
     border-color:rgba(var(--brand-primary-rgb),0.24);
-    color:#dbeafe;
+  }
+
+  .auth-chip-soft{
+    color:rgba(226,232,240,0.76);
+    background:rgba(255,255,255,0.04);
   }
 
   .chip-dot{
@@ -953,112 +930,131 @@
     height:8px;
     border-radius:50%;
     background:#34d399;
-    box-shadow:0 0 0 6px rgba(52,211,153,0.12);
+    box-shadow:0 0 0 6px rgba(52,211,153,0.18);
+  }
+
+  .experience-intro,
+  .brand-lockup{
+    display:grid;
+    gap:8px;
   }
 
   .experience-kicker,
-  .section-kicker,
   .auth-kicker,
+  .section-kicker,
   .oauth-kicker{
     margin:0;
-    color:#d7e8ff;
-    font-size:12px;
-    font-weight:700;
+    color:rgba(45,212,191,0.88);
+    font-size:11px;
+    font-weight:800;
     letter-spacing:0.16em;
     text-transform:uppercase;
   }
 
   .experience-title{
-    margin:10px 0 0;
-    max-width:700px;
+    margin:0;
+    max-width:640px;
     font-family:'Fraunces',serif;
-    font-size:clamp(42px, 6vw, 64px);
-    line-height:1;
+    font-size:clamp(34px, 4vw, 52px);
+    line-height:1.02;
     letter-spacing:-0.04em;
-    text-shadow:0 16px 40px rgba(2,6,23,0.36);
   }
 
   .experience-copy{
-    margin:16px 0 0;
-    max-width:640px;
-    color:rgba(226,232,240,0.86);
-    font-size:17px;
-    line-height:1.65;
+    margin:0;
+    max-width:560px;
+    color:var(--text-soft);
+    font-size:15px;
+    line-height:1.75;
   }
 
   .showcase-grid{
     display:grid;
-    grid-template-columns:1.15fr .85fr;
-    gap:14px;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:12px;
   }
 
   .showcase-card,
   .section-card{
-    padding:20px;
     border-radius:24px;
-    border:1px solid rgba(255,255,255,0.1);
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
-      rgba(7, 13, 24, 0.68);
-    box-shadow:0 20px 46px rgba(2, 6, 23, 0.24);
+    border:1px solid rgba(255,255,255,0.12);
+    background:rgba(255,255,255,0.05);
+  }
+
+  .showcase-card{
+    padding:18px;
+    display:grid;
+    gap:10px;
   }
 
   .showcase-card.is-primary{
     background:
-      radial-gradient(circle at top right, rgba(var(--brand-primary-rgb),0.22) 0%, rgba(var(--brand-primary-rgb),0) 34%),
-      linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
-      rgba(7, 13, 24, 0.72);
+      radial-gradient(circle at top right, rgba(var(--brand-primary-rgb),0.18) 0%, rgba(var(--brand-primary-rgb),0) 62%),
+      rgba(255,255,255,0.06);
+  }
+
+  .section-card{
+    padding:20px;
+    display:grid;
+    gap:16px;
   }
 
   .showcase-icon,
   .feature-icon{
     width:42px;
     height:42px;
+    border-radius:14px;
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    border-radius:14px;
     background:rgba(var(--brand-primary-rgb),0.16);
-    color:#dbeafe;
+    color:#d5fffb;
     box-shadow:inset 0 1px 0 rgba(255,255,255,0.08);
   }
 
   .showcase-card h3,
-  .section-card h3{
-    margin:12px 0 8px;
-    font-size:23px;
-    line-height:1.12;
-    letter-spacing:-0.03em;
+  .section-head h3{
+    margin:0;
+    color:#ffffff;
+  }
+
+  .showcase-card h3{
+    font-size:17px;
+    line-height:1.35;
+  }
+
+  .section-head h3{
+    font-size:22px;
+    font-weight:700;
+    line-height:1.2;
   }
 
   .showcase-card p,
-  .section-card p,
-  .feature-item p{
+  .feature-item p,
+  .privacy-copy{
     margin:0;
-    color:rgba(226,232,240,0.82);
-    font-size:14px;
-    line-height:1.6;
+    color:var(--text-soft);
+    font-size:13px;
+    line-height:1.7;
   }
 
   .feature-list{
     display:grid;
-    gap:12px;
+    gap:14px;
   }
 
   .feature-item{
     display:grid;
     grid-template-columns:auto 1fr;
-    gap:14px;
-    padding:16px;
-    border-radius:20px;
-    background:rgba(255,255,255,0.05);
-    border:1px solid rgba(255,255,255,0.08);
+    gap:12px;
+    align-items:flex-start;
   }
 
   .feature-item h4{
-    margin:0 0 6px;
-    font-size:16px;
-    letter-spacing:-0.02em;
+    margin:0 0 4px;
+    color:#ffffff;
+    font-size:14px;
+    line-height:1.35;
   }
 
   .policy-link{
@@ -1077,10 +1073,6 @@
     border-bottom-color:rgba(255,255,255,0.62);
   }
 
-  .privacy-copy{
-    margin:0 0 14px;
-  }
-
   .privacy-pills{
     display:flex;
     flex-wrap:wrap;
@@ -1089,138 +1081,115 @@
 
   .login-card{
     grid-area:auth;
-    min-height:720px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
     max-height:none;
-    padding:26px;
-    border-radius:30px;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)),
-      rgba(8, 14, 27, 0.82);
-    justify-content:flex-start;
+    padding:clamp(22px, 3vw, 30px);
     gap:18px;
   }
 
-  .login-card::before{
-    content:"";
-    position:absolute;
-    inset:-110px auto auto 56%;
-    width:260px;
-    height:260px;
-    border-radius:999px;
-    background:radial-gradient(circle, rgba(var(--brand-primary-rgb),0.26) 0%, rgba(var(--brand-primary-rgb),0) 72%);
-    pointer-events:none;
+  .login-card:hover{
+    transform:none;
+    box-shadow:var(--card-shadow);
   }
 
   .login-card-glow{
-    inset:auto -24% 54% auto;
+    inset:auto -18% 58% auto;
   }
 
   .auth-header,
   .brand-lockup,
-  .form-stack{
+  .form-stack,
+  .legal-row{
     position:relative;
     z-index:1;
   }
 
-  .auth-header{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    flex-wrap:wrap;
-  }
-
-  .auth-chip-soft{
-    color:#dbeafe;
-    background:rgba(255,255,255,0.05);
+  .auth-header,
+  .auth-pills{
+    justify-content:center;
   }
 
   .brand-lockup{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
+    justify-items:center;
     text-align:center;
   }
 
   .logo-container{
-    width:104px;
-    height:104px;
-    margin:0 auto 14px;
-    border-radius:28px;
-    padding:8px;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04)),
-      rgba(255,255,255,0.06);
+    position:relative;
+    width:84px;
+    height:84px;
+    margin:0 auto 8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:24px;
+    padding:0;
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.18);
+    box-shadow:0 18px 38px rgba(2, 6, 23, 0.32);
+    overflow:hidden;
   }
 
   .logo-container::before{
-    content:"";
-    position:absolute;
-    inset:10px;
-    border-radius:22px;
-    border:1px solid rgba(255,255,255,0.14);
-    pointer-events:none;
+    display:none;
   }
 
   .logo-container img{
-    border-radius:20px;
+    border-radius:24px;
   }
 
   h1#loginTitle{
-    margin:8px 0 6px;
-    font-size:clamp(34px, 4vw, 42px);
+    margin:0;
+    font-size:clamp(34px, 4.1vw, 46px);
+    line-height:0.98;
     letter-spacing:-0.04em;
+    text-wrap:balance;
   }
 
   .subtitle{
     margin:0;
+    color:var(--text-soft);
     font-size:14px;
+    font-weight:600;
+    line-height:1.6;
   }
 
   .company-hint{
-    margin:12px auto 0;
+    margin:0;
     max-width:320px;
-    font-size:12.5px;
-    line-height:1.5;
+    color:var(--text-faint);
+    font-size:12px;
+    line-height:1.6;
   }
 
   .auth-pills{
-    position:relative;
-    z-index:1;
-    display:flex;
-    flex-wrap:wrap;
-    justify-content:center;
-    gap:10px;
+    margin:0 0 4px;
   }
 
   .auth-pill{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    min-height:36px;
-    padding:0 14px;
-    border-radius:999px;
-    border:1px solid rgba(255,255,255,0.1);
-    background:rgba(255,255,255,0.05);
-    color:rgba(226,232,240,0.86);
-    font-size:12px;
-    font-weight:700;
+    min-height:32px;
+    padding:0 12px;
+    letter-spacing:0.04em;
+    text-transform:none;
+    font-size:11px;
+    font-weight:600;
   }
 
   .form-stack{
-    display:flex;
-    flex-direction:column;
+    display:grid;
     gap:10px;
   }
 
   .input-group{
-    gap:12px;
-    border-radius:18px;
-    padding:0 14px;
+    gap:10px;
+    border-radius:16px;
+    padding:0 12px;
   }
 
   .input-group input{
-    height:52px;
+    height:48px;
     font-family:'Sora',sans-serif;
   }
 
@@ -1230,19 +1199,28 @@
   }
 
   .login-btn,
+  .customer-btn,
   .oauth-btn,
   .install-btn{
     font-family:'Sora',sans-serif;
   }
 
-  .login-btn{
-    height:54px;
-    margin-top:2px;
-    border-radius:18px;
+  .login-btn,
+  .customer-btn,
+  .install-btn{
+    min-height:50px;
+    margin-top:0;
+    border-radius:16px;
+  }
+
+  .customer-btn{
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.22);
+    box-shadow:none;
   }
 
   .link-row{
-    margin-top:2px;
+    margin-top:0;
   }
 
   .link-btn,
@@ -1252,39 +1230,36 @@
   }
 
   .divider{
-    margin:4px 0 0;
+    margin:6px 0 0;
   }
 
   .oauth-card{
-    display:flex;
-    flex-direction:column;
+    display:grid;
     gap:14px;
     padding:18px;
     border-radius:22px;
     border:1px solid rgba(255,255,255,0.1);
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)),
-      rgba(255,255,255,0.03);
-    box-shadow:0 20px 46px rgba(2, 6, 23, 0.24);
+    background:rgba(255,255,255,0.05);
   }
 
   .oauth-copy strong{
     display:block;
-    margin-top:8px;
+    margin-top:6px;
     font-size:18px;
     letter-spacing:-0.03em;
+    color:#ffffff;
   }
 
   .oauth-copy p:last-child{
     margin-top:8px;
-    color:rgba(226,232,240,0.82);
+    color:var(--text-soft);
     font-size:13px;
-    line-height:1.55;
+    line-height:1.65;
   }
 
   .oauth-btn{
     position:relative;
-    min-height:56px;
+    min-height:54px;
     padding:0 18px;
     border-radius:18px;
     border:1px solid rgba(255,255,255,0.7);
@@ -1313,17 +1288,14 @@
   }
 
   #message{
-    margin-top:2px;
+    min-height:18px;
+    margin-top:4px;
   }
 
   .legal-row{
-    position:relative;
-    z-index:1;
-    display:flex;
-    flex-direction:column;
+    display:grid;
     gap:10px;
-    margin-top:auto;
-    padding-top:6px;
+    padding-top:14px;
     border-top:1px solid rgba(255,255,255,0.08);
   }
 
@@ -1342,7 +1314,7 @@
     line-height:1.5;
   }
 
-  @media (max-width: 1080px){
+  @media (max-width: 980px){
     .login-stage{
       grid-template-columns:1fr;
       grid-template-areas:
@@ -1372,55 +1344,52 @@
 
     .login-card{
       padding:22px 18px;
-    }
-
-    .experience-title{
-      font-size:clamp(34px, 10vw, 46px);
+      gap:16px;
     }
 
     .showcase-grid{
       grid-template-columns:1fr;
     }
 
-    .logo-container{
-      width:90px;
-      height:90px;
-      border-radius:24px;
-    }
-
-    h1#loginTitle{
-      font-size:32px;
-    }
-
-    .input-group input{
-      height:50px;
+    .experience-title{
+      font-size:clamp(32px, 10vw, 44px);
     }
 
     .experience-top,
-    .section-head,
-    .link-row,
-    .legal-links{
+    .section-head{
       flex-direction:column;
       align-items:flex-start;
     }
 
-    .auth-pills{
+    .auth-header,
+    .auth-pills,
+    .legal-links{
       justify-content:flex-start;
+    }
+
+    h1#loginTitle{
+      font-size:34px;
     }
   }
 
-  @media (max-width: 480px){
-    .experience-chip,
-    .auth-chip,
-    .auth-pill,
-    .privacy-pill{
-      min-height:34px;
-      padding:0 12px;
-      font-size:11px;
+  @media (max-width: 520px){
+    body{
+      padding:10px;
     }
 
-    .company-hint{
-      max-width:100%;
+    .login-card{
+      padding:18px 14px;
+      border-radius:22px;
+    }
+
+    .logo-container{
+      width:76px;
+      height:76px;
+      border-radius:20px;
+    }
+
+    .logo-container img{
+      border-radius:20px;
     }
 
     .showcase-card,
@@ -1428,80 +1397,66 @@
     .oauth-card{
       padding:16px;
     }
-  }
 
-  @media (max-height: 760px){
-    .experience-panel,
-    .login-card{
-      min-height:auto;
+    .company-hint{
+      max-width:100%;
     }
   }
 
-  /* login-cleanup-start */
-  body{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    overflow-x:hidden;
-    overflow-y:auto;
-    padding:12px 16px;
+  @media (max-height: 860px){
+    body{
+      align-items:flex-start;
+    }
   }
 
-  body::after{
-    opacity:0;
-    background:none;
-    mask-image:none;
+  /* centered-login-fix-start */
+  body{
+    height:100dvh;
+    overflow:hidden;
+    padding:16px;
+    align-items:center;
   }
 
   .login-shell{
-    width:min(100%, 420px);
-    max-width:420px;
-    display:flex;
-    align-items:center;
+    width:460px !important;
+    max-width:calc(100vw - 32px) !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    flex:0 0 auto !important;
     margin:0 auto;
   }
 
   .login-stage{
-    display:block;
+    display:block !important;
     width:100%;
   }
 
-  .experience-panel{
-    display:none;
-  }
-
   .login-card{
-    min-height:auto;
-    max-height:calc(100dvh - 24px);
-    padding:18px 16px 14px;
-    border-radius:24px;
+    max-height:calc(100dvh - 32px) !important;
+    min-height:auto !important;
+    padding:18px 18px 14px !important;
     gap:10px;
-  }
-
-  .login-card:hover{
-    transform:none;
   }
 
   .auth-header,
   .auth-pills{
-    display:none;
+    display:none !important;
   }
 
   .brand-lockup{
-    margin-bottom:0;
+    gap:4px;
+  }
+
+  .auth-kicker{
+    font-size:10px;
   }
 
   .logo-container{
     width:76px;
     height:76px;
-    margin-bottom:10px;
     border-radius:20px;
-    padding:0;
-    background:rgba(255,255,255,0.08);
-  }
-
-  .logo-container::before{
-    display:none;
+    margin-bottom:6px;
   }
 
   .logo-container img{
@@ -1509,8 +1464,7 @@
   }
 
   h1#loginTitle{
-    margin:6px 0 2px;
-    font-size:clamp(27px, 5vw, 34px);
+    font-size:clamp(28px, 4vw, 34px);
   }
 
   .subtitle{
@@ -1518,18 +1472,11 @@
   }
 
   .company-hint{
-    margin:6px auto 0;
-    max-width:280px;
-    font-size:11.5px;
-    line-height:1.4;
+    display:none;
   }
 
   .form-stack{
     gap:7px;
-  }
-
-  .input-group{
-    border-radius:16px;
   }
 
   .input-group input{
@@ -1537,164 +1484,101 @@
     font-size:14px;
   }
 
-  .login-btn{
-    height:46px;
+  .login-btn,
+  .customer-btn,
+  .install-btn{
+    min-height:46px;
   }
 
   .divider{
-    margin:0;
+    margin:2px 0 0;
     font-size:10px;
   }
 
   .oauth-card{
     padding:12px 14px;
-    border-radius:18px;
-    gap:10px;
+    gap:8px;
   }
 
   .oauth-copy strong{
-    margin-top:6px;
     font-size:15px;
-    line-height:1.2;
+    line-height:1.25;
   }
 
   .oauth-copy p:last-child{
-    margin-top:6px;
-    font-size:11.5px;
-    line-height:1.45;
-  }
-
-  .oauth-kicker{
-    font-size:10px;
-    letter-spacing:0.14em;
+    display:none;
   }
 
   .oauth-btn{
-    min-height:48px;
-    padding:0 16px;
-    border-radius:16px;
+    min-height:46px;
     font-size:14px;
   }
 
-  .oauth-btn::after{
-    border-radius:15px;
-  }
-
-  .google-badge{
-    width:26px;
-    height:26px;
-  }
-
-  .google-badge img{
-    width:16px;
-    height:16px;
-  }
-
   .legal-row{
-    margin-top:2px;
-    padding-top:8px;
+    padding-top:6px;
+    gap:4px;
   }
 
   .legal-links{
     justify-content:center;
+    gap:14px;
+  }
+
+  .legal-links a{
+    color:rgba(226,232,240,0.82);
+    font-size:11px;
+    font-weight:600;
+    line-height:1.2;
+  }
+
+  .legal-links a:hover{
+    color:#ffffff;
   }
 
   .legal-note{
     display:none;
   }
 
-  @media (max-height: 820px){
-    .company-hint{
-      display:none;
-    }
-
-    .oauth-copy p:last-child{
-      display:none;
-    }
-  }
-
-  @media (max-width: 520px){
+  @media (max-width: 640px){
     body{
+      height:auto;
+      min-height:100dvh;
       overflow-y:auto;
       padding:10px;
     }
 
     .login-shell{
-      width:100%;
-      max-width:none;
+      width:100% !important;
+      max-width:none !important;
     }
 
     .login-card{
-      max-height:none;
-      padding:18px 14px;
-      border-radius:22px;
-    }
-
-    .logo-container{
-      width:72px;
-      height:72px;
-      border-radius:18px;
-    }
-
-    .logo-container img{
-      border-radius:18px;
+      max-height:none !important;
+      padding:18px 14px !important;
     }
   }
 
-  @media (min-width: 900px){
+  @media (max-height: 820px) and (min-width: 641px){
     body{
+      height:auto;
+      min-height:100dvh;
+      overflow-y:auto;
+      padding:10px 16px;
       align-items:flex-start;
-      padding:18px;
     }
 
     .login-shell{
-      width:min(1120px, 100%);
-      max-width:none;
-      display:block;
-    }
-
-    .login-stage{
-      display:grid;
-      grid-template-columns:minmax(0, 1fr) minmax(360px, 430px);
-      grid-template-areas:"experience auth";
-      gap:22px;
-      align-items:stretch;
-    }
-
-    .experience-panel{
-      display:block;
-      min-height:680px;
-      padding:26px;
+      width:460px !important;
+      max-width:calc(100vw - 32px) !important;
     }
 
     .login-card{
-      min-height:680px;
-      max-height:none;
-      padding:24px 20px 18px;
-    }
-
-    .auth-header,
-    .auth-pills{
-      display:flex;
-    }
-
-    .company-hint{
-      display:block;
-    }
-
-    .legal-note{
-      display:block;
+      max-height:none !important;
+      margin:0 auto;
     }
   }
-
-  @media (min-width: 900px) and (max-height: 900px){
-    .experience-panel,
-    .login-card{
-      min-height:auto;
-    }
-  }
-  /* login-cleanup-end */
-  /* premium-login-overrides-end */
+  /* centered-login-fix-end */
+  /* login-layout-refresh-end */
 </style>
 </head>
 <body>
@@ -1705,104 +1589,28 @@
 
 <main class="login-shell">
   <div class="login-stage">
-    <section class="experience-panel" aria-label="Product highlights">
-      <div class="experience-content">
-        <div class="experience-top">
-          <span class="experience-chip"><i class="fa-solid fa-layer-group"></i> Premium workspace login</span>
-          <span class="experience-chip is-live"><span class="chip-dot" aria-hidden="true"></span> Live company theming</span>
-        </div>
-
-        <div class="experience-intro">
-          <p class="experience-kicker">Modern sign-in for modern teams</p>
-          <h2 class="experience-title">A cleaner, more premium first impression for every company login.</h2>
-          <p class="experience-copy">GMS ERP now opens with a richer app-style experience: branded company preview, polished authentication, and a stronger Google sign-in section that feels closer to the best apps today.</p>
-        </div>
-
-        <div class="showcase-grid">
-          <article class="showcase-card is-primary">
-            <span class="showcase-icon" aria-hidden="true"><i class="fa-solid fa-bolt"></i></span>
-            <h3>Fast company-aware access</h3>
-            <p>Type the company ID and the login surface can instantly preview the right color, logo, and background before entering the workspace.</p>
-          </article>
-
-          <article class="showcase-card">
-            <span class="showcase-icon" aria-hidden="true"><i class="fa-solid fa-mobile-screen-button"></i></span>
-            <h3>Responsive premium layout</h3>
-            <p>Better spacing, stronger visual hierarchy, and cleaner surfaces on both desktop and mobile.</p>
-          </article>
-        </div>
-
-        <section class="section-card" aria-labelledby="featuresHeading">
-          <div class="section-head">
-            <div>
-              <p class="section-kicker">Features</p>
-              <h3 id="featuresHeading">What this login now highlights</h3>
-            </div>
-          </div>
-          <div class="feature-list">
-            <article class="feature-item">
-              <span class="feature-icon" aria-hidden="true"><i class="fa-solid fa-palette"></i></span>
-              <div>
-                <h4>Branded access preview</h4>
-                <p>Users see the company visual identity while entering the Company ID for a more personalized sign-in flow.</p>
-              </div>
-            </article>
-            <article class="feature-item">
-              <span class="feature-icon" aria-hidden="true"><i class="fa-brands fa-google"></i></span>
-              <div>
-                <h4>Premium Google quick access</h4>
-                <p>The Google area is presented as a featured action instead of a plain box, with better hierarchy and copy.</p>
-              </div>
-            </article>
-            <article class="feature-item">
-              <span class="feature-icon" aria-hidden="true"><i class="fa-solid fa-shield-halved"></i></span>
-              <div>
-                <h4>More confidence and trust</h4>
-                <p>Protected-access cues and cleaner structure make the page feel more like a production-grade app.</p>
-              </div>
-            </article>
-          </div>
-        </section>
-
-        <section class="section-card privacy-card" aria-labelledby="privacyHeading">
-          <div class="section-head">
-            <div>
-              <p class="section-kicker">Privacy Policy</p>
-              <h3 id="privacyHeading">Protected and company-aware access</h3>
-            </div>
-            <a class="policy-link" href="/privacy">Read full policy <i class="fa-solid fa-arrow-right"></i></a>
-          </div>
-          <p class="privacy-copy">Login information stays tied to your company workspace, and users can clearly open the privacy policy from the sign-in screen.</p>
-          <div class="privacy-pills">
-            <span class="privacy-pill">Scoped company sign-in</span>
-            <span class="privacy-pill">Role-based access</span>
-            <span class="privacy-pill">Visible privacy route</span>
-          </div>
-        </section>
-      </div>
-    </section>
-
     <section class="login-card" id="loginCard">
       <div class="login-card-glow" aria-hidden="true"></div>
 
       <div class="auth-header">
         <span class="auth-chip"><i class="fa-solid fa-lock"></i> Secure workspace access</span>
-        <span class="auth-chip auth-chip-soft">Encrypted login</span>
+        <span class="auth-chip auth-chip-soft">Company-specific branding</span>
       </div>
 
       <div class="brand-lockup">
         <div class="logo-container" id="logoContainer">
           <img id="brandLogo" src="/logo.png" alt="Company Logo">
         </div>
-        <p class="auth-kicker">Sign in to your company account</p>
+        <p class="auth-kicker">Sign in to your company workspace</p>
         <h1 id="loginTitle">GMS ERP Login</h1>
         <div class="subtitle" id="loginSubtitle">Sign in to continue</div>
-        <div class="company-hint" id="brandingHint">Type your company ID to preview your company theme before logging in.</div>
+        <div class="company-hint" id="brandingHint">Enter the Company ID first so the correct company theme loads before login.</div>
       </div>
 
       <div class="auth-pills" aria-hidden="true">
-        <span class="auth-pill"><i class="fa-regular fa-building"></i> Company preview</span>
-        <span class="auth-pill"><i class="fa-solid fa-wand-magic-sparkles"></i> Premium UI</span>
+        <span class="auth-pill"><i class="fa-regular fa-building"></i> Company theme preview</span>
+        <span class="auth-pill"><i class="fa-solid fa-lock"></i> Email and password</span>
+        <span class="auth-pill"><i class="fa-brands fa-google"></i> Linked Google access</span>
       </div>
 
       <div class="form-stack">
@@ -1836,8 +1644,8 @@
         <div class="oauth-card">
           <div class="oauth-copy">
             <p class="oauth-kicker">Google Sign-In</p>
-            <strong>Continue faster with your linked Google account</strong>
-            <p>Enter the Company ID first, then continue in one tap using the Google account already connected to the same GMS profile.</p>
+            <strong>Use your linked Google account after entering the Company ID.</strong>
+            <p>Google sign-in works with the same Google account already connected to this GMS profile for the selected company workspace.</p>
           </div>
 
           <button id="googleLoginBtn" class="oauth-btn" type="button">
@@ -1855,7 +1663,6 @@
       <div class="legal-row">
         <div class="legal-links">
           <a href="/renderer/customer_portal.html">Support</a>
-          <a href="/account-delete.html">Delete Account</a>
           <a href="/privacy">Privacy Policy</a>
         </div>
         <p class="legal-note">Secure login for your company workspace.</p>

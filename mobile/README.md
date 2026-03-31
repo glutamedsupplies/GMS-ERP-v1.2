@@ -10,7 +10,6 @@ What is included now:
   - Company-aware login
   - Session restore shell
   - Public branding fetch
-  - Self-service account deletion flow using the existing backend routes
   - Role-aware workspace placeholder routing for the next beta waves
 
 Important notes:
