@@ -2187,11 +2187,11 @@
             method: 'PATCH',
             body: payload
         }),
-        listLbcTracking: ({ branch = '', search = '', deliveryStatus = '', quickFilter = 'all' } = {}) => request(
-            `/api/lbc-tracking?branch=${encodeURIComponent(branch)}&search=${encodeURIComponent(search)}&deliveryStatus=${encodeURIComponent(deliveryStatus)}&quickFilter=${encodeURIComponent(quickFilter)}`
+        listLbcTracking: ({ branch = '', search = '', deliveryStatus = '', quickFilter = 'all', dateFrom = '' } = {}) => request(
+            `/api/lbc-tracking?branch=${encodeURIComponent(branch)}&search=${encodeURIComponent(search)}&deliveryStatus=${encodeURIComponent(deliveryStatus)}&quickFilter=${encodeURIComponent(quickFilter)}&dateFrom=${encodeURIComponent(dateFrom)}`
         ),
-        listLbcCollections: ({ branch = '', search = '', status = 'all' } = {}) => request(
-            `/api/lbc-tracking/collections?branch=${encodeURIComponent(branch)}&search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}`
+        listLbcCollections: ({ branch = '', search = '', status = 'all', dateFrom = '' } = {}) => request(
+            `/api/lbc-tracking/collections?branch=${encodeURIComponent(branch)}&search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}&dateFrom=${encodeURIComponent(dateFrom)}`
         ),
         updateLbcTracking: (orderKey, payload) => request(`/api/lbc-tracking/${encodeURIComponent(orderKey)}`, {
             method: 'PUT',

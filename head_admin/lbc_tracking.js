@@ -56,6 +56,7 @@ const DELIVERY_SELECT_CLASS_NAMES = Object.freeze([
 ]);
 
 const branchButtons = Array.from(document.querySelectorAll('#branchButtons .chip[data-branch]'));
+const dateScopeButtons = Array.from(document.querySelectorAll('#dateScopeButtons .chip[data-date-scope]'));
 const quickFilterButtons = Array.from(document.querySelectorAll('#quickFilterButtons .chip[data-quick-filter]'));
 const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
@@ -103,6 +104,12 @@ const COLLECTION_FILTER_LABELS = Object.freeze({
     confirmed: 'Confirmed'
 });
 
+const LBC_HISTORY_MIN_DATE = '2026-03-01';
+const DATE_SCOPE_LABELS = Object.freeze({
+    this_month: 'This Month',
+    all_dates: 'Mar 2026 Onward'
+});
+
 const state = {
     session: null,
     assignedBranch: '',
@@ -146,7 +153,8 @@ const state = {
         branch: '',
         search: '',
         quickFilter: 'all',
-        collectionStatus: 'all'
+        collectionStatus: 'all',
+        dateScope: 'all_dates'
     },
     workspaceView: 'tracking',
     expandedOrderKeys: new Set(),
@@ -218,6 +226,17 @@ function bindEvents() {
             }
             state.filters.branch = String(button.dataset.branch || '').trim();
             applyActiveBranchButton();
+            await loadRows();
+        });
+    });
+
+    dateScopeButtons.forEach((button) => {
+        button.addEventListener('click', async () => {
+            if (state.locked || state.loading) {
+                return;
+            }
+            state.filters.dateScope = normalizeDateScope(button.dataset.dateScope);
+            applyActiveDateScopeButton();
             await loadRows();
         });
     });
@@ -502,6 +521,13 @@ function normalizeCollectionFilter(value) {
         : 'all';
 }
 
+function normalizeDateScope(value) {
+    const normalized = normalizeText(value).toLowerCase();
+    return Object.prototype.hasOwnProperty.call(DATE_SCOPE_LABELS, normalized)
+        ? normalized
+        : 'all_dates';
+}
+
 function normalizeText(value) {
     return String(value || '').replace(/\s+/g, ' ').trim();
 }
@@ -512,6 +538,25 @@ function normalizeBranchName(value = '') {
 
 function sameBranch(left = '', right = '') {
     return normalizeBranchName(left).toLowerCase() === normalizeBranchName(right).toLowerCase();
+}
+
+function getCurrentMonthStartDateKey(referenceDate = new Date()) {
+    const baseDate = referenceDate instanceof Date ? new Date(referenceDate.getTime()) : new Date(referenceDate);
+    if (Number.isNaN(baseDate.getTime())) {
+        const fallback = new Date();
+        return `${fallback.getFullYear()}-${String(fallback.getMonth() + 1).padStart(2, '0')}-01`;
+    }
+    return `${baseDate.getFullYear()}-${String(baseDate.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
+function getSelectedDateFrom() {
+    return normalizeDateScope(state.filters.dateScope) === 'this_month'
+        ? getCurrentMonthStartDateKey()
+        : LBC_HISTORY_MIN_DATE;
+}
+
+function getTrackingAssignmentDateFrom() {
+    return getCurrentMonthStartDateKey();
 }
 
 function isEmployeeLikeRole(role = '') {
@@ -713,6 +758,13 @@ function applyActiveCollectionFilterButton() {
     });
 }
 
+function applyActiveDateScopeButton() {
+    const activeScope = normalizeDateScope(state.filters.dateScope);
+    dateScopeButtons.forEach((button) => {
+        button.classList.toggle('active', normalizeDateScope(button.dataset.dateScope) === activeScope);
+    });
+}
+
 function applyWorkspaceView() {
     const activeView = normalizeWorkspaceView(state.workspaceView);
     workspaceViewButtons.forEach((button) => {
@@ -737,16 +789,19 @@ async function loadRows({ keepStatus = false } = {}) {
     }
 
     try {
+        const selectedDateFrom = getSelectedDateFrom();
         const [payload, collectionPayload] = await Promise.all([
             appClient.listLbcTracking({
                 branch: state.filters.branch,
                 search: state.filters.search,
-                quickFilter: state.filters.quickFilter
+                quickFilter: state.filters.quickFilter,
+                dateFrom: selectedDateFrom
             }),
             appClient.listLbcCollections({
                 branch: state.filters.branch,
                 search: state.filters.search,
-                status: state.filters.collectionStatus
+                status: state.filters.collectionStatus,
+                dateFrom: selectedDateFrom
             })
         ]);
 
@@ -772,19 +827,21 @@ async function loadRows({ keepStatus = false } = {}) {
         renderCollectionRows();
         renderWorkspaceMeta();
         applyActiveBranchButton();
+        applyActiveDateScopeButton();
         applyActiveQuickFilterButton();
         applyActiveCollectionFilterButton();
         applyWorkspaceView();
 
         const visibleCount = Number(state.summary?.total || state.items.length || 0);
         const baseCount = Number(state.summary?.baseTotal || visibleCount || 0);
+        const scopeLabel = DATE_SCOPE_LABELS[normalizeDateScope(state.filters.dateScope)] || DATE_SCOPE_LABELS.all_dates;
         const modeLabel = canUseTrackingWriteActions()
             ? 'edit enabled'
             : (isEmployeeLikeRole(state.session?.role) ? 'read-only for other branch' : 'read only');
         if (!state.items.length) {
-            setStatus(`No orders found for "${QUICK_FILTER_LABELS[normalizeQuickFilter(state.filters.quickFilter)]}" (${modeLabel}).`);
+            setStatus(`No orders found for "${QUICK_FILTER_LABELS[normalizeQuickFilter(state.filters.quickFilter)]}" in ${scopeLabel} (${modeLabel}).`);
         } else {
-            setStatus(`Showing ${visibleCount} of ${baseCount} LBC order(s) (${modeLabel}).`);
+            setStatus(`Showing ${visibleCount} of ${baseCount} LBC order(s) in ${scopeLabel} (${modeLabel}).`);
         }
     } catch (error) {
         console.error('Failed to load LBC tracking rows:', error);
@@ -1496,9 +1553,12 @@ function resolveAutoDetectedOrder(orderLookup = '') {
         }
     }
 
-    const queue = [...state.items]
+    const queueCandidates = [...state.items]
         .filter((item) => !normalizeText(item.trackingNumber))
-        .filter((item) => canEditTrackingRow(item))
+        .filter((item) => canEditTrackingRow(item));
+    const currentMonthStart = getTrackingAssignmentDateFrom();
+    const prioritizedQueue = queueCandidates.filter((item) => normalizeText(item.saleDate) >= currentMonthStart);
+    const queue = (prioritizedQueue.length ? prioritizedQueue : queueCandidates)
         .sort((left, right) => {
             const leftDate = Date.parse(normalizeText(left.saleDate)) || 0;
             const rightDate = Date.parse(normalizeText(right.saleDate)) || 0;
@@ -1520,7 +1580,7 @@ function handleAutoDetectOrder() {
     const targetOrder = resolveAutoDetectedOrder(orderLookup);
     if (!targetOrder) {
         if (!orderLookup) {
-            setAutoDetectResult('No visible queue item in current filter. Save will still assign sequentially on the server.');
+            setAutoDetectResult('No visible queue item in current filter. Save will still assign sequentially from the current-month queue on the server.');
             return;
         }
         setAutoDetectResult('No available LBC order found for auto-detect.', true);
@@ -1572,6 +1632,7 @@ async function handleSingleTrackingSave() {
 
     const payload = {
         branch: state.filters.branch,
+        dateFrom: getTrackingAssignmentDateFrom(),
         items: [
             orderLookup
                 ? { orderLookup, trackingNumber }
@@ -1685,6 +1746,7 @@ async function handleBulkTrackingSave() {
     try {
         const result = await appClient.bulkAssignLbcTracking({
             branch: effectiveBranch,
+            dateFrom: getTrackingAssignmentDateFrom(),
             items: entries
         });
         const assignedCount = Number(result?.assignedCount || 0);
@@ -1720,7 +1782,8 @@ async function handleRefreshTracking() {
 
     try {
         const result = await appClient.refreshLbcTrackingStatuses({
-            branch: state.filters.branch
+            branch: state.filters.branch,
+            dateFrom: getSelectedDateFrom()
         });
 
         await loadRows({ keepStatus: true });

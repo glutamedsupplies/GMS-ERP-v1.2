@@ -1055,13 +1055,18 @@
       <section class="toolbar shared-toolbar">
         <div class="toolbar-head">
           <span class="toolbar-kicker">Shared Filters</span>
-          <p class="toolbar-note">Branch and search filters apply to both the tracking panel and the collection confirmation panel.</p>
+          <p class="toolbar-note">Branch, date scope, and search filters apply to both the tracking panel and the collection confirmation panel.</p>
         </div>
 
         <div id="branchButtons" class="chip-row">
           <button class="chip active" data-branch="">All Branches</button>
           <button class="chip" data-branch="Pampanga">Pampanga</button>
           <button class="chip" data-branch="Cubao">Cubao</button>
+        </div>
+
+        <div id="dateScopeButtons" class="chip-row">
+          <button class="chip" data-date-scope="this_month">This Month</button>
+          <button class="chip active" data-date-scope="all_dates">Mar 2026 Onward</button>
         </div>
 
         <div class="search-row">
@@ -1083,7 +1088,7 @@
           <button id="saveTrackingBtn" class="btn primary" type="button">Save</button>
         </div>
         <p id="autoDetectResult" class="auto-detect-result"></p>
-        <p class="scanner-hint">Scanner-ready: this field auto-focuses and pressing Enter saves immediately.</p>
+        <p class="scanner-hint">Scanner-ready: this field auto-focuses and pressing Enter saves immediately. Leave Order # blank to keep auto-assignment on the current-month queue.</p>
       </article>
 
       <article class="input-card">
