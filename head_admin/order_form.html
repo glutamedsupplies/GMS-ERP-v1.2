@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<link rel="stylesheet" href="order_form.css">
+<link rel="stylesheet" href="order_form.css?v=20260401c">
 </head>
 <body>
   <div class="page-shell">
@@ -45,9 +45,11 @@
             <p class="eyebrow">Header</p>
             <h2 id="orderDetailsTitle">Order Details</h2>
           </div>
-          <button id="openOrderFormSetupBtn" type="button" class="secondary-btn secondary-btn-compact">
-            <i class="fa-solid fa-sliders"></i> Customize Form
-          </button>
+          <div class="section-heading-actions">
+            <button id="openOrderFormSetupBtn" type="button" class="secondary-btn secondary-btn-compact">
+              <i class="fa-solid fa-sliders"></i> Customize Form
+            </button>
+          </div>
         </div>
 
         <div id="editModeBanner" class="edit-mode-banner" hidden></div>
@@ -140,6 +142,14 @@
           <div class="field">
             <label for="overpaymentInput">Overpayment</label>
             <input id="overpaymentInput" type="text" readonly>
+          </div>
+          <div class="field">
+            <label for="availableCreditInput">Available Credit</label>
+            <input id="availableCreditInput" type="text" readonly>
+          </div>
+          <div class="field">
+            <label for="appliedCreditInput">Applied Credit</label>
+            <input id="appliedCreditInput" type="number" min="0" step="0.01" placeholder="0.00">
           </div>
           <div id="fieldNote" class="field field-span-2">
             <label id="noteLabel" for="noteInput">Note</label>
@@ -415,6 +425,6 @@
   </div>
 
   <script src="../shared/app-client.js"></script>
-  <script src="order_form.js?v=20260325a"></script>
+  <script src="order_form.js?v=20260401c"></script>
 </body>
 </html>

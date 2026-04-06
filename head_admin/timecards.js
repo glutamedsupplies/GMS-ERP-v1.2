@@ -4,11 +4,19 @@ const timecardTableBody = document.getElementById('timecardTableBody');
 const employeeNameTitle = document.getElementById('employeeNameTitle');
 const weekDateInput = document.getElementById('weekDate');
 const weekRangeLabel = document.getElementById('weekRangeLabel');
-const DAILY_TARGET_HOURS = 8;
-const OVERTIME_THRESHOLD_HOURS = 1;
+const timecardPolicyNote = document.getElementById('timecardPolicyNote');
+const DEFAULT_ATTENDANCE_POLICY = Object.freeze({
+    dailyTargetHours: 9,
+    overtimeThresholdHours: 1
+});
+const GMS_GWD_ATTENDANCE_POLICY = Object.freeze({
+    dailyTargetHours: 8,
+    overtimeThresholdHours: 1
+});
 
 let selectedEmployee = null;
 let serverDateKey = formatDateKey(new Date());
+let currentAttendancePolicy = DEFAULT_ATTENDANCE_POLICY;
 
 initialize();
 
@@ -21,8 +29,10 @@ async function initialize() {
     try {
         const bootstrap = await appClient.getBootstrap();
         appClient.applyBootstrapBrandTheme(bootstrap);
+        applyAttendancePolicy(getAttendancePolicyForCompany(bootstrap?.company));
     } catch (error) {
         console.error('Failed to load head admin branding for time cards:', error);
+        applyAttendancePolicy(DEFAULT_ATTENDANCE_POLICY);
     }
 
     serverDateKey = await resolveServerDateKey();
@@ -42,6 +52,20 @@ function initSelectors(dateKey) {
             renderTimecard(selectedEmployee);
         }
     });
+}
+
+function getAttendancePolicyForCompany(company = {}) {
+    const companyCode = String(company?.company_code || company?.companyCode || '').trim().toLowerCase();
+    return companyCode === 'gms'
+        ? GMS_GWD_ATTENDANCE_POLICY
+        : DEFAULT_ATTENDANCE_POLICY;
+}
+
+function applyAttendancePolicy(policy = DEFAULT_ATTENDANCE_POLICY) {
+    currentAttendancePolicy = policy;
+    if (timecardPolicyNote) {
+        timecardPolicyNote.textContent = `Weekly attendance / ${policy.dailyTargetHours}h target`;
+    }
 }
 
 async function resolveServerDateKey() {
@@ -245,6 +269,11 @@ function getWorkHoursState(row) {
     const normalizedStatus = String(row?.status || '').trim().toLowerCase();
     const hasTimeIn = Boolean(String(row?.timeIn || '').trim());
     const hasTimeOut = Boolean(String(row?.timeOut || '').trim());
+    const dailyTargetHours = Number(currentAttendancePolicy?.dailyTargetHours || DEFAULT_ATTENDANCE_POLICY.dailyTargetHours);
+    const overtimeThresholdHours = Number(
+        currentAttendancePolicy?.overtimeThresholdHours || DEFAULT_ATTENDANCE_POLICY.overtimeThresholdHours
+    );
+    const overtimeStartHours = dailyTargetHours + overtimeThresholdHours;
 
     if (normalizedStatus === 'day off') {
         return { valueLabel, targetLabel: 'Not scheduled', tone: 'neutral' };
@@ -266,20 +295,22 @@ function getWorkHoursState(row) {
         return { valueLabel, targetLabel: 'Absent', tone: 'missing' };
     }
 
-    const overtimeHours = workedHours - DAILY_TARGET_HOURS;
-    if (overtimeHours >= OVERTIME_THRESHOLD_HOURS) {
+    const overtimeHours = Math.max(workedHours - overtimeStartHours, 0);
+    if (workedHours >= overtimeStartHours) {
         return {
             valueLabel,
-            targetLabel: `Overtime ${overtimeHours.toFixed(2)}h`,
+            targetLabel: overtimeHours > 0
+                ? `Overtime ${overtimeHours.toFixed(2)}h`
+                : 'Overtime',
             tone: 'overtime'
         };
     }
 
-    if (workedHours >= DAILY_TARGET_HOURS) {
-        return { valueLabel, targetLabel: 'Met 8h target', tone: 'met' };
+    if (workedHours >= dailyTargetHours) {
+        return { valueLabel, targetLabel: `Met ${dailyTargetHours}h target`, tone: 'met' };
     }
 
-    const shortHours = Math.max(DAILY_TARGET_HOURS - workedHours, 0);
+    const shortHours = Math.max(dailyTargetHours - workedHours, 0);
     const tone = !hasTimeIn && !hasTimeOut && normalizedStatus === 'absent'
         ? 'missing'
         : 'short';

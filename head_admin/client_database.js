@@ -364,7 +364,8 @@ function formatCreatedAt(value) {
         month: 'short',
         day: '2-digit',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        hour12: true
     });
 }
 

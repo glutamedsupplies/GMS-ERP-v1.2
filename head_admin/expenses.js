@@ -3,6 +3,10 @@ const expensesPageTitle = document.getElementById('expensesPageTitle');
 const expensesPageCopy = document.getElementById('expensesPageCopy');
 const moduleSwitchButtons = Array.from(document.querySelectorAll('[data-module-switch]'));
 const moduleJumpButtons = Array.from(document.querySelectorAll('[data-module-jump][data-jump-target]'));
+const expenseCopySummaryBtn = document.getElementById('expenseCopySummaryBtn');
+const expenseSavePdfBtn = document.getElementById('expenseSavePdfBtn');
+const expenseExportExcelBtn = document.getElementById('expenseExportExcelBtn');
+const expenseExportStatus = document.getElementById('expenseExportStatus');
 
 const MODULES = {
     expense: {
@@ -67,6 +71,7 @@ async function initialize() {
             editingId: null,
             syncingPeriod: false,
             items: [],
+            summary: {},
             preferredBranch: '',
             refs: getModuleRefs(module.prefix)
         };
@@ -154,6 +159,10 @@ function bindEvents() {
             scrollModulePanelIntoView(moduleKey, target);
         });
     });
+
+    expenseCopySummaryBtn?.addEventListener('click', copyExpenseBreakdownSummary);
+    expenseSavePdfBtn?.addEventListener('click', saveExpenseBreakdownAsPdf);
+    expenseExportExcelBtn?.addEventListener('click', downloadExpenseBreakdownExcel);
 
     Object.values(MODULES).forEach((module) => {
         const moduleState = state.modules[module.key];
@@ -392,6 +401,7 @@ async function loadRecords(moduleKey) {
         });
 
         state.modules[moduleKey].items = payload.items || [];
+        state.modules[moduleKey].summary = payload.summary || {};
         renderSummary(moduleKey, payload.summary || {});
         renderTable(moduleKey, payload.items || []);
         setReportStatus(
@@ -399,12 +409,566 @@ async function loadRecords(moduleKey) {
             `Loaded ${payload.summary?.totalCount || 0} ${module.searchPlaceholder} entr${payload.summary?.totalCount === 1 ? 'y' : 'ies'}.`,
             false
         );
+        return payload;
     } catch (error) {
         console.error(`Failed to load ${module.searchPlaceholder}:`, error);
         state.modules[moduleKey].items = [];
+        state.modules[moduleKey].summary = {};
         renderSummary(moduleKey, {});
         renderTable(moduleKey, []);
         setReportStatus(moduleKey, error.message || `Unable to load ${module.searchPlaceholder} records.`, true);
+        return null;
+    }
+}
+
+function getModuleFilters(moduleKey) {
+    const refs = state.modules[moduleKey]?.refs;
+    if (!refs) {
+        return {
+            dateFrom: '',
+            dateTo: '',
+            branch: '',
+            search: ''
+        };
+    }
+
+    return {
+        dateFrom: refs.dateFromFilter.value || '',
+        dateTo: refs.dateToFilter.value || '',
+        branch: refs.branchFilter.value || '',
+        search: refs.searchInput.value.trim()
+    };
+}
+
+function setExpenseExportStatus(message, isError = false) {
+    if (!expenseExportStatus) {
+        return;
+    }
+
+    expenseExportStatus.textContent = message || '';
+    expenseExportStatus.classList.toggle('error', Boolean(isError));
+}
+
+function setExpenseExportBusy(isBusy) {
+    [expenseCopySummaryBtn, expenseSavePdfBtn, expenseExportExcelBtn].forEach((button) => {
+        if (button) {
+            button.disabled = Boolean(isBusy);
+        }
+    });
+}
+
+function getExpenseBranchOrder(rows, branchFilter = '') {
+    const matchedFilterBranch = findMatchingBranch(branchFilter) || String(branchFilter || '').trim();
+    if (matchedFilterBranch) {
+        return [matchedFilterBranch];
+    }
+
+    const rowBranchMap = new Map();
+    (rows || []).forEach((row) => {
+        const branchName = String(row?.branch || '').trim();
+        if (branchName) {
+            rowBranchMap.set(branchName.toLowerCase(), branchName);
+        }
+    });
+
+    const availableBranches = getAvailableBranches();
+    const orderedBranches = availableBranches.filter((branch) => rowBranchMap.has(branch.toLowerCase()));
+    const remainingBranches = [...rowBranchMap.values()]
+        .filter((branch) => !orderedBranches.some((candidate) => candidate.toLowerCase() === branch.toLowerCase()))
+        .sort((left, right) => left.localeCompare(right));
+
+    const finalOrder = [...orderedBranches, ...remainingBranches];
+    if (finalOrder.length) {
+        return finalOrder;
+    }
+
+    return availableBranches.length === 1 ? [availableBranches[0]] : ['All Branches'];
+}
+
+function buildExpenseBreakdownSections(rows, branchFilter = '') {
+    return getExpenseBranchOrder(rows, branchFilter).map((branch) => {
+        const scopedRows = branch === 'All Branches'
+            ? rows
+            : rows.filter((row) => String(row?.branch || '').trim().toLowerCase() === branch.toLowerCase());
+        const grouped = new Map();
+
+        scopedRows.forEach((row) => {
+            const label = String(row?.about || '').trim() || 'Unlabeled Expense';
+            const key = label.toLowerCase();
+            const current = grouped.get(key) || {
+                label,
+                amount: 0,
+                recordCount: 0
+            };
+
+            current.amount += Number(row?.amount || 0);
+            current.recordCount += 1;
+            grouped.set(key, current);
+        });
+
+        const expenseItems = [...grouped.values()].sort((left, right) => left.label.localeCompare(right.label));
+        const totalAmount = expenseItems.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+        return {
+            branch,
+            recordCount: scopedRows.length,
+            uniqueItemCount: expenseItems.length,
+            totalAmount,
+            expenseItems
+        };
+    });
+}
+
+function buildExpenseFilterSummaryText(filters = {}) {
+    const parts = [];
+    const branch = String(filters.branch || '').trim();
+    const search = String(filters.search || '').trim();
+
+    if (filters.dateFrom || filters.dateTo) {
+        parts.push(`Period: ${formatFilterDate(filters.dateFrom) || 'Start'} to ${formatFilterDate(filters.dateTo) || 'End'}`);
+    } else {
+        parts.push('Period: All Dates');
+    }
+
+    parts.push(`Branch: ${branch || 'All Branches'}`);
+
+    if (search) {
+        parts.push(`Search: ${search}`);
+    }
+
+    return parts.join(' | ');
+}
+
+function buildExpenseBreakdownData() {
+    const filters = getModuleFilters('expense');
+    const items = Array.isArray(state.modules.expense?.items) ? state.modules.expense.items : [];
+    const summary = state.modules.expense?.summary || {};
+    const sections = buildExpenseBreakdownSections(items, filters.branch);
+    const companyName = String(
+        state.workspaceConfig?.company?.name
+        || state.session?.companyName
+        || state.session?.companyCode
+        || 'GMS ERP'
+    ).trim() || 'GMS ERP';
+    const totalAmount = Number(summary.totalAmount || items.reduce((sum, row) => sum + Number(row.amount || 0), 0));
+
+    return {
+        companyName,
+        title: 'Business Costs Breakdown',
+        filterSummary: buildExpenseFilterSummaryText(filters),
+        filters,
+        items,
+        summary: {
+            ...summary,
+            totalAmount
+        },
+        sections
+    };
+}
+
+function buildExpenseBreakdownText(data) {
+    const lines = [
+        String(data.title || 'Business Costs Breakdown').toUpperCase(),
+        data.companyName || 'GMS ERP',
+        data.filterSummary || '',
+        ''
+    ];
+
+    (data.sections || []).forEach((section, index) => {
+        lines.push(String(section.branch || 'Branch').toUpperCase());
+        if (!section.expenseItems.length) {
+            lines.push('- No expense entries recorded.');
+        } else {
+            section.expenseItems.forEach((item) => {
+                lines.push(`- ${item.label}: ${formatMoney(item.amount || 0)}`);
+            });
+        }
+        lines.push(`Total Expenses: ${formatMoney(section.totalAmount || 0)}`);
+        lines.push(`Records: ${section.recordCount || 0}`);
+        if (index < data.sections.length - 1) {
+            lines.push('');
+        }
+    });
+
+    lines.push('');
+    lines.push(`Overall Total Expenses: ${formatMoney(data.summary?.totalAmount || 0)}`);
+    lines.push(`Cash Left: ${formatMoney(data.summary?.cashLeftAmount || 0)}`);
+    return lines.join('\n').trim();
+}
+
+async function copyExpenseBreakdownSummary() {
+    setExpenseExportBusy(true);
+    setExpenseExportStatus('Refreshing expense data before copying...', false);
+
+    try {
+        const payload = await loadRecords('expense');
+        if (!payload) {
+            throw new Error('Unable to refresh expense records for copying.');
+        }
+        const data = buildExpenseBreakdownData();
+        await copyTextToClipboard(buildExpenseBreakdownText(data));
+        setExpenseExportStatus('Expense breakdown copied. Ready na siyang i-paste sa message or chat.', false);
+    } catch (error) {
+        console.error('Failed to copy expense breakdown:', error);
+        setExpenseExportStatus(error.message || 'Unable to copy the expense breakdown.', true);
+    } finally {
+        setExpenseExportBusy(false);
+    }
+}
+
+async function saveExpenseBreakdownAsPdf() {
+    setExpenseExportBusy(true);
+    setExpenseExportStatus('Preparing print-friendly expense breakdown...', false);
+
+    try {
+        const payload = await loadRecords('expense');
+        if (!payload) {
+            throw new Error('Unable to refresh expense records for PDF.');
+        }
+        const data = buildExpenseBreakdownData();
+        const popup = window.open('', '_blank', 'width=1200,height=900');
+
+        if (!popup) {
+            setExpenseExportStatus('Allow pop-ups to save the expense breakdown as PDF.', true);
+            return;
+        }
+
+        popup.document.write(buildExpenseBreakdownPrintHtml(data));
+        popup.document.close();
+        popup.focus();
+
+        const triggerPrint = () => {
+            try {
+                popup.focus();
+                popup.print();
+            } catch (_error) {
+                // Ignore popup print errors.
+            }
+        };
+
+        popup.addEventListener('load', triggerPrint, { once: true });
+        setTimeout(triggerPrint, 300);
+        setExpenseExportStatus('Print dialog opened. Piliin ang Save as PDF para ma-send sa owner.', false);
+    } catch (error) {
+        console.error('Failed to prepare expense breakdown PDF:', error);
+        setExpenseExportStatus(error.message || 'Unable to prepare the PDF view.', true);
+    } finally {
+        setExpenseExportBusy(false);
+    }
+}
+
+function buildExpenseBreakdownPrintHtml(data) {
+    const sectionsHtml = (data.sections || []).map((section) => {
+        const itemRows = section.expenseItems.length
+            ? section.expenseItems.map((item) => `
+                <tr>
+                    <td>${appClient.escapeHtml(item.label)}</td>
+                    <td class="amount">${appClient.escapeHtml(formatMoney(item.amount || 0))}</td>
+                </tr>
+            `).join('')
+            : `
+                <tr>
+                    <td>No expense entries recorded.</td>
+                    <td class="amount">${appClient.escapeHtml(formatMoney(0))}</td>
+                </tr>
+            `;
+
+        return `
+            <section class="branch-card">
+                <div class="branch-head">${appClient.escapeHtml(String(section.branch || 'Branch').toUpperCase())}</div>
+                <div class="branch-copy">${appClient.escapeHtml(data.filterSummary || '')}</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Expense Item</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemRows}
+                        <tr class="total-row">
+                            <td>Total Expenses</td>
+                            <td class="amount">${appClient.escapeHtml(formatMoney(section.totalAmount || 0))}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="branch-meta">${appClient.escapeHtml(`${section.recordCount || 0} record${section.recordCount === 1 ? '' : 's'} | ${section.uniqueItemCount || 0} grouped item${section.uniqueItemCount === 1 ? '' : 's'}`)}</p>
+            </section>
+        `;
+    }).join('');
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${appClient.escapeHtml(`${data.companyName || 'GMS ERP'} Expense Breakdown`)}</title>
+<style>
+  :root {
+    color-scheme: light;
+    --ink: #111827;
+    --muted: #7c2d12;
+    --line: #111827;
+    --paper: #ffffff;
+    --accent: #e68a1f;
+    --accent-soft: #fff4ea;
+    --total: #f7d36b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px;
+    font-family: Arial, sans-serif;
+    color: var(--ink);
+    background: #f3f4f6;
+  }
+  .sheet {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+    background: var(--paper);
+  }
+  h1 {
+    margin: 0;
+    text-align: center;
+    font-size: 28px;
+    letter-spacing: 0.04em;
+  }
+  .company {
+    margin: 8px 0 4px;
+    text-align: center;
+    font-weight: 700;
+  }
+  .copy {
+    margin: 0 0 22px;
+    text-align: center;
+    color: var(--muted);
+    font-style: italic;
+    font-size: 13px;
+  }
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .summary-card {
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    background: #fafaf9;
+  }
+  .summary-card span,
+  .summary-card strong {
+    display: block;
+  }
+  .summary-card span {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .summary-card strong {
+    margin-top: 6px;
+    font-size: 18px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .branch-card {
+    border: 1px solid var(--line);
+    break-inside: avoid;
+  }
+  .branch-head {
+    padding: 10px 12px;
+    background: var(--accent);
+    color: #ffffff;
+    text-align: center;
+    font-weight: 700;
+  }
+  .branch-copy {
+    padding: 8px 12px;
+    background: var(--accent-soft);
+    color: var(--muted);
+    font-size: 12px;
+    font-style: italic;
+    border-bottom: 1px solid var(--line);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th,
+  td {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    font-size: 13px;
+  }
+  th {
+    background: #111827;
+    color: #ffffff;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+  td.amount {
+    text-align: right;
+    white-space: nowrap;
+  }
+  .total-row td {
+    background: var(--total);
+    font-weight: 700;
+  }
+  .branch-meta {
+    margin: 0;
+    padding: 10px 12px;
+    color: #4b5563;
+    font-size: 12px;
+    border-top: 1px solid var(--line);
+    background: #fffbeb;
+  }
+  @media print {
+    body {
+        padding: 0;
+        background: #ffffff;
+    }
+    .sheet {
+        max-width: none;
+        padding: 0;
+        box-shadow: none;
+    }
+  }
+  @media (max-width: 900px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+  <main class="sheet">
+    <h1>${appClient.escapeHtml(String(data.title || 'Business Costs Breakdown').toUpperCase())}</h1>
+    <p class="company">${appClient.escapeHtml(data.companyName || 'GMS ERP')}</p>
+    <p class="copy">${appClient.escapeHtml(data.filterSummary || '')}</p>
+
+    <section class="summary">
+      <article class="summary-card">
+        <span>Total Expenses</span>
+        <strong>${appClient.escapeHtml(formatMoney(data.summary?.totalAmount || 0))}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Cash Left</span>
+        <strong>${appClient.escapeHtml(formatMoney(data.summary?.cashLeftAmount || 0))}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Visible Records</span>
+        <strong>${appClient.escapeHtml(String(data.summary?.totalCount || data.items?.length || 0))}</strong>
+      </article>
+    </section>
+
+    <section class="grid">
+      ${sectionsHtml}
+    </section>
+  </main>
+</body>
+</html>`;
+}
+
+async function downloadExpenseBreakdownExcel() {
+    const filters = getModuleFilters('expense');
+    setExpenseExportBusy(true);
+    setExpenseExportStatus('Preparing Excel export. Please wait...', false);
+
+    try {
+        const { blob, filename } = await fetchExpenseBreakdownExcel(filters);
+        triggerBlobDownload(blob, filename || 'expense-breakdown.xlsx');
+        setExpenseExportStatus('Excel export ready. Check your downloads.', false);
+    } catch (error) {
+        console.error('Failed to export expense breakdown Excel:', error);
+        setExpenseExportStatus(error.message || 'Failed to export the expense breakdown.', true);
+    } finally {
+        setExpenseExportBusy(false);
+    }
+}
+
+async function fetchExpenseBreakdownExcel(filters = {}) {
+    const query = new URLSearchParams({
+        dateFrom: filters.dateFrom || '',
+        dateTo: filters.dateTo || '',
+        branch: filters.branch || '',
+        search: filters.search || ''
+    });
+    const response = await fetch(`/api/expenses/export-excel?${query.toString()}`, {
+        credentials: 'same-origin'
+    });
+    const contentType = response.headers.get('content-type') || '';
+
+    if (!response.ok) {
+        if (contentType.includes('application/json')) {
+            const payload = await response.json();
+            throw new Error(payload.error || `Export failed (${response.status}).`);
+        }
+
+        const text = await response.text();
+        throw new Error(text || `Export failed (${response.status}).`);
+    }
+
+    if (contentType.includes('application/json')) {
+        const payload = await response.json();
+        throw new Error(payload.error || 'Unexpected response when downloading the Excel file.');
+    }
+
+    const blob = await response.blob();
+    const filename = parseFilenameFromHeader(response.headers.get('content-disposition'));
+    return { blob, filename };
+}
+
+function triggerBlobDownload(blob, filename) {
+    const blobUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = blobUrl;
+    anchor.download = filename || 'download.xlsx';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+}
+
+function parseFilenameFromHeader(headerValue) {
+    const header = String(headerValue || '');
+    const encodedMatch = header.match(/filename\*=UTF-8''([^;]+)/i);
+    if (encodedMatch) {
+        try {
+            return decodeURIComponent(encodedMatch[1]);
+        } catch (_error) {
+            return encodedMatch[1];
+        }
+    }
+
+    const match = header.match(/filename=\"?([^\";]+)\"?/i);
+    return match ? match[1] : '';
+}
+
+async function copyTextToClipboard(text) {
+    const value = String(text || '');
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.setAttribute('readonly', 'readonly');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+
+    const copied = document.execCommand('copy');
+    textarea.remove();
+    if (!copied) {
+        throw new Error('Copy is not available in this browser.');
     }
 }
 
@@ -798,6 +1362,10 @@ function scrollModulePanelIntoView(moduleKey, target = 'form') {
 
     const panel = target === 'records' ? refs.recordsPanel : refs.formPanel;
     panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function formatFilterDate(value) {
+    return value ? formatDate(value) : '';
 }
 
 function formatMoney(value) {

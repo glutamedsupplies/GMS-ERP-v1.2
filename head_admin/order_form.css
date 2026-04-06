@@ -360,6 +360,13 @@ body.quick-pos-mode .panel-footer {
   margin-bottom: 18px;
 }
 
+.section-heading-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .edit-mode-banner {
   margin-bottom: 16px;
   padding: 12px 14px;

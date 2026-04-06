@@ -1452,9 +1452,15 @@
             return text;
         }
 
-        const hours = String(match[1]).padStart(2, '0');
+        const hours = Number.parseInt(match[1], 10);
         const minutes = match[2];
-        return `${hours}:${minutes}`;
+        if (!Number.isFinite(hours)) {
+            return text;
+        }
+
+        const period = hours >= 12 ? 'PM' : 'AM';
+        const displayHour = hours % 12 || 12;
+        return `${displayHour}:${minutes} ${period}`;
     }
 
     function navigateTo(path) {
@@ -2151,6 +2157,14 @@
         listPendingPayments: ({ dateFrom = '', dateTo = '', branch = '', cashBranch = '', paymentOption = '', adminName = '', salesRepresentative = '', search = '', status = '', limit = 500, offset = 0 } = {}) => request(
             `/api/sales/pending-payments?dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}&branch=${encodeURIComponent(branch)}&cashBranch=${encodeURIComponent(cashBranch)}&paymentOption=${encodeURIComponent(paymentOption)}&adminName=${encodeURIComponent(adminName)}&salesRepresentative=${encodeURIComponent(salesRepresentative)}&search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`
         ),
+        listCustomerCredits: ({ dateFrom = '', dateTo = '', search = '', status = 'with_balance', limitClients = 250, limitEntries = 250 } = {}) => {
+            const query = `dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}&search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}&limitClients=${encodeURIComponent(limitClients)}&limitEntries=${encodeURIComponent(limitEntries)}`;
+            return requestWithSessionCache(
+                `customer-credits:${query}`,
+                15000,
+                () => request(`/api/sales/customer-credits?${query}`)
+            );
+        },
         addSale: (payload) => request('/api/sales', {
             method: 'POST',
             body: payload
@@ -2248,6 +2262,33 @@
             () => window.electronAPI?.orders?.preview(saleDate),
             () => request(`/api/orders/next-number?saleDate=${encodeURIComponent(saleDate)}`)
         ),
+        previewCustomerCreditBackfill: ({ dateFrom = '', dateTo = '' } = {}) => request(
+            `/api/orders/customer-credit-backfill/preview?dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}`
+        ),
+        applyCustomerCreditBackfill: ({ dateFrom = '', dateTo = '' } = {}) => request('/api/orders/customer-credit-backfill', {
+            method: 'POST',
+            body: {
+                dateFrom,
+                dateTo
+            }
+        }).then((result) => {
+            invalidateReferenceCaches(['customer-credits', 'orders:pending-client']);
+            return result;
+        }),
+        addManualCustomerCredit: ({ clientName = '', clientContact = '', clientAddress = '', amount = 0, note = '', action = 'add' } = {}) => request('/api/orders/customer-credit/manual-entry', {
+            method: 'POST',
+            body: {
+                clientName,
+                clientContact,
+                clientAddress,
+                amount,
+                note,
+                action
+            }
+        }).then((result) => {
+            invalidateReferenceCaches(['customer-credits', 'orders:pending-client']);
+            return result;
+        }),
         checkOrderClientPending: ({ clientName = '', clientContact = '', clientAddress = '', excludeOrderNumber = '', limit = 12 } = {}) => {
             const query = `clientName=${encodeURIComponent(clientName)}&clientContact=${encodeURIComponent(clientContact)}&clientAddress=${encodeURIComponent(clientAddress)}&excludeOrderNumber=${encodeURIComponent(excludeOrderNumber)}&limit=${encodeURIComponent(limit)}`;
             return requestWithSessionCache(

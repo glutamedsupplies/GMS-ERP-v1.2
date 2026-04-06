@@ -290,6 +290,12 @@
     flex-wrap: wrap;
     margin-top: 16px;
   }
+  .export-tools {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
   button {
     min-height: 44px;
     padding: 0 18px;
@@ -597,6 +603,11 @@
                 <h3>Expense Records</h3>
                 <p>Weekly, monthly, custom, o all-date filtering with branch totals.</p>
               </div>
+              <div class="export-tools">
+                <button id="expenseCopySummaryBtn" type="button" class="secondary-btn tiny-btn">Copy Summary</button>
+                <button id="expenseSavePdfBtn" type="button" class="warning-btn tiny-btn">Save as PDF</button>
+                <button id="expenseExportExcelBtn" type="button" class="primary-btn tiny-btn">Download Excel</button>
+              </div>
             </div>
 
             <div class="filter-grid">
@@ -630,6 +641,8 @@
                 <button id="resetExpenseFiltersBtn" type="button" class="secondary-btn">Reset</button>
               </div>
             </div>
+
+            <div id="expenseExportStatus" class="status">Use the current filters, then copy or save the breakdown for the owner.</div>
 
             <div class="summary-grid" id="expenseSummaryGrid">
               <article class="summary-card" data-static-card="count">

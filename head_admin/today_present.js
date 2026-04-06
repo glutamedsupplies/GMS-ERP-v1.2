@@ -130,7 +130,12 @@ async function initialize() {
 
     function updateClock() {
         const now = new Date();
-        clock.textContent = now.toLocaleTimeString('en-GB', buildTimeZoneOptions({ hour12: false }));
+        clock.textContent = now.toLocaleTimeString('en-US', buildTimeZoneOptions({
+            hour: 'numeric',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        }));
     }
 
     function updateDateLabel() {

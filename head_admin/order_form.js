@@ -232,6 +232,8 @@ const amountPaidInput = document.getElementById('amountPaidInput');
 const collectionInput = document.getElementById('collectionInput');
 const underpaymentInput = document.getElementById('underpaymentInput');
 const overpaymentInput = document.getElementById('overpaymentInput');
+const availableCreditInput = document.getElementById('availableCreditInput');
+const appliedCreditInput = document.getElementById('appliedCreditInput');
 const noteInput = document.getElementById('noteInput');
 const addItemRowBtn = document.getElementById('addItemRowBtn');
 const quickPosSection = document.getElementById('quickPosSection');
@@ -356,10 +358,11 @@ const DEFAULT_RECEIPT_TEMPLATE = Object.freeze({
     ].join('\n'),
     totalsLayout: [
         'Items Total|totals.baseTotal|money',
+        'Delivery Fee|totals.deliveryFee|money',
+        'Applied Credit|totals.appliedCreditAmount|money',
         'Total Due|totals.orderTotal|money',
         'Amount Paid|totals.amountPaid|money',
         'Collection|totals.collectionAmount|money',
-        'Delivery Fee|totals.deliveryFee|money',
         'Overpayment|totals.overpaymentAmount|money',
         'Underpayment|totals.underpaymentAmount|money',
         'Note|note|text'
@@ -424,6 +427,26 @@ function createOrderFormDraftState() {
     };
 }
 
+function createPendingClientCheckSummary(overrides = {}) {
+    return {
+        totalMatches: 0,
+        strongCount: 0,
+        possibleCount: 0,
+        totalBalance: 0,
+        totalBalanceDisplay: formatMoney(0),
+        historyCount: 0,
+        pendingCount: 0,
+        settledCount: 0,
+        latestProduct: '',
+        latestSaleDate: '',
+        latestOrderNumber: '',
+        availableCreditAmount: 0,
+        availableCreditDisplay: formatMoney(0),
+        creditLookupReady: false,
+        ...overrides
+    };
+}
+
 function createPendingClientCheckState() {
     return {
         timerId: 0,
@@ -434,19 +457,7 @@ function createPendingClientCheckState() {
         errorMessage: '',
         items: [],
         historyItems: [],
-        summary: {
-            totalMatches: 0,
-            strongCount: 0,
-            possibleCount: 0,
-            totalBalance: 0,
-            totalBalanceDisplay: formatMoney(0),
-            historyCount: 0,
-            pendingCount: 0,
-            settledCount: 0,
-            latestProduct: '',
-            latestSaleDate: '',
-            latestOrderNumber: ''
-        },
+        summary: createPendingClientCheckSummary(),
         selectedProfile: null
     };
 }
@@ -856,6 +867,7 @@ function bindStaticEvents() {
     saleDateInput.addEventListener('change', handleSaleDateChange);
     deliveryFeeInput.addEventListener('input', handleDeliveryFeeInput);
     deliveryFeeToggle.addEventListener('change', () => renderTotals());
+    appliedCreditInput?.addEventListener('input', () => renderTotals());
     clientContactInput.addEventListener('input', () => {
         clientContactInput.value = clientContactInput.value.replace(/[^\d\s()+-]/g, '');
         schedulePendingClientCheck();
@@ -1473,9 +1485,15 @@ async function resetOrderForm(statusMessage = '') {
     }
     clientContactInput.value = '';
     clientAddressInput.value = '';
+    if (appliedCreditInput) {
+        appliedCreditInput.value = '';
+    }
     collectionInput.value = formatMoney(0);
     underpaymentInput.value = formatMoney(0);
     overpaymentInput.value = formatMoney(0);
+    if (availableCreditInput) {
+        availableCreditInput.value = formatMoney(0);
+    }
     if (pastedOrderInput) {
         pastedOrderInput.value = '';
     }
@@ -1659,6 +1677,7 @@ function buildOrderFormDraftSnapshot() {
         deliveryFee: String(deliveryFeeInput?.value || '').trim(),
         deliveryFeeToCollect: Boolean(deliveryFeeToggle?.checked),
         inventoryDeducted: Boolean(inventoryDeductToggle?.checked ?? true),
+        appliedCreditAmount: String(appliedCreditInput?.value || '').trim(),
         clientContact: String(clientContactInput?.value || '').trim(),
         clientAddress: String(clientAddressInput?.value || '').trim(),
         note: String(noteInput?.value || '').trim(),
@@ -1686,6 +1705,7 @@ function hasOrderFormDraftSnapshotContent(snapshot = {}) {
     return Boolean(
         controls.some((entry) => String(entry?.value || '').trim() || String(entry?.input || '').trim())
         || (snapshot.paymentMethods || []).length
+        || String(snapshot.appliedCreditAmount || '').trim()
         || String(snapshot.clientContact || '').trim()
         || String(snapshot.clientAddress || '').trim()
         || String(snapshot.note || '').trim()
@@ -1855,6 +1875,9 @@ async function restoreOrderFormDraft({ orderNumber = '', scope = '' } = {}) {
 
         syncClientDetailVisibility();
 
+        if (appliedCreditInput) {
+            appliedCreditInput.value = draft.appliedCreditAmount || '';
+        }
         clientContactInput.value = draft.clientContact ? formatContactNumber(draft.clientContact) : '';
         clientAddressInput.value = draft.clientAddress || '';
         noteInput.value = draft.note || '';
@@ -2395,6 +2418,11 @@ async function loadOrderForEditing(orderNumber, { statusMessage = '' } = {}) {
             noteInput.value = order.note || '';
             amountPaidInput.value = Number(order.amountPaid || 0) > 0 ? formatNumberInputValue(Number(order.amountPaid)) : '';
             deliveryFeeInput.value = Number(order.deliveryFee || 0) > 0 ? String(Number(order.deliveryFee)) : '';
+            if (appliedCreditInput) {
+                appliedCreditInput.value = Number(order.appliedCreditAmount || 0) > 0
+                    ? formatNumberInputValue(Number(order.appliedCreditAmount))
+                    : '';
+            }
             deliveryFeeToggle.checked = Boolean(order.deliveryFeeToCollect);
             if (inventoryDeductToggle) {
                 inventoryDeductToggle.checked = parseBooleanLike(order.inventoryDeducted, true);
@@ -2415,6 +2443,16 @@ async function loadOrderForEditing(orderNumber, { statusMessage = '' } = {}) {
                 suggested: getSuggestedDeliveryFee(),
                 isManual: Number(order.deliveryFee || 0) !== getSuggestedDeliveryFee()
             };
+            state.pendingClientCheck.summary = createPendingClientCheckSummary({
+                availableCreditAmount: Number(order.availableCreditAmount || 0),
+                availableCreditDisplay: formatMoney(Number(order.availableCreditAmount || 0)),
+                creditLookupReady: Boolean(
+                    order.creditLookupReady
+                    || normalizePendingClientContact(order.clientContact || '')
+                    || (normalizePendingClientLookup(order.clientName || '') && normalizePendingClientLookup(order.clientAddress || ''))
+                )
+            });
+            syncAvailableCreditDisplay();
 
             state.rows = (order.items || []).map((item) => buildLoadedOrderRow(item));
             state.nextRowId = state.rows.reduce((highest, row) => Math.max(highest, row.id), 0) + 1;
@@ -3096,23 +3134,12 @@ function resetPendingClientCheck({ clearSelectedProfile = false } = {}) {
     state.pendingClientCheck.errorMessage = '';
     state.pendingClientCheck.items = [];
     state.pendingClientCheck.historyItems = [];
-    state.pendingClientCheck.summary = {
-        totalMatches: 0,
-        strongCount: 0,
-        possibleCount: 0,
-        totalBalance: 0,
-        totalBalanceDisplay: formatMoney(0),
-        historyCount: 0,
-        pendingCount: 0,
-        settledCount: 0,
-        latestProduct: '',
-        latestSaleDate: '',
-        latestOrderNumber: ''
-    };
+    state.pendingClientCheck.summary = createPendingClientCheckSummary();
     if (clearSelectedProfile) {
         state.pendingClientCheck.selectedProfile = null;
     }
     closePendingClientConfirmModal();
+    syncAvailableCreditDisplay();
     renderPendingClientAlert();
 }
 
@@ -3169,7 +3196,7 @@ async function runPendingClientCheck({ force = false } = {}) {
         state.pendingClientCheck.historyItems = Array.isArray(result?.historyItems)
             ? result.historyItems
             : state.pendingClientCheck.items;
-        state.pendingClientCheck.summary = {
+        state.pendingClientCheck.summary = createPendingClientCheckSummary({
             totalMatches: Number(result?.summary?.totalMatches || 0),
             strongCount: Number(result?.summary?.strongCount || 0),
             possibleCount: Number(result?.summary?.possibleCount || 0),
@@ -3180,8 +3207,12 @@ async function runPendingClientCheck({ force = false } = {}) {
             settledCount: Number(result?.summary?.settledCount || 0),
             latestProduct: String(result?.summary?.latestProduct || ''),
             latestSaleDate: String(result?.summary?.latestSaleDate || ''),
-            latestOrderNumber: String(result?.summary?.latestOrderNumber || '')
-        };
+            latestOrderNumber: String(result?.summary?.latestOrderNumber || ''),
+            availableCreditAmount: Number(result?.summary?.availableCreditAmount || 0),
+            availableCreditDisplay: String(result?.summary?.availableCreditDisplay || formatMoney(0)),
+            creditLookupReady: Boolean(result?.summary?.creditLookupReady)
+        });
+        syncAvailableCreditDisplay();
         renderPendingClientAlert();
         return state.pendingClientCheck;
     } catch (error) {
@@ -3195,19 +3226,8 @@ async function runPendingClientCheck({ force = false } = {}) {
         state.pendingClientCheck.errorMessage = error.message || 'Unable to check previous pending receipts.';
         state.pendingClientCheck.items = [];
         state.pendingClientCheck.historyItems = [];
-        state.pendingClientCheck.summary = {
-            totalMatches: 0,
-            strongCount: 0,
-            possibleCount: 0,
-            totalBalance: 0,
-            totalBalanceDisplay: formatMoney(0),
-            historyCount: 0,
-            pendingCount: 0,
-            settledCount: 0,
-            latestProduct: '',
-            latestSaleDate: '',
-            latestOrderNumber: ''
-        };
+        state.pendingClientCheck.summary = createPendingClientCheckSummary();
+        syncAvailableCreditDisplay();
         renderPendingClientAlert();
         return state.pendingClientCheck;
     }
@@ -3304,13 +3324,15 @@ function buildPendingClientStatsHtml(summary = {}) {
             { label: 'Past Orders', value: `${Number(summary.historyCount || 0)}` },
             { label: 'With Pending', value: `${Number(summary.pendingCount || 0)}` },
             { label: 'Settled', value: `${Number(summary.settledCount || 0)}` },
-            { label: 'Pending Balance', value: String(summary.totalBalanceDisplay || formatMoney(0)) }
+            { label: 'Pending Balance', value: String(summary.totalBalanceDisplay || formatMoney(0)) },
+            { label: 'Available Credit', value: String(summary.availableCreditDisplay || formatMoney(0)) }
         ]
         : [
             { label: 'Past Orders', value: `${Number(summary.historyCount || 0)}` },
             { label: 'Last Product', value: String(summary.latestProduct || 'No saved product') },
             { label: 'Last Order Date', value: summary.latestSaleDate ? formatDisplayDate(summary.latestSaleDate) : '-' },
-            { label: 'Pending Balance', value: String(summary.totalBalanceDisplay || formatMoney(0)) }
+            { label: 'Pending Balance', value: String(summary.totalBalanceDisplay || formatMoney(0)) },
+            { label: 'Available Credit', value: String(summary.availableCreditDisplay || formatMoney(0)) }
         ];
 
     return statEntries.map((entry) => `
@@ -5253,6 +5275,61 @@ function formatNumberInputValue(value) {
     return normalized > 0 ? normalized.toFixed(2) : '';
 }
 
+function syncAvailableCreditDisplay() {
+    if (!availableCreditInput) {
+        return;
+    }
+
+    availableCreditInput.value = state.pendingClientCheck.summary?.availableCreditDisplay || formatMoney(0);
+}
+
+function getAvailableCreditAmount() {
+    return Math.max(0, Number(state.pendingClientCheck.summary?.availableCreditAmount || 0));
+}
+
+function isCreditLookupReady() {
+    if (state.pendingClientCheck.summary?.creditLookupReady) {
+        return true;
+    }
+
+    const normalizedClientName = normalizePendingClientLookup(state.controls.clientName?.getValue?.() || '');
+    const normalizedContact = normalizePendingClientContact(getPendingClientContactValue());
+    const normalizedAddress = normalizePendingClientLookup(getPendingClientAddressValue());
+    return Boolean(normalizedContact || (normalizedClientName && normalizedAddress));
+}
+
+function getRequestedAppliedCreditAmount() {
+    return Math.max(0, Number(appliedCreditInput?.value || 0));
+}
+
+function getAppliedCreditValidationMessage(summary = {}) {
+    const requestedAppliedCreditAmount = Math.max(0, Number(summary.requestedAppliedCreditAmount || 0));
+    if (requestedAppliedCreditAmount <= 0) {
+        return '';
+    }
+
+    const grossOrderTotal = Math.max(0, Number(summary.grossOrderTotal || 0));
+    if (grossOrderTotal <= 0) {
+        return 'Applied credit can only be used after adding items to the order.';
+    }
+    if (requestedAppliedCreditAmount > grossOrderTotal + 0.009) {
+        return `Applied credit cannot be more than the order total of ${formatMoney(grossOrderTotal)}.`;
+    }
+    if (state.pendingClientCheck.loading) {
+        return 'Wait for the client credit check to finish before applying credit.';
+    }
+    if (!summary.creditLookupReady) {
+        return 'Applied credit requires the client contact number or the exact client address.';
+    }
+    if (summary.availableCreditAmount <= 0) {
+        return 'No available customer credit was found for this client.';
+    }
+    if (requestedAppliedCreditAmount > Number(summary.availableCreditAmount || 0) + 0.009) {
+        return `Applied credit cannot be more than the available credit of ${formatMoney(summary.availableCreditAmount || 0)}.`;
+    }
+    return '';
+}
+
 function buildPaymentMethodDisplay(entries = [], labels = []) {
     const normalizedLabels = labels.length
         ? labels
@@ -5437,6 +5514,11 @@ function renderTotals() {
     collectionInput.value = collectionDisplay;
     underpaymentInput.value = formatMoney(summary.underpaymentAmount);
     overpaymentInput.value = formatMoney(summary.overpaymentAmount);
+    syncAvailableCreditDisplay();
+    if (appliedCreditInput) {
+        appliedCreditInput.max = summary.grossOrderTotal > 0 ? String(summary.grossOrderTotal) : '';
+        appliedCreditInput.setCustomValidity(getAppliedCreditValidationMessage(summary));
+    }
 
     heroTotalMeta.textContent = summary.baseTotal > 0
         ? `${summary.itemCount} item row${summary.itemCount === 1 ? '' : 's'} ready`
@@ -5447,6 +5529,8 @@ function renderTotals() {
             : `Balance ${formatMoney(summary.collectionAmount)}`
         : summary.overpaymentAmount > 0
             ? `Overpayment ${formatMoney(summary.overpaymentAmount)}`
+            : summary.appliedCreditAmount > 0
+                ? `Credit Applied ${formatMoney(summary.appliedCreditAmount)}`
             : 'No balance';
 
     heroTotalCard.classList.toggle('warn', hasBalanceAlert);
@@ -5463,10 +5547,15 @@ function computeSummary() {
     const itemCount = getPreparedItems({ allowIncomplete: false }).filter((item) => item.isComplete).length;
     const amountPaid = sumPaymentMethodBreakdown(state.controls.paymentMethods.getEntries());
     const deliveryFee = Math.max(0, Number(deliveryFeeInput.value || 0));
-    const orderTotal = baseTotal + (deliveryFeeToggle.checked ? deliveryFee : 0);
+    const grossOrderTotal = baseTotal + (deliveryFeeToggle.checked ? deliveryFee : 0);
+    const requestedAppliedCreditAmount = getRequestedAppliedCreditAmount();
+    const appliedCreditAmount = Math.min(requestedAppliedCreditAmount, grossOrderTotal);
+    const orderTotal = Math.max(grossOrderTotal - appliedCreditAmount, 0);
     const remainingAmount = Math.max(orderTotal - amountPaid, 0);
     const useCourierCollection = isCourierCollectionManaged(state.controls.courier.getValue()) && remainingAmount > 0;
     const paymentType = resolvePaymentType({ itemCount, orderTotal, amountPaid });
+    const availableCreditAmount = getAvailableCreditAmount();
+    const creditLookupReady = isCreditLookupReady();
 
     let underpaymentAmount = 0;
     let overpaymentAmount = 0;
@@ -5478,9 +5567,14 @@ function computeSummary() {
     return {
         itemCount,
         baseTotal,
+        grossOrderTotal,
         orderTotal,
         amountPaid,
         deliveryFee,
+        requestedAppliedCreditAmount,
+        appliedCreditAmount,
+        availableCreditAmount,
+        creditLookupReady,
         remainingAmount,
         collectionAmount,
         underpaymentAmount,
@@ -5553,13 +5647,15 @@ function validateOrder() {
     }
 
     if (summary.paymentType === 'Full Paid') {
-        if (!resolvedPaymentMethods.length) return 'Full Paid orders require at least one payment method.';
+        if (summary.amountPaid > 0 && !resolvedPaymentMethods.length) return 'Full Paid orders require at least one payment method.';
         if (summary.remainingAmount > 0) return 'Full Paid orders cannot have an underpayment.';
     }
 
     if (summary.paymentType === 'Partial' && summary.amountPaid > 0) {
         if (!resolvedPaymentMethods.length) return 'Partial orders require at least one payment method.';
     }
+    const appliedCreditValidationMessage = getAppliedCreditValidationMessage(summary);
+    if (appliedCreditValidationMessage) return appliedCreditValidationMessage;
     return '';
 }
 
@@ -5626,6 +5722,7 @@ async function submitOrder() {
         paymentAmount: summary.amountPaid,
         deliveryFee: summary.deliveryFee,
         deliveryFeeToCollect: summary.deliveryFeeToCollect,
+        appliedCreditAmount: summary.appliedCreditAmount,
         collectionAmount: summary.collectionAmount,
         overpaymentAmount: summary.overpaymentAmount,
         underpaymentAmount: summary.underpaymentAmount,
@@ -5715,6 +5812,7 @@ function buildReceiptSnapshot(payload, result) {
             : [];
     const baseTotal = Number(payload.baseTotal ?? payload.orderTotal ?? 0);
     const orderTotal = Number(result?.orderTotal ?? payload.orderTotal ?? payload.baseTotal ?? 0);
+    const appliedCreditAmount = Number(result?.appliedCreditAmount ?? payload.appliedCreditAmount ?? 0);
     const amountPaid = Number(result?.paymentAmount ?? payload.paymentAmount ?? payload.amountPaid ?? 0);
     const remainingAmount = Number(result?.remainingAmount ?? Math.max(orderTotal - amountPaid, 0));
     const displayPaymentEntries = buildDisplayPaymentEntries(paymentMethodBreakdown, {
@@ -5734,7 +5832,11 @@ function buildReceiptSnapshot(payload, result) {
         cashBranch: result?.cashBranch || payload.cashBranch || payload.branch,
         courier: payload.courier,
         paymentType: result?.paymentType || payload.paymentType,
-        paymentMethod: buildPaymentMethodDisplay(displayPaymentEntries, displayPaymentLabels) || result?.paymentMethod || payload.paymentMethod || payload.paymentOption || '-',
+        paymentMethod: buildPaymentMethodDisplay(displayPaymentEntries, displayPaymentLabels)
+            || result?.paymentMethod
+            || payload.paymentMethod
+            || payload.paymentOption
+            || (appliedCreditAmount > 0 ? 'Customer Credit' : '-'),
         paymentMethodBreakdown,
         adminName: payload.adminName,
         salesRepresentative: payload.salesRepresentative,
@@ -5760,6 +5862,7 @@ function buildReceiptSnapshot(payload, result) {
             remainingAmount,
             collectionAmount: Number(result?.collectionAmount ?? payload.collectionAmount ?? 0),
             deliveryFee: Number(result?.deliveryFee ?? payload.deliveryFee ?? 0),
+            appliedCreditAmount,
             overpaymentAmount: Number(result?.overpaymentAmount ?? payload.overpaymentAmount ?? 0),
             underpaymentAmount: Number(result?.underpaymentAmount ?? payload.underpaymentAmount ?? 0)
         }
@@ -5769,6 +5872,7 @@ function buildReceiptSnapshot(payload, result) {
 function buildReceiptSnapshotFromOrder(order) {
     const baseTotal = Number(order?.baseTotal ?? order?.orderTotal ?? 0);
     const orderTotal = Number(order?.orderTotal ?? order?.baseTotal ?? 0);
+    const appliedCreditAmount = Number(order?.appliedCreditAmount ?? 0);
     const amountPaid = Number(order?.amountPaid ?? order?.paymentAmount ?? 0);
     const remainingAmount = Number(order?.remainingAmount ?? Math.max(orderTotal - amountPaid, 0));
     const displayPaymentEntries = buildDisplayPaymentEntries(order?.paymentMethodBreakdown || [], {
@@ -5787,7 +5891,9 @@ function buildReceiptSnapshotFromOrder(order) {
         cashBranch: order?.cashBranch || order?.branch || '',
         courier: order?.courier || '',
         paymentType: order?.paymentType || '-',
-        paymentMethod: buildPaymentMethodDisplay(displayPaymentEntries, displayPaymentLabels) || order?.paymentMethod || '-',
+        paymentMethod: buildPaymentMethodDisplay(displayPaymentEntries, displayPaymentLabels)
+            || order?.paymentMethod
+            || (appliedCreditAmount > 0 ? 'Customer Credit' : '-'),
         paymentMethodBreakdown: Array.isArray(order?.paymentMethodBreakdown) ? order.paymentMethodBreakdown : [],
         adminName: order?.adminName || '',
         salesRepresentative: order?.salesRepresentative || '',
@@ -5811,6 +5917,7 @@ function buildReceiptSnapshotFromOrder(order) {
             remainingAmount,
             collectionAmount: Number(order?.collectionAmount ?? 0),
             deliveryFee: Number(order?.deliveryFee ?? 0),
+            appliedCreditAmount,
             overpaymentAmount: Number(order?.overpaymentAmount ?? 0),
             underpaymentAmount: Number(order?.underpaymentAmount ?? 0)
         }
@@ -6318,6 +6425,7 @@ function resolveReceiptTemplateValue(receipt, key) {
         'totals.remainingAmount': Number(totals.remainingAmount ?? 0),
         'totals.collectionAmount': Number(totals.collectionAmount ?? 0),
         'totals.deliveryFee': Number(totals.deliveryFee ?? 0),
+        'totals.appliedCreditAmount': Number(totals.appliedCreditAmount ?? 0),
         'totals.overpaymentAmount': Number(totals.overpaymentAmount ?? 0),
         'totals.underpaymentAmount': Number(totals.underpaymentAmount ?? 0)
     };

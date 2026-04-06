@@ -23,10 +23,11 @@ const DEFAULT_RECEIPT_META_LAYOUT = [
 ].join('\n');
 const DEFAULT_RECEIPT_TOTALS_LAYOUT = [
     'Items Total|totals.baseTotal|money',
+    'Delivery Fee|totals.deliveryFee|money',
+    'Applied Credit|totals.appliedCreditAmount|money',
     'Total Due|totals.orderTotal|money',
     'Amount Paid|totals.amountPaid|money',
     'Collection|totals.collectionAmount|money',
-    'Delivery Fee|totals.deliveryFee|money',
     'Overpayment|totals.overpaymentAmount|money',
     'Underpayment|totals.underpaymentAmount|money',
     'Note|note|text'

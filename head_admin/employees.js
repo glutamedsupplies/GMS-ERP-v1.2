@@ -277,8 +277,8 @@ function renderEmployees(rows) {
         const safeId = appClient.escapeHtml(emp.id);
         const safeName = appClient.escapeHtml(emp.name);
         const safeRole = appClient.escapeHtml(formatRoleLabel(emp.role));
-        const safeTimeIn = appClient.escapeHtml(normalizeTime(emp.time_in, DEFAULT_TIME_IN));
-        const safeTimeOut = appClient.escapeHtml(normalizeTime(emp.time_out, DEFAULT_TIME_OUT));
+        const safeTimeIn = appClient.escapeHtml(appClient.formatDisplayTime(normalizeTime(emp.time_in, DEFAULT_TIME_IN)));
+        const safeTimeOut = appClient.escapeHtml(appClient.formatDisplayTime(normalizeTime(emp.time_out, DEFAULT_TIME_OUT)));
         const isActive = Boolean(emp.is_active);
         const isCurrentUser = String(emp.id || '') === state.currentUserId;
         const statusLabel = isActive ? 'Active' : 'Suspended';
@@ -470,6 +470,11 @@ async function saveEmployee() {
 
 function updateClock() {
     if (liveClock) {
-        liveClock.innerText = new Date().toLocaleTimeString('en-GB', { hour12: false });
+        liveClock.innerText = new Date().toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        });
     }
 }

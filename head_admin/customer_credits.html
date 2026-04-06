@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Credits</title>
+<script src="../shared/theme-preload.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f1efe8;
+    --panel: rgba(255, 255, 255, 0.92);
+    --ink: #162218;
+    --muted: #667167;
+    --line: #d9dfd8;
+    --sage: #2f6f57;
+    --sage-soft: #e9f4ee;
+    --amber: #c88f1f;
+    --amber-soft: #fff5dc;
+    --rose: #c76363;
+    --rose-soft: #fff0ef;
+    --sky-soft: #eef6ff;
+    --shadow: 0 26px 70px rgba(18, 39, 31, 0.1);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Manrope", sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at top left, rgba(47, 111, 87, 0.12), transparent 20%),
+      radial-gradient(circle at bottom right, rgba(200, 143, 31, 0.12), transparent 22%),
+      linear-gradient(180deg, #fbfaf7 0%, var(--bg) 100%);
+  }
+  .page {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 28px 22px 40px;
+  }
+  .hero,
+  .panel {
+    background: var(--panel);
+    border: 1px solid rgba(255, 255, 255, 0.76);
+    border-radius: 30px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+  }
+  .hero {
+    padding: 28px;
+  }
+  .hero-head,
+  .stack-header,
+  .card-actions,
+  .entry-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .eyebrow {
+    margin: 0 0 8px;
+    color: var(--sage);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  h1, h2, h3 {
+    margin: 0;
+    font-family: "Fraunces", serif;
+  }
+  h1 {
+    font-size: clamp(34px, 4vw, 48px);
+  }
+  h2 {
+    font-size: clamp(24px, 3vw, 32px);
+  }
+  h3 {
+    font-size: clamp(21px, 2.3vw, 27px);
+  }
+  .hero-copy,
+  .section-copy {
+    margin: 12px 0 0;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .active-range {
+    padding: 14px 18px;
+    border-radius: 22px;
+    background: linear-gradient(180deg, #f4fbf7 0%, #ebf4ef 100%);
+    border: 1px solid #dbe8e0;
+    min-width: 280px;
+  }
+  .active-range span,
+  .active-range strong {
+    display: block;
+  }
+  .active-range span {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .active-range strong {
+    margin-top: 8px;
+    font-size: 24px;
+  }
+  .filter-panel,
+  .adjustment-panel {
+    margin-top: 18px;
+    padding: 18px;
+    border-radius: 24px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.82);
+  }
+  .filter-grid,
+  .adjustment-grid {
+    display: grid;
+    gap: 12px;
+    align-items: end;
+  }
+  .filter-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  }
+  .adjustment-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .field.span-2 {
+    grid-column: span 2;
+  }
+  .field label {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+  }
+  input,
+  select,
+  textarea {
+    width: 100%;
+    min-height: 48px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 12px 14px;
+    background: #fffdfb;
+    color: var(--ink);
+  }
+  textarea {
+    min-height: 104px;
+    resize: vertical;
+  }
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-color: rgba(47, 111, 87, 0.44);
+    box-shadow: 0 0 0 4px rgba(47, 111, 87, 0.1);
+  }
+  button {
+    min-height: 46px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    font-weight: 800;
+  }
+  .primary-btn {
+    background: linear-gradient(135deg, #2f6f57 0%, #48906f 100%);
+    color: #fff;
+  }
+  .secondary-btn {
+    background: #edf4ef;
+    color: var(--sage);
+  }
+  .ghost-btn {
+    background: #fff;
+    color: var(--sage);
+    border: 1px solid #dbe7df;
+  }
+  .danger-btn {
+    background: #fff1f0;
+    color: #b42318;
+    border: 1px solid #f2d2cf;
+  }
+  .filter-actions,
+  .adjustment-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .status {
+    min-height: 22px;
+    margin-top: 14px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .status.error {
+    color: #b42318;
+  }
+  .content-grid {
+    margin-top: 18px;
+    display: grid;
+    gap: 18px;
+  }
+  .panel {
+    padding: 22px;
+  }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .summary-card {
+    padding: 20px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(245, 250, 247, 0.98) 0%, rgba(255, 255, 255, 0.94) 100%);
+  }
+  .summary-card.warn {
+    background: linear-gradient(180deg, #fff7e5 0%, #fffdf8 100%);
+    border-color: #f1dfb7;
+  }
+  .summary-card span {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .summary-card strong {
+    display: block;
+    margin-top: 10px;
+    font-size: clamp(24px, 2.6vw, 32px);
+  }
+  .summary-card p {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .client-list,
+  .activity-list {
+    display: grid;
+    gap: 16px;
+  }
+  .client-card,
+  .activity-card {
+    padding: 20px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 249, 247, 0.94) 100%);
+  }
+  .balance-pill,
+  .entry-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .balance-pill {
+    background: rgba(47, 111, 87, 0.12);
+    color: var(--sage);
+  }
+  .entry-pill.is-positive {
+    background: rgba(47, 111, 87, 0.12);
+    color: var(--sage);
+  }
+  .entry-pill.is-negative {
+    background: rgba(199, 99, 99, 0.12);
+    color: #b42318;
+  }
+  .client-subtitle,
+  .activity-subtitle {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.6;
+  }
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .detail-card {
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: #fff;
+    border: 1px solid #e8eeea;
+  }
+  .detail-card span {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .detail-card strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 18px;
+    line-height: 1.4;
+  }
+  .detail-card p {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .client-note,
+  .activity-note {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: #fffdf8;
+    border: 1px solid #f0e5cb;
+  }
+  .client-note span,
+  .activity-note span {
+    display: block;
+    color: #8b6b20;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .client-note p,
+  .activity-note p {
+    margin: 8px 0 0;
+    color: var(--ink);
+    line-height: 1.7;
+  }
+  .entry-meta {
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.7;
+  }
+  .empty {
+    padding: 28px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-weight: 700;
+    border: 1px dashed #d9dfd8;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.76);
+  }
+  @media (max-width: 1380px) {
+    .filter-grid,
+    .adjustment-grid,
+    .summary-grid,
+    .detail-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 860px) {
+    .page {
+      padding: 18px 14px 28px;
+    }
+    .hero,
+    .panel {
+      padding: 18px;
+      border-radius: 24px;
+    }
+    .hero-head,
+    .filter-actions,
+    .adjustment-actions,
+    .card-actions,
+    .entry-actions {
+      flex-direction: column;
+    }
+    .filter-grid,
+    .adjustment-grid,
+    .summary-grid,
+    .detail-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="hero-head">
+        <div>
+          <p class="eyebrow">Customer Credit Desk</p>
+          <h1>Credits / Overpayment</h1>
+          <p class="hero-copy">Hiwalay na panel ito para sa customer credits, overpayments, at manual credit adjustments. Dito mo makikita ang live available balance per client at ang history ng credit movements.</p>
+        </div>
+
+        <div class="active-range">
+          <span>Activity Range</span>
+          <strong id="activeDateLabel">This Month</strong>
+        </div>
+      </div>
+
+      <section class="filter-panel">
+        <div class="filter-grid">
+          <div class="field">
+            <label for="periodFilter">Report View</label>
+            <select id="periodFilter">
+              <option value="this_month">This Month</option>
+              <option value="this_week">This Week</option>
+              <option value="custom">Custom Range</option>
+              <option value="all">All Dates</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="dateFromFilter">Date From</label>
+            <input id="dateFromFilter" type="date">
+          </div>
+          <div class="field">
+            <label for="dateToFilter">Date To</label>
+            <input id="dateToFilter" type="date">
+          </div>
+          <div class="field">
+            <label for="searchFilter">Search Client / Order</label>
+            <input id="searchFilter" type="search" placeholder="Client, contact, order number, note">
+          </div>
+          <div class="field">
+            <label for="statusFilter">Balance Status</label>
+            <select id="statusFilter">
+              <option value="with_balance">With Balance</option>
+              <option value="all">All Clients</option>
+              <option value="zero_balance">Zero Balance</option>
+            </select>
+          </div>
+          <div class="filter-actions">
+            <button id="applyFiltersBtn" type="button" class="primary-btn">Apply</button>
+            <button id="resetFiltersBtn" type="button" class="secondary-btn">Reset</button>
+          </div>
+        </div>
+
+        <div id="panelStatus" class="status">Loading customer credits...</div>
+      </section>
+    </section>
+
+    <section class="content-grid">
+      <section class="panel">
+        <div class="stack-header">
+          <div>
+            <p class="eyebrow">Live Overview</p>
+            <h2>Credit Snapshot</h2>
+            <p id="summaryMeta" class="section-copy">Current available balances and activity in the selected date range.</p>
+          </div>
+        </div>
+
+        <div id="summaryBody" class="summary-grid">
+          <div class="summary-card"><span>Loading</span><strong>...</strong><p>Preparing customer credit summary.</p></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="stack-header">
+          <div>
+            <p class="eyebrow">Adjustment Tool</p>
+            <h2>Manual Credit Adjustment</h2>
+            <p class="section-copy">Gamitin ito kung walang saved old overpayment record o kung kailangan mong magdagdag o magbawas ng credit nang may audit trail pa rin.</p>
+          </div>
+        </div>
+
+        <section class="adjustment-panel">
+          <div class="adjustment-grid">
+            <div class="field">
+              <label for="manualActionInput">Adjustment Type</label>
+              <select id="manualActionInput">
+                <option value="add">Add Credit</option>
+                <option value="remove">Remove Credit</option>
+              </select>
+            </div>
+            <div class="field span-2">
+              <label for="manualClientNameInput">Client Name</label>
+              <input id="manualClientNameInput" type="text" placeholder="Client name">
+            </div>
+            <div class="field">
+              <label for="manualClientContactInput">Contact Number</label>
+              <input id="manualClientContactInput" type="text" placeholder="09XXXXXXXXX">
+            </div>
+            <div class="field">
+              <label for="manualAmountInput">Credit Amount</label>
+              <input id="manualAmountInput" type="number" min="0" step="0.01" placeholder="0.00">
+            </div>
+            <div class="field span-2">
+              <label for="manualNoteInput">Note</label>
+              <input id="manualNoteInput" type="text" placeholder="Example: Manual carry-over from old notebook">
+            </div>
+            <div class="field span-2">
+              <label for="manualClientAddressInput">Exact Address</label>
+              <textarea id="manualClientAddressInput" rows="3" placeholder="Required if there is no contact number"></textarea>
+            </div>
+            <div class="adjustment-actions">
+              <button id="saveManualAdjustmentBtn" type="button" class="primary-btn">Save Adjustment</button>
+              <button id="clearManualAdjustmentBtn" type="button" class="danger-btn">Clear Form</button>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="panel">
+        <div class="stack-header">
+          <div>
+            <p class="eyebrow">Client Balances</p>
+            <h2>Available Credits</h2>
+            <p id="clientBalancesMeta" class="section-copy">Live per-client credit balance. Use the action button para mabilis i-fill ang manual adjustment form.</p>
+          </div>
+        </div>
+
+        <div id="clientBalancesBody" class="client-list">
+          <div class="empty">Loading customer balances...</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="stack-header">
+          <div>
+            <p class="eyebrow">Ledger Activity</p>
+            <h2>Recent Credit Movements</h2>
+            <p id="creditActivityMeta" class="section-copy">Activity within the selected date range, including overpayment credits, applied credits, at manual adjustments.</p>
+          </div>
+        </div>
+
+        <div id="creditActivityBody" class="activity-list">
+          <div class="empty">Loading credit activity...</div>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <script src="../shared/app-client.js"></script>
+  <script src="customer_credits.js?v=20260401a"></script>
+</body>
+</html>

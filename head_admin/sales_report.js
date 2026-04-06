@@ -87,10 +87,11 @@ const DEFAULT_RECEIPT_TEMPLATE = Object.freeze({
     ].join('\n'),
     totalsLayout: [
         'Items Total|totals.baseTotal|money',
+        'Delivery Fee|totals.deliveryFee|money',
+        'Applied Credit|totals.appliedCreditAmount|money',
         'Total Due|totals.orderTotal|money',
         'Amount Paid|totals.amountPaid|money',
         'Collection|totals.collectionAmount|money',
-        'Delivery Fee|totals.deliveryFee|money',
         'Overpayment|totals.overpaymentAmount|money',
         'Underpayment|totals.underpaymentAmount|money',
         'Note|note|text'
@@ -1207,6 +1208,7 @@ function buildReceiptSnapshot(order) {
         : [];
     const baseTotal = Number(order?.baseTotal ?? order?.orderTotal ?? 0);
     const orderTotal = Number(order?.orderTotal ?? order?.baseTotal ?? 0);
+    const appliedCreditAmount = Number(order?.appliedCreditAmount ?? 0);
     const amountPaid = Number(order?.amountPaid ?? order?.paymentAmount ?? 0);
     const remainingAmount = Number(order?.remainingAmount ?? Math.max(orderTotal - amountPaid, 0));
     const displayPaymentEntries = buildDisplayPaymentEntries(paymentMethodBreakdown, {
@@ -1226,7 +1228,9 @@ function buildReceiptSnapshot(order) {
         cashBranch: order?.cashBranch || order?.branch || '',
         courier: order?.courier || '',
         paymentType: order?.paymentType || '-',
-        paymentMethod: buildPaymentMethodDisplay(displayPaymentEntries, displayPaymentLabels) || order?.paymentMethod || '-',
+        paymentMethod: buildPaymentMethodDisplay(displayPaymentEntries, displayPaymentLabels)
+            || order?.paymentMethod
+            || (appliedCreditAmount > 0 ? 'Customer Credit' : '-'),
         paymentMethodBreakdown,
         adminName: order?.adminName || '',
         salesRepresentative: order?.salesRepresentative || '',
@@ -1250,6 +1254,7 @@ function buildReceiptSnapshot(order) {
             remainingAmount,
             collectionAmount: Number(order?.collectionAmount ?? 0),
             deliveryFee: Number(order?.deliveryFee ?? 0),
+            appliedCreditAmount,
             overpaymentAmount: Number(order?.overpaymentAmount ?? 0),
             underpaymentAmount: Number(order?.underpaymentAmount ?? 0)
         }
@@ -1757,6 +1762,7 @@ function resolveReceiptTemplateValue(receipt, key) {
         'totals.remainingAmount': Number(totals.remainingAmount ?? 0),
         'totals.collectionAmount': Number(totals.collectionAmount ?? 0),
         'totals.deliveryFee': Number(totals.deliveryFee ?? 0),
+        'totals.appliedCreditAmount': Number(totals.appliedCreditAmount ?? 0),
         'totals.overpaymentAmount': Number(totals.overpaymentAmount ?? 0),
         'totals.underpaymentAmount': Number(totals.underpaymentAmount ?? 0)
     };

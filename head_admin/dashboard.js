@@ -84,6 +84,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         communication_panel: 'communication_panel.html',
         sales_report: 'sales_report.html',
         pending_payments: 'pending_payments.html',
+        customer_credits: 'customer_credits.html',
         lbc_tracking: 'lbc_tracking.html',
         invoice_summary: 'invoice_summary.html',
         expenses: 'expenses.html',
@@ -109,6 +110,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         communication_panel: [],
         sales_report: ['sales', 'reports'],
         pending_payments: ['sales', 'reports'],
+        customer_credits: ['sales', 'invoicing'],
         lbc_tracking: ['sales'],
         invoice_summary: ['invoicing'],
         expenses: ['sales'],
@@ -128,6 +130,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         inventory_levels: ['inventory'],
         composite_items: ['composite'],
         order_form: ['order_form'],
+        customer_credits: ['order_form'],
         expenses: ['expenses']
     };
     const panelGroups = [
@@ -144,6 +147,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 'order_form',
                 'sales_report',
                 'pending_payments',
+                'customer_credits',
                 'invoice_summary',
                 'expenses',
                 'lbc_tracking'
@@ -194,6 +198,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         communication_panel: 'Stay on top of tenant and customer messages from a dedicated communication view.',
         sales_report: 'Read sales performance summaries with faster navigation between report panels.',
         pending_payments: 'Follow up unpaid and partially paid orders from a separate non-LBC payment panel.',
+        customer_credits: 'Track customer credits, overpayments, and manual credit adjustments from one dedicated panel.',
         lbc_tracking: 'Track shipment details and update records without leaving the admin shell.',
         invoice_summary: 'Review invoice activity with a simpler, more focused summary panel.',
         expenses: 'Capture expenses and cash flow entries in a cleaner transactional workspace.',
@@ -625,6 +630,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     'sales_inventory_insight',
                     'sales_report',
                     'pending_payments',
+                    'customer_credits',
                     'invoice_summary',
                     'expenses',
                     'lbc_tracking'
@@ -650,6 +656,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             setNavItemLabel('order_form', labels.orderFormMenu || 'Counter POS');
             setNavItemLabel('sales_report', labels.salesReportMenu || 'Sales & Profit');
             setNavItemLabel('pending_payments', 'Pending Bills');
+            setNavItemLabel('customer_credits', 'Credits / Overpayment');
             setNavItemLabel('expenses', labels.expensesMenu || 'Cash Log');
             setNavItemLabel('timecards', 'Time Cards');
             setNavItemLabel('today', "Today's Crew");
@@ -669,6 +676,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             updatePanelDescription('order_form', 'Run dine-in, takeout, and pickup orders from a tap-first fast-food counter layout.');
             updatePanelDescription('sales_report', 'Check daily sales, payment mix, food cost, and profit performance for the Chow counter.');
             updatePanelDescription('pending_payments', 'Follow up unpaid and partially paid counter orders without mixing in LBC delivery records.');
+            updatePanelDescription('customer_credits', 'Track guest credits, old overpayments, and manual credit adjustments without crowding the POS view.');
             updatePanelDescription('expenses', 'Record cash-outs, petty cash, and operating expenses without leaving the restaurant workspace.');
             updatePanelDescription('timecards', 'Open crew time cards and shift history from the attendance section.');
             updatePanelDescription('today', 'See who is on shift today before the lunch or dinner rush starts.');
@@ -689,6 +697,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             setNavItemLabel('order_form', 'POS');
             setNavItemLabel('sales_report', 'Sales');
             setNavItemLabel('pending_payments', 'Pending Payments');
+            setNavItemLabel('customer_credits', 'Credits / Overpayment');
             setNavItemLabel('branches', 'Stores');
             return;
         }
@@ -699,6 +708,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         setNavItemLabel('order_form', labels.orderFormMenu || 'Order Form');
         setNavItemLabel('sales_report', labels.salesReportMenu || 'Sales Reports');
         setNavItemLabel('pending_payments', 'Pending Payments');
+        setNavItemLabel('customer_credits', 'Credits / Overpayment');
         setNavItemLabel('expenses', labels.expensesMenu || 'Expenses');
     }
 
