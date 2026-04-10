@@ -378,7 +378,7 @@ function buildClipboardText(orders, { title = 'Today\'s Invoice', date = '' } = 
         lines.push('');
 
         items.forEach((order, index) => {
-            lines.push(`${index + 1}. ${order.clientName}`);
+            lines.push(`${index + 1}. ${order.clientName}${buildOrderStarSuffix(order.orderTotal)}`);
         });
 
         lines.push('');
@@ -393,6 +393,11 @@ function buildClipboardText(orders, { title = 'Today\'s Invoice', date = '' } = 
     lines.push(`Total Sales: ${formatPesoWhole(orders.reduce((sum, order) => sum + Number(order.orderTotal || 0), 0))}`);
 
     return lines.join('\n');
+}
+
+function buildOrderStarSuffix(orderTotal) {
+    const starCount = Math.floor(Math.max(0, Number(orderTotal) || 0) / 5000);
+    return starCount > 0 ? ` ${'\u2B50'.repeat(starCount)}` : '';
 }
 
 function groupOrdersByBranch(orders) {
