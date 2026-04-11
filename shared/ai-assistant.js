@@ -5,13 +5,15 @@
     window.GMS_AI_WIDGET_INITIALIZED = true;
 
     const CONFIG = {
-        endpoint: '/api/public/ai/chat',
-        title: 'GMS AI Assistant',
-        subtitle: 'Taglish help for login, sign up, register company ID, modules, troubleshooting, and GMS ERP workflows.'
+        endpoint: '/api/public/ai/chat'
     };
+    const DEFAULT_BRANDING = Object.freeze({
+        appName: 'GMS ERP',
+        companyName: ''
+    });
     const STORAGE = {
-        conversationKey: 'gmsAiConversationId:v2',
-        historyPrefix: 'gmsAiHistory:v2:',
+        conversationKey: 'gmsAiConversationId:v3',
+        historyPrefix: 'gmsAiHistory:v3:',
         maxMessages: 24
     };
 
@@ -19,7 +21,11 @@
         open: false,
         history: [],
         sending: false,
-        conversationId: ''
+        conversationId: '',
+        companyCode: '',
+        branding: { ...DEFAULT_BRANDING },
+        brandingRequestId: 0,
+        brandingTimer: 0
     };
 
     function generateConversationId() {
@@ -108,6 +114,173 @@
         } catch (_error) {
             // Ignore storage errors
         }
+    }
+
+    function readContextValue(value) {
+        if (typeof value === 'function') {
+            try {
+                return value();
+            } catch (_error) {
+                return '';
+            }
+        }
+        return value;
+    }
+
+    function getAssistantContext() {
+        if (!window.GMS_AI_ASSISTANT_CONTEXT || typeof window.GMS_AI_ASSISTANT_CONTEXT !== 'object') {
+            return {};
+        }
+
+        const source = window.GMS_AI_ASSISTANT_CONTEXT;
+        return {
+            companyCode: readContextValue(source.getCompanyCode || source.companyCode),
+            appName: readContextValue(source.getAppName || source.appName),
+            companyName: readContextValue(source.getCompanyName || source.companyName)
+        };
+    }
+
+    function normalizeBranding(rawBranding = {}) {
+        return {
+            appName: String(rawBranding.appName || '').trim() || DEFAULT_BRANDING.appName,
+            companyName: String(rawBranding.companyName || '').trim()
+        };
+    }
+
+    function getQueryCompanyCode() {
+        try {
+            return String(new URLSearchParams(window.location.search).get('companyCode') || '').trim();
+        } catch (_error) {
+            return '';
+        }
+    }
+
+    function getDomCompanyCode() {
+        const selectors = ['#companyCode', '#companyCodeInput', 'input[name="companyCode"]'];
+        for (const selector of selectors) {
+            const el = document.querySelector(selector);
+            const value = String(el?.value || '').trim();
+            if (value) {
+                return value;
+            }
+        }
+        return '';
+    }
+
+    function resolveCompanyCode() {
+        const context = getAssistantContext();
+        return String(context.companyCode || getQueryCompanyCode() || getDomCompanyCode() || '').trim();
+    }
+
+    function buildAssistantTitle(branding = state.branding) {
+        const companyName = String(branding?.companyName || '').trim();
+        const appName = String(branding?.appName || '').trim() || DEFAULT_BRANDING.appName;
+        if (companyName) {
+            return `${companyName} Assistant`;
+        }
+        if (appName && appName !== DEFAULT_BRANDING.appName) {
+            return `${appName} Assistant`;
+        }
+        return 'GMS AI Assistant';
+    }
+
+    function buildAssistantSubtitle(branding = state.branding) {
+        const companyName = String(branding?.companyName || '').trim();
+        if (companyName) {
+            return `Taglish help for login, sign up, register company ID, modules, troubleshooting, and workflows for ${companyName}.`;
+        }
+        return 'Taglish help for login, sign up, register company ID, modules, troubleshooting, and app workflows.';
+    }
+
+    function getWelcomeMessage(branding = state.branding) {
+        const companyName = String(branding?.companyName || '').trim();
+        if (companyName) {
+            return `Hi! Ako ang AI assistant ng ${companyName}. Pwede tayo mag-Taglish. Alam ko ang Login, Forgot Password, Sign up, Register Company ID, Customer Portal, Order Form, Communication Panel, Inventory, Reports, Tracking, Settings, at role-based pages ng Employee, Head Admin, at Super Admin. I-type mo lang yung page o problem mo at gagabayan kita step by step.`;
+        }
+        return 'Hi! Ako ang GMS AI Assistant. Pwede tayo mag-Taglish. Alam ko ang Login, Forgot Password, Sign up, Register Company ID, Customer Portal, Order Form, Communication Panel, Inventory, Reports, Tracking, Settings, at role-based pages ng Employee, Head Admin, at Super Admin. I-type mo lang yung page o problem mo at gagabayan kita step by step.';
+    }
+
+    function applyHeaderBranding() {
+        if (titleEl) {
+            titleEl.textContent = buildAssistantTitle(state.branding);
+        }
+        if (subtitleEl) {
+            subtitleEl.textContent = buildAssistantSubtitle(state.branding);
+        }
+    }
+
+    async function refreshBrandingContext() {
+        const requestId = ++state.brandingRequestId;
+        const context = getAssistantContext();
+        const companyCode = resolveCompanyCode();
+        let nextBranding = normalizeBranding(context);
+
+        try {
+            if (window.appClient && typeof window.appClient.getPublicBranding === 'function') {
+                const publicBranding = await window.appClient.getPublicBranding({ companyCode });
+                if (requestId !== state.brandingRequestId) {
+                    return;
+                }
+                nextBranding = normalizeBranding({
+                    ...nextBranding,
+                    ...(publicBranding || {})
+                });
+            }
+        } catch (_error) {
+            // Ignore branding fetch failures and keep local fallback.
+        }
+
+        if (!nextBranding.companyName && window.appClient && typeof window.appClient.getBootstrap === 'function') {
+            try {
+                const bootstrap = await window.appClient.getBootstrap();
+                if (requestId !== state.brandingRequestId) {
+                    return;
+                }
+                nextBranding = normalizeBranding({
+                    ...nextBranding,
+                    appName: bootstrap?.company?.app_name || bootstrap?.branding?.appName || nextBranding.appName,
+                    companyName: bootstrap?.company?.name || bootstrap?.branding?.companyName || nextBranding.companyName
+                });
+            } catch (_error) {
+                // Public pages usually do not have bootstrap access.
+            }
+        }
+
+        if (requestId !== state.brandingRequestId) {
+            return;
+        }
+
+        state.companyCode = companyCode;
+        state.branding = nextBranding;
+        applyHeaderBranding();
+        if (!state.history.length && messagesEl && messagesEl.childElementCount === 1) {
+            const firstBubble = messagesEl.firstElementChild;
+            if (firstBubble && firstBubble.classList.contains('assistant')) {
+                firstBubble.textContent = normalizeAssistantReply(getWelcomeMessage(state.branding));
+            }
+        }
+    }
+
+    function scheduleBrandingRefresh() {
+        if (state.brandingTimer) {
+            window.clearTimeout(state.brandingTimer);
+        }
+        state.brandingTimer = window.setTimeout(() => {
+            refreshBrandingContext();
+        }, 180);
+    }
+
+    function watchBrandingInputs() {
+        const selectors = ['#companyCode', '#companyCodeInput', 'input[name="companyCode"]'];
+        selectors.forEach((selector) => {
+            const el = document.querySelector(selector);
+            if (!el || el.dataset.gmsAiBrandingBound === '1') {
+                return;
+            }
+            el.dataset.gmsAiBrandingBound = '1';
+            el.addEventListener('input', scheduleBrandingRefresh);
+            el.addEventListener('change', scheduleBrandingRefresh);
+        });
     }
 
     function createEl(tag, className, attrs = {}) {
@@ -291,10 +464,6 @@
         document.head.appendChild(style);
     }
 
-    function getWelcomeMessage() {
-        return 'Hi! Ako ang GMS AI Assistant. Pwede tayo mag-Taglish. Alam ko ang Login, Forgot Password, Sign up, Register Company ID, Customer Portal, Order Form, Communication Panel, Inventory, Reports, Tracking, Settings, at role-based pages ng Employee, Head Admin, at Super Admin. I-type mo lang yung page o problem mo at gagabayan kita step by step.';
-    }
-
     function normalizeAssistantReply(text = '') {
         return String(text || '')
             .replace(/\r\n/g, '\n')
@@ -373,7 +542,8 @@
             const payload = {
                 message: raw,
                 history: recentHistory,
-                threadId: state.conversationId
+                threadId: state.conversationId,
+                companyCode: state.companyCode || resolveCompanyCode()
             };
 
             const response = await fetch(CONFIG.endpoint, {
@@ -401,17 +571,21 @@
         }
     }
 
-    function init() {
+    async function init() {
         appendStyles();
         state.conversationId = loadConversationId();
+        watchBrandingInputs();
+        await refreshBrandingContext();
 
         launcher = createEl('button', 'gms-ai-launcher', { type: 'button', text: 'Ask AI' });
         panel = createEl('div', 'gms-ai-panel');
 
         const header = createEl('div', 'gms-ai-header');
         const titleWrap = createEl('div');
-        const title = createEl('div', 'gms-ai-title', { text: CONFIG.title });
-        const subtitle = createEl('div', 'gms-ai-subtitle', { text: CONFIG.subtitle });
+        titleEl = createEl('div', 'gms-ai-title', { text: buildAssistantTitle(state.branding) });
+        subtitleEl = createEl('div', 'gms-ai-subtitle', { text: buildAssistantSubtitle(state.branding) });
+        const title = titleEl;
+        const subtitle = subtitleEl;
         titleWrap.appendChild(title);
         titleWrap.appendChild(subtitle);
         const headerActions = createEl('div', 'gms-ai-header-actions');
@@ -446,6 +620,7 @@
 
         document.body.appendChild(launcher);
         document.body.appendChild(panel);
+        applyHeaderBranding();
 
         launcher.addEventListener('click', () => setOpen(!state.open));
         resetBtn.addEventListener('click', startNewConversation);
@@ -466,6 +641,8 @@
     let messagesEl;
     let textarea;
     let sendButton;
+    let titleEl;
+    let subtitleEl;
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

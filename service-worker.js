@@ -1,4 +1,4 @@
-const STATIC_CACHE = 'attendance-static-v10';
+const STATIC_CACHE = 'attendance-static-v11';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
