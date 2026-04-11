@@ -2,6 +2,7 @@
     const installButton = document.getElementById('installAppBtn');
     const statusMessage = document.getElementById('message');
     let deferredPrompt = null;
+    const isAuthPage = /\/(?:login|forgot_password)\.html$/i.test(window.location.pathname || '');
 
     function setInstallStatus(text, color = '#ffffff') {
         if (!statusMessage) {
@@ -11,12 +12,10 @@
         statusMessage.style.color = color;
     }
 
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/service-worker.js').catch((error) => {
-                console.error('Service worker registration failed:', error);
-            });
-        });
+    cleanupServiceWorkerArtifacts();
+
+    if (isAuthPage && installButton) {
+        installButton.hidden = true;
     }
 
     window.addEventListener('beforeinstallprompt', (event) => {
@@ -55,4 +54,20 @@
         }
         deferredPrompt = null;
     });
+
+    function cleanupServiceWorkerArtifacts() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations?.().then((registrations) => {
+                registrations.forEach((registration) => registration.unregister().catch(() => {}));
+            }).catch(() => {});
+        }
+
+        if ('caches' in window) {
+            caches.keys().then((keys) => {
+                keys
+                    .filter((key) => /^attendance-static-/i.test(key))
+                    .forEach((key) => caches.delete(key).catch(() => {}));
+            }).catch(() => {});
+        }
+    }
 })();

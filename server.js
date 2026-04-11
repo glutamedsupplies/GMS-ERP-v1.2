@@ -35,8 +35,32 @@ function loadEnvFile() {
 
 loadEnvFile();
 
-const store = require('./lib/sqlite');
-const { startServer, SERVER_CONFIG } = require('./lib/http-server');
+function reportStartupError(error) {
+    const message = error?.message || String(error);
+    console.error('Failed to start Attendance server:', error);
+    if (process.versions?.electron) {
+        try {
+            require('electron').dialog.showErrorBox(
+                'GMS ERP Error',
+                `GMS ERP failed to start.\n\n${message}`
+            );
+        } catch (_dialogError) {
+            // Fall through to exit below.
+        }
+    }
+}
+
+let store;
+let startServer;
+let SERVER_CONFIG;
+
+try {
+    store = require('./lib/sqlite');
+    ({ startServer, SERVER_CONFIG } = require('./lib/http-server'));
+} catch (error) {
+    reportStartupError(error);
+    process.exit(0);
+}
 
 let server = null;
 

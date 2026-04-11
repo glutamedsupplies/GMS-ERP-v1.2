@@ -17,6 +17,7 @@
     const SUPPORT_SESSION_BANNER_ID = 'appSupportSessionBanner';
     const COMPANY_ANNOUNCEMENT_BANNER_ID = 'appCompanyAnnouncementBanner';
     const REQUEST_CACHE_STORAGE_PREFIX = 'appRequestCacheV1';
+    const AUTO_NAVIGATION_GUARD_KEY = 'appAutoNavigationGuardV1';
     const CURRENT_SESSION_CACHE_KEY = 'current-session';
     const inFlightRequestCache = new Map();
 
@@ -860,11 +861,13 @@
         }
     }
 
-    async function requestWithSessionCache(cacheKey, maxAgeMs, factory) {
+    async function requestWithSessionCache(cacheKey, maxAgeMs, factory, { bypassCache = false } = {}) {
         const scopedKey = buildScopedRequestCacheKey(cacheKey);
-        const cachedValue = readRequestCache(cacheKey, maxAgeMs);
-        if (cachedValue !== null) {
-            return cachedValue;
+        if (!bypassCache) {
+            const cachedValue = readRequestCache(cacheKey, maxAgeMs);
+            if (cachedValue !== null) {
+                return cachedValue;
+            }
         }
 
         if (inFlightRequestCache.has(scopedKey)) {
@@ -1467,6 +1470,9 @@
         const targetWindow = window.top && window.top !== window
             ? window.top
             : window;
+        if (!shouldAllowAutoNavigation(path)) {
+            return;
+        }
 
         if (/^https?:\/\//i.test(path)) {
             targetWindow.location.replace(path);
@@ -1476,6 +1482,41 @@
         if (targetWindow.location.pathname !== path) {
             targetWindow.location.replace(path);
         }
+    }
+
+    function shouldAllowAutoNavigation(path) {
+        const targetPath = String(path || '').trim();
+        if (!targetPath || typeof sessionStorage === 'undefined') {
+            return true;
+        }
+
+        const now = Date.now();
+        const windowMs = 8000;
+        const maxTransitions = 4;
+
+        try {
+            const rawValue = sessionStorage.getItem(AUTO_NAVIGATION_GUARD_KEY);
+            const previousState = rawValue ? JSON.parse(rawValue) : {};
+            const recentEvents = Array.isArray(previousState.events)
+                ? previousState.events.filter((timestamp) => Number.isFinite(timestamp) && (now - timestamp) <= windowMs)
+                : [];
+            recentEvents.push(now);
+
+            sessionStorage.setItem(AUTO_NAVIGATION_GUARD_KEY, JSON.stringify({
+                events: recentEvents.slice(-maxTransitions),
+                lastPath: targetPath,
+                lastAt: now
+            }));
+
+            if (recentEvents.length >= maxTransitions) {
+                console.error(`Blocked repeated auto-navigation to ${targetPath} to prevent a redirect loop.`);
+                return false;
+            }
+        } catch (_error) {
+            return true;
+        }
+
+        return true;
     }
 
     function normalizeHost(value = '') {
@@ -1782,19 +1823,23 @@
         }, 0);
     }
 
-    async function getCurrentSession() {
-        const cachedUser = readRequestCache(CURRENT_SESSION_CACHE_KEY, 15000);
-        if (cachedUser && cachedUser.id) {
-            setSessionUser(cachedUser);
-            syncSupportSessionBanner(cachedUser.support_session || cachedUser.supportSession || null);
-            return cachedUser;
+    async function getCurrentSession({ bypassCache = false } = {}) {
+        if (!bypassCache) {
+            const cachedUser = readRequestCache(CURRENT_SESSION_CACHE_KEY, 15000);
+            if (cachedUser && cachedUser.id) {
+                setSessionUser(cachedUser);
+                syncSupportSessionBanner(cachedUser.support_session || cachedUser.supportSession || null);
+                return cachedUser;
+            }
         }
 
         let user = null;
         try {
             user = await requestWithSessionCache(CURRENT_SESSION_CACHE_KEY, 15000, () => request('/api/session', {
                 skipAuthRedirect: true
-            }));
+            }), {
+                bypassCache
+            });
         } catch (error) {
             if (error?.code === 'HTTP_401') {
                 clearStoredSession();
@@ -1814,7 +1859,7 @@
     }
 
     async function ensureSession({ role = '', allowEmployeeFeature = '', allowEmployeeFeatures = [] } = {}) {
-        const user = await getCurrentSession();
+        const user = await getCurrentSession({ bypassCache: true });
         if (!user) {
             redirectToLogin();
             return null;

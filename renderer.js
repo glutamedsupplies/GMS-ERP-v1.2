@@ -45,7 +45,7 @@ async function handleLogin() {
 
 async function restoreSession() {
     try {
-        const user = await appClient.getCurrentSession();
+        const user = await appClient.getCurrentSession({ bypassCache: true });
         if (!user) {
             return;
         }

@@ -1,4 +1,4 @@
-const STATIC_CACHE = 'attendance-static-v11';
+const STATIC_CACHE = 'attendance-static-v13';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -15,8 +15,21 @@ const STATIC_ASSETS = [
     '/renderer/forgot_password.html',
     '/renderer/forgot_password.js'
 ];
+const NETWORK_ONLY_PATHS = new Set([
+    '/login.html',
+    '/shared/app-client.js',
+    '/shared/pwa.js',
+    '/renderer/login.js',
+    '/shared/firebase.js',
+    '/renderer/forgot_password.html',
+    '/renderer/forgot_password.js'
+]);
 
 function shouldCache(requestUrl) {
+    if (NETWORK_ONLY_PATHS.has(requestUrl.pathname)) {
+        return false;
+    }
+
     return STATIC_ASSETS.includes(requestUrl.pathname) || requestUrl.pathname.startsWith('/assets/icons/');
 }
 

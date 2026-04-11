@@ -90,7 +90,6 @@ const FIREBASE_GOOGLE_REDIRECT_CODES = new Set([
 ]);
 
 applyQueryPrefill();
-redirectIfSessionExists();
 refreshBranding();
 
 if (togglePassIcon) {
@@ -231,7 +230,7 @@ async function handleLogin() {
 
 async function redirectIfSessionExists() {
     try {
-        const user = await appClient.getCurrentSession();
+        const user = await appClient.getCurrentSession({ bypassCache: true });
         if (!user) {
             return;
         }
@@ -268,7 +267,7 @@ function redirectByRole(role, { bootstrap = null } = {}) {
             ? '/head_admin/dashboard.html'
             : '/employee/employee.html');
     const tenantHost = resolveTenantHost(bootstrap);
-    if (tenantHost) {
+    if (tenantHost && shouldUseTenantHostRedirect(tenantHost)) {
         const currentHost = normalizeHost(window.location.hostname);
         if (currentHost && currentHost !== tenantHost) {
             window.location.replace(`${window.location.protocol}//${tenantHost}${path}`);
@@ -276,6 +275,26 @@ function redirectByRole(role, { bootstrap = null } = {}) {
         }
     }
     window.location.replace(path);
+}
+
+function shouldUseTenantHostRedirect(tenantHost) {
+    const currentHost = normalizeHost(window.location.hostname);
+    const normalizedTenantHost = normalizeHost(tenantHost);
+    if (!currentHost || !normalizedTenantHost) {
+        return false;
+    }
+
+    if (currentHost === normalizedTenantHost) {
+        return true;
+    }
+
+    const currentBaseDomain = getBaseDomain(currentHost);
+    const tenantBaseDomain = getBaseDomain(normalizedTenantHost);
+    if (!currentBaseDomain || !tenantBaseDomain) {
+        return false;
+    }
+
+    return currentBaseDomain === tenantBaseDomain;
 }
 
 async function buildWelcomeContext(user, { companyCode = '', loginId = '' } = {}) {

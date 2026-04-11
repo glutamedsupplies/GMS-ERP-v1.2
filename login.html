@@ -1691,9 +1691,35 @@
   </section>
 </div>
 
-<script type="module" src="shared/firebase.js?v=20260317-google-fix"></script>
-<script src="shared/app-client.js"></script>
-<script src="shared/pwa.js"></script>
-<script src="renderer/login.js?v=20260317-google-fix"></script>
+<script>
+(function cleanupAuthPageControl() {
+  if (!/\/(?:login|forgot_password)\.html$/i.test(window.location.pathname || '')) {
+    return;
+  }
+
+  try {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistrations) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((registration) => registration.unregister().catch(() => {}));
+      }).catch(() => {});
+    }
+  } catch (_error) {}
+
+  try {
+    if ('caches' in window) {
+      caches.keys().then((keys) => {
+        keys
+          .filter((key) => /^attendance-static-/i.test(key))
+          .forEach((key) => caches.delete(key).catch(() => {}));
+      }).catch(() => {});
+    }
+  } catch (_error) {}
+})();
+</script>
+
+<script type="module" src="shared/firebase.js?v=20260411-authloop-fix"></script>
+<script src="shared/app-client.js?v=20260411-authloop-fix"></script>
+<script src="shared/pwa.js?v=20260411-authloop-fix"></script>
+<script src="renderer/login.js?v=20260411-authloop-fix"></script>
 </body>
 </html>
