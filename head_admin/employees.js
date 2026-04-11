@@ -444,6 +444,9 @@ function closeEmployeeModal() {
 
 async function saveEmployee() {
     const isEditing = Boolean(state.editingId);
+    const existingEmployee = isEditing
+        ? state.employees.find((item) => String(item.id) === String(state.editingId))
+        : null;
     const weeklySchedule = collectWeeklySchedule();
     const defaultTimes = deriveDefaultTimesFromSchedule(weeklySchedule);
     const payload = {
@@ -467,13 +470,21 @@ async function saveEmployee() {
 
     try {
         if (isEditing) {
-            await appClient.updateUser(state.editingId, {
+            const updatePayload = {
                 name: payload.name,
                 password: payload.password || '',
                 timeIn: payload.timeIn,
                 timeOut: payload.timeOut,
                 weeklySchedule: payload.weeklySchedule
-            });
+            };
+
+            // Preserve the current account state when only updating schedule details.
+            if (existingEmployee) {
+                updatePayload.is_active = Boolean(existingEmployee.is_active);
+                updatePayload.account_status = getEmployeeAccountStatus(existingEmployee);
+            }
+
+            await appClient.updateUser(state.editingId, updatePayload);
             alert('Account updated successfully.');
         } else {
             await appClient.addEmployee(payload);
