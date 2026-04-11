@@ -3538,6 +3538,8 @@ async function handlePastedOrderApply({ auto = false } = {}) {
         }
     }
 
+    parsed = normalizeParsedOrderForForm(parsed);
+
     if (!parsed.rows.length) {
         const reason = parsed.unmatchedItemLines.length
             ? `Unable to match item lines: ${parsed.unmatchedItemLines.join(' | ')}`
@@ -3659,6 +3661,194 @@ function mergeParsedRows(baseParsed, aiParsed) {
     }
 
     return baseRows;
+}
+
+function normalizeParsedReferenceSelection(value = '', options = []) {
+    const matchedValue = matchReferenceValue(value, options);
+    return matchedValue || '';
+}
+
+function normalizeParsedPaymentMethodEntry(rawValue = '', amount = 0, courier = '') {
+    const matchedMethods = dedupeValues([
+        ...matchPaymentMethods(rawValue, courier),
+        normalizeParsedReferenceSelection(rawValue, state.references.paymentMethods)
+    ].filter(Boolean));
+    if (!matchedMethods.length) {
+        return [];
+    }
+
+    const normalizedAmount = Math.max(0, Number(amount || 0));
+    let assignedAmount = false;
+    return matchedMethods.map((method) => {
+        if (isZeroAmountPaymentMethod(method)) {
+            return { method, amount: 0 };
+        }
+
+        if (!assignedAmount) {
+            assignedAmount = true;
+            return {
+                method,
+                amount: normalizedAmount
+            };
+        }
+
+        return {
+            method,
+            amount: 0
+        };
+    });
+}
+
+function normalizeParsedPaymentEntriesForForm(entries = [], { courier = '', rawPaymentMethod = '' } = {}) {
+    const normalizedEntries = [];
+    const pushEntry = (entry = {}) => {
+        const method = String(entry?.method || entry?.value || '').trim();
+        if (!method) {
+            return;
+        }
+
+        normalizeParsedPaymentMethodEntry(method, entry?.amount, courier).forEach((normalizedEntry) => {
+            const existingEntry = normalizedEntries.find((item) => normalizeLookup(item.method) === normalizeLookup(normalizedEntry.method));
+            if (existingEntry) {
+                existingEntry.amount += Math.max(0, Number(normalizedEntry.amount || 0));
+                return;
+            }
+
+            normalizedEntries.push({
+                method: normalizedEntry.method,
+                amount: Math.max(0, Number(normalizedEntry.amount || 0))
+            });
+        });
+    };
+
+    (Array.isArray(entries) ? entries : []).forEach(pushEntry);
+    if (!normalizedEntries.length && rawPaymentMethod) {
+        pushEntry({ method: rawPaymentMethod, amount: 0 });
+    }
+
+    return normalizedEntries.map((entry) => ({
+        method: entry.method,
+        amount: isZeroAmountPaymentMethod(entry.method) ? 0 : Math.max(0, Number(entry.amount || 0))
+    }));
+}
+
+function findOrderableVariantByCodeAndSet(itemCode = '', setName = '') {
+    const codeNeedle = normalizeLookup(itemCode);
+    const setNeedle = normalizeLookup(setName);
+    if (!codeNeedle) {
+        return null;
+    }
+
+    return getOrderableInventoryVariants().find((variant) => (
+        normalizeLookup(variant.itemCode) === codeNeedle
+        && (!setNeedle || normalizeLookup(variant.setName) === setNeedle)
+    )) || null;
+}
+
+function resolveParsedOrderVariant(row = {}) {
+    const productName = normalizeWhitespace(row?.productName || '');
+    const setName = normalizeWhitespace(row?.setName || '');
+    const itemCode = normalizeWhitespace(row?.itemCode || '');
+    const quantity = Math.max(1, Number(row?.quantity || 1));
+    const parsedPrice = Math.max(0, Number(row?.price || 0));
+    const lineTotal = Number.isFinite(Number(row?.subtotal))
+        ? Math.max(0, Number(row?.subtotal || 0))
+        : (parsedPrice * quantity);
+
+    return findOrderableVariantByCodeAndSet(itemCode, setName)
+        || findVariantForSelection(productName, setName)
+        || findOrderableVariantByProductAndSet(productName, setName)
+        || resolvePastedVariant([productName, setName].filter(Boolean).join(' '), {
+            unitPrice: parsedPrice > 0 ? parsedPrice : null,
+            quantity,
+            lineTotal
+        })
+        || (!setName
+            ? (
+                findOrderableVariantByCodeAndSet(itemCode, '')
+                || findOrderableVariantByProductAndSet(productName)
+                || resolvePastedVariant(productName, {
+                    unitPrice: parsedPrice > 0 ? parsedPrice : null,
+                    quantity,
+                    lineTotal
+                })
+            )
+            : null);
+}
+
+function normalizeParsedRowsForForm(rows = []) {
+    const warnings = [];
+    const normalizedRows = (Array.isArray(rows) ? rows : []).map((row, index) => {
+        const quantity = Math.max(1, Number(row?.quantity || 1));
+        const parsedPrice = Math.max(0, Number(row?.price || 0));
+        const variant = resolveParsedOrderVariant(row);
+
+        if (!variant) {
+            const itemLabel = [String(row?.productName || '').trim(), String(row?.setName || '').trim()]
+                .filter(Boolean)
+                .join(' / ')
+                || `line ${index + 1}`;
+            warnings.push(`Review parsed item ${index + 1}: ${itemLabel}.`);
+            return {
+                productName: String(row?.productName || '').trim(),
+                setName: String(row?.setName || '').trim(),
+                itemCode: String(row?.itemCode || '').trim(),
+                price: parsedPrice,
+                quantity,
+                subtotal: quantity * parsedPrice,
+                helper: String(row?.helper || '').trim(),
+                priceOverride: Boolean(row?.priceOverride),
+                stock: null
+            };
+        }
+
+        const referencePrice = Math.max(0, Number(variant.price || 0));
+        const shouldOverridePrice = Boolean(row?.priceOverride);
+        return {
+            ...buildParsedRowFromVariant(variant, {
+                quantity,
+                price: shouldOverridePrice ? parsedPrice : referencePrice,
+                priceOverride: shouldOverridePrice
+            }),
+            stock: null
+        };
+    });
+
+    return {
+        rows: normalizedRows,
+        warnings
+    };
+}
+
+function normalizeParsedOrderForForm(parsed = {}) {
+    const adminResolution = resolvePastedAdmin(parsed.admin || '');
+    const branch = normalizeParsedReferenceSelection(parsed.branch, state.references.branches);
+    const cashBranch = normalizeParsedReferenceSelection(parsed.cashBranch || parsed.branch || '', getCashBranchOptions()) || branch;
+    const courier = resolvePastedCourier(parsed.courier || '')
+        || normalizeParsedReferenceSelection(parsed.courier, state.references.couriers);
+    const admin = adminResolution.admin
+        || normalizeParsedReferenceSelection(parsed.admin, state.references.admins);
+    const salesRepresentative = resolvePastedSalesRepresentative({
+        rawSalesRepresentative: parsed.salesRepresentative || '',
+        text: [parsed.rawText || '', parsed.note || ''].filter(Boolean).join('\n'),
+        adminResolution
+    }) || normalizeParsedReferenceSelection(parsed.salesRepresentative, state.references.salesRepresentatives);
+    const normalizedRows = normalizeParsedRowsForForm(parsed.rows);
+
+    return {
+        ...parsed,
+        branch,
+        cashBranch,
+        courier,
+        admin,
+        salesRepresentative,
+        paymentEntries: normalizeParsedPaymentEntriesForForm(parsed.paymentEntries, {
+            courier,
+            rawPaymentMethod: parsed.rawPaymentMethod || ''
+        }),
+        rows: normalizedRows.rows,
+        warnings: dedupeValues([...(parsed.warnings || []), ...normalizedRows.warnings])
+    };
 }
 
 async function applyParsedOrder(parsed) {

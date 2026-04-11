@@ -11,6 +11,11 @@ const BASE_FEATURE_DEFAULTS = Object.freeze(FEATURE_CONFIG.reduce((defaults, fea
     defaults[feature.key] = feature.defaultEnabled !== false;
     return defaults;
 }, {}));
+const USER_ACCOUNT_STATUS_LABELS = Object.freeze({
+    active: 'Active',
+    inactive: 'Inactive',
+    suspended: 'Suspended'
+});
 
 const limitText = document.getElementById('limitText');
 const statusEl = document.getElementById('status');
@@ -126,6 +131,23 @@ function renderCreateBranchOptions() {
     fillBranchOptions(userBranchInput, userBranchInput.value || state.branches[0]?.id || '');
 }
 
+function normalizeUserAccountStatusValue(value = '') {
+    return String(value || '').trim().toLowerCase();
+}
+
+function getUserAccountStatus(user) {
+    const normalized = normalizeUserAccountStatusValue(user?.account_status);
+    if (Object.prototype.hasOwnProperty.call(USER_ACCOUNT_STATUS_LABELS, normalized)) {
+        return normalized;
+    }
+
+    return user?.is_active === false ? 'suspended' : 'active';
+}
+
+function getUserStatusLabel(status = '') {
+    return USER_ACCOUNT_STATUS_LABELS[normalizeUserAccountStatusValue(status)] || USER_ACCOUNT_STATUS_LABELS.active;
+}
+
 function fillBranchOptions(selectEl, selectedBranchId = '') {
     if (!selectEl) {
         return;
@@ -169,7 +191,8 @@ function renderRows() {
     }
 
     tableBody.innerHTML = rows.map((user) => {
-        const isActive = Boolean(user.is_active);
+        const accountStatus = getUserAccountStatus(user);
+        const isActive = accountStatus === 'active';
         const safeId = appClient.escapeHtml(user.id || '');
         return `
             <tr>
@@ -178,7 +201,7 @@ function renderRows() {
               <td>${appClient.escapeHtml(user.role || '')}</td>
               <td>${appClient.escapeHtml(user.branch_name || '')}</td>
               <td>${renderFeaturePills(user.feature_access)}</td>
-              <td><span class="pill ${isActive ? 'active' : 'inactive'}">${isActive ? 'Active' : 'Suspended'}</span></td>
+              <td><span class="pill ${accountStatus}">${getUserStatusLabel(accountStatus)}</span></td>
               <td>
                 <div class="actions">
                   <button class="edit" type="button" data-action="edit" data-id="${safeId}">Edit</button>
@@ -283,7 +306,7 @@ function openEditModal(user) {
     editUserNameInput.value = String(user.name || '');
     editUserRoleInput.value = String(user.role || 'employee');
     fillBranchOptions(editUserBranchInput, user.branch_id || '');
-    editUserStatusInput.value = user.is_active ? 'active' : 'inactive';
+    editUserStatusInput.value = getUserAccountStatus(user);
     editUserPasswordInput.value = '';
     applyFeatureAccessToInputs(state.editingFeatureAccess, editFeatureInputs);
     setEditStatus('', false);
@@ -312,7 +335,8 @@ async function saveEditUser() {
     const nextRole = String(editUserRoleInput.value || '').trim().toLowerCase();
     const branchId = String(editUserBranchInput.value || '').trim();
     const password = String(editUserPasswordInput.value || '').trim();
-    const isActive = editUserStatusInput.value === 'active';
+    const accountStatus = normalizeUserAccountStatusValue(editUserStatusInput.value) || 'active';
+    const isActive = accountStatus === 'active';
     const featureAccess = readFeatureAccessFromInputs(editFeatureInputs, state.editingFeatureAccess);
 
     if (!nextName) {
@@ -341,6 +365,7 @@ async function saveEditUser() {
             password: password || '',
             branch_id: branchId,
             is_active: isActive,
+            account_status: accountStatus,
             feature_access: featureAccess
         });
         await refreshData();
@@ -355,11 +380,12 @@ async function saveEditUser() {
 }
 
 async function toggleUser(user) {
-    const nextActive = !Boolean(user.is_active);
+    const nextActive = getUserAccountStatus(user) !== 'active';
     setStatus(nextActive ? 'Reactivating user...' : 'Suspending user...');
     try {
         await appClient.updateUser(user.id, {
-            is_active: nextActive
+            is_active: nextActive,
+            account_status: nextActive ? 'active' : 'suspended'
         });
         await refreshData();
         setStatus(nextActive ? 'User reactivated.' : 'User suspended.');

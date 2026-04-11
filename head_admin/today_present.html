@@ -302,6 +302,7 @@
   .status-on-time { color: var(--success); background: rgba(15, 118, 110, 0.12); }
   .status-late { color: var(--warning); background: rgba(217, 119, 6, 0.14); }
   .status-absent { color: var(--danger); background: rgba(220, 38, 38, 0.12); }
+  .status-inactive { color: #9a6700; background: rgba(245, 158, 11, 0.16); }
   .status-suspended { color: #475569; background: rgba(100, 116, 139, 0.16); }
   .status-excuse { color: var(--primary-strong); background: rgba(var(--primary-rgb), 0.12); }
   .status-day-off { color: var(--muted); background: rgba(148, 163, 184, 0.14); }
@@ -356,7 +357,7 @@
       <div class="hero-copy">
         <span class="hero-kicker"><i class="fa-regular fa-calendar-check"></i> Attendance Overview</span>
         <h1>Today Attendance Snapshot</h1>
-        <p>Current-date view of all employees with On Time, Late, Absent, Excuse, and Suspended status in a tenant-aware layout that stays balanced across company colors.</p>
+        <p>Current-date view of all employees with On Time, Late, Absent, Excuse, Inactive, and Suspended status in a tenant-aware layout that stays balanced across company colors.</p>
       </div>
       <div class="hero-meta">
         <div class="meta-card">
@@ -402,7 +403,7 @@
     <div class="table-head">
       <div>
         <h2>Employee Attendance For Today</h2>
-        <p>Absent employees are inferred from the employee list when no current-date record exists in the attendance log, while inactive accounts stay tagged as Suspended.</p>
+        <p>Absent employees are inferred from the employee list when no current-date record exists in the attendance log, while inactive and suspended accounts stay labeled with their own status.</p>
       </div>
       <div class="status-note" id="statusNote"></div>
     </div>

@@ -156,8 +156,19 @@
       border-color: rgba(226, 232, 240, 0.16);
     }
 
+    .employee-item.is-inactive {
+      background: rgba(245, 158, 11, 0.12);
+      border-color: rgba(245, 158, 11, 0.18);
+    }
+
     .employee-item.is-suspended.active {
       background: rgba(226, 232, 240, 0.18);
+      border-color: rgba(255, 255, 255, 0.34);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    }
+
+    .employee-item.is-inactive.active {
+      background: rgba(245, 158, 11, 0.18);
       border-color: rgba(255, 255, 255, 0.34);
       box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
     }
@@ -231,6 +242,12 @@
       background: rgba(226, 232, 240, 0.14);
       border-color: rgba(226, 232, 240, 0.16);
       color: #e2e8f0;
+    }
+
+    .account-pill.inactive {
+      background: rgba(245, 158, 11, 0.14);
+      border-color: rgba(245, 158, 11, 0.18);
+      color: #fef3c7;
     }
 
     .main-content {
@@ -489,6 +506,11 @@
       font-weight: 700;
     }
 
+    .status-inactive {
+      color: #9a6700;
+      font-weight: 700;
+    }
+
     .status-suspended {
       color: #475569;
       font-weight: 700;
@@ -561,7 +583,7 @@
 <div class="side-panel" id="employeePanel">
   <div class="panel-kicker">Attendance Accounts</div>
   <h3><i class="fa-solid fa-users"></i> Accounts</h3>
-  <p class="side-copy">Select an account to review the weekly time card. Suspended attendance accounts stay visible here for audit and review.</p>
+  <p class="side-copy">Select an account to review the weekly time card. Inactive and suspended attendance accounts stay visible here for audit and review.</p>
   <div id="employeeList"></div>
 </div>
 

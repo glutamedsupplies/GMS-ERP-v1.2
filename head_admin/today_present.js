@@ -1,6 +1,11 @@
 const appClient = window.appClient;
 const savingUsers = new Set();
 let statusClearTimer = null;
+const ACCOUNT_STATUS_LABELS = Object.freeze({
+    active: 'Active',
+    inactive: 'Inactive',
+    suspended: 'Suspended'
+});
 
 initialize();
 
@@ -52,7 +57,7 @@ async function initialize() {
             updateSummary(rows);
 
             if (!rows.length) {
-                tbody.innerHTML = '<tr><td colspan="11" class="no-data">No employee accounts found. Add employees first so today\'s list can show Suspended, Absent, Late, On Time, or Excuse status for the current date.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" class="no-data">No employee accounts found. Add employees first so today\'s list can show Inactive, Suspended, Absent, Late, On Time, or Excuse status for the current date.</td></tr>';
                 return;
             }
 
@@ -205,6 +210,19 @@ function isHeadAdminRole(role) {
     return normalizedRole === 'head_admin' || normalizedRole === 'company_admin';
 }
 
+function normalizeAccountStatusValue(value = '') {
+    return String(value || '').trim().toLowerCase();
+}
+
+function getUserAccountStatus(user) {
+    const normalized = normalizeAccountStatusValue(user?.account_status);
+    if (Object.prototype.hasOwnProperty.call(ACCOUNT_STATUS_LABELS, normalized)) {
+        return normalized;
+    }
+
+    return user?.is_active === false ? 'suspended' : 'active';
+}
+
 function formatDateKey(value) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
@@ -223,7 +241,7 @@ function resolveSuspendedOn(user, fallbackDateKey) {
 }
 
 function shouldOverrideAsSuspended(row, user, fallbackDateKey) {
-    if (!row || !user || user.is_active !== false) {
+    if (!row || !user || getUserAccountStatus(user) !== 'suspended') {
         return false;
     }
 
@@ -257,11 +275,12 @@ function applySuspensionOverrides(rows, users, fallbackDateKey) {
 function sortTodayRows(rows) {
     const priority = {
         suspended: 0,
-        late: 1,
-        absent: 2,
-        excuse: 3,
-        on_time: 4,
-        day_off: 5
+        inactive: 1,
+        late: 2,
+        absent: 3,
+        excuse: 4,
+        on_time: 5,
+        day_off: 6
     };
 
     return [...rows].sort((left, right) => {
@@ -288,6 +307,8 @@ function statusClass(statusGroup) {
             return 'status-late';
         case 'absent':
             return 'status-absent';
+        case 'inactive':
+            return 'status-inactive';
         case 'suspended':
             return 'status-suspended';
         case 'excuse':

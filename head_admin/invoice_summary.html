@@ -296,6 +296,18 @@
     gap: 10px;
     margin-top: 14px;
   }
+  .report-template-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .report-template-field {
+    min-width: 220px;
+    max-width: 280px;
+  }
   .hint {
     padding: 14px 16px;
     border-radius: 18px;
@@ -326,6 +338,10 @@
     }
     textarea {
       min-height: 420px;
+    }
+    .report-template-field {
+      width: 100%;
+      max-width: none;
     }
   }
 </style>
@@ -482,6 +498,38 @@
             </div>
           </section>
         </div>
+      </section>
+
+      <section class="panel discrepancy-panel">
+        <div class="preview-header">
+          <div>
+            <p class="eyebrow">Templates</p>
+            <h2>Report Templates</h2>
+            <p class="panel-copy">Auto-filled daily, weekly, at monthly report format based on the selected invoice date, with Cubao and Pampanga sales blocks, total both branch, at shared attendance section.</p>
+          </div>
+        </div>
+
+        <div class="report-template-controls">
+          <div class="field report-template-field">
+            <label for="reportTemplateType">Template Type</label>
+            <select id="reportTemplateType">
+              <option value="daily">Daily Report</option>
+              <option value="weekly">Weekly Report</option>
+              <option value="monthly">Monthly Report</option>
+            </select>
+          </div>
+
+          <div class="field report-template-field">
+            <label for="reportTemplateDateInput">Report Date</label>
+            <input id="reportTemplateDateInput" type="date">
+          </div>
+
+          <div class="actions">
+            <button id="copyReportTemplateBtn" type="button" class="secondary-btn">Copy Report Template</button>
+          </div>
+        </div>
+
+        <textarea id="reportTemplatePreview" class="compact-textarea" spellcheck="false" aria-label="Report template preview"></textarea>
       </section>
     </section>
   </div>

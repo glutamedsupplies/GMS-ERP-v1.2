@@ -13,6 +13,11 @@ const exportMonthInput = document.getElementById('exportMonth');
 const exportExcelBtn = document.getElementById('exportExcelBtn');
 const exportStatus = document.getElementById('exportStatus');
 let serverDateKey = new Date().toISOString().slice(0, 10);
+const ACCOUNT_STATUS_LABELS = Object.freeze({
+    active: 'Active',
+    inactive: 'Inactive',
+    suspended: 'Suspended'
+});
 
 initialize();
 
@@ -78,6 +83,19 @@ async function listAttendanceUsers() {
 function isHeadAdminRole(role) {
     const normalizedRole = String(role || '').trim().toLowerCase();
     return normalizedRole === 'head_admin' || normalizedRole === 'company_admin';
+}
+
+function normalizeAccountStatusValue(value = '') {
+    return String(value || '').trim().toLowerCase();
+}
+
+function getUserAccountStatus(user) {
+    const normalized = normalizeAccountStatusValue(user?.account_status);
+    if (Object.prototype.hasOwnProperty.call(ACCOUNT_STATUS_LABELS, normalized)) {
+        return normalized;
+    }
+
+    return user?.is_active === false ? 'suspended' : 'active';
 }
 
 async function renderReport() {
@@ -154,6 +172,8 @@ function statusClass(status) {
             return 'status-late';
         case 'absent':
             return 'status-absent';
+        case 'inactive':
+            return 'status-inactive';
         case 'suspended':
             return 'status-suspended';
         default:
@@ -171,7 +191,7 @@ function resolveSuspendedOn(user, fallbackDateKey) {
 }
 
 function shouldOverrideAsSuspended(record, user, fallbackDateKey) {
-    if (!record || !user || user.is_active !== false) {
+    if (!record || !user || getUserAccountStatus(user) !== 'suspended') {
         return false;
     }
 

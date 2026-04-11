@@ -208,7 +208,8 @@
       font-weight: 700;
     }
     .pill.active { background: var(--success-bg); color: var(--success-text); }
-    .pill.inactive { background: var(--danger-bg); color: var(--danger-text); }
+    .pill.inactive { background: #eef2f7; color: #475569; }
+    .pill.suspended { background: var(--danger-bg); color: var(--danger-text); }
 
     .actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .actions button {
@@ -535,7 +536,8 @@
           Status
           <select id="editUserStatus">
             <option value="active">Active</option>
-            <option value="inactive">Suspended</option>
+            <option value="inactive">Inactive</option>
+            <option value="suspended">Suspended</option>
           </select>
         </label>
         <label>

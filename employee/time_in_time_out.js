@@ -87,10 +87,17 @@ async function refreshState() {
             return;
         }
 
-        if (String(record.status || '').toLowerCase() === 'suspended') {
+        const normalizedStatus = String(record.status || '').toLowerCase();
+        if (normalizedStatus === 'suspended') {
             timeInBtn.disabled = true;
             timeOutBtn.disabled = true;
             setStatusMessage('Your attendance account is suspended.', true);
+            return;
+        }
+        if (normalizedStatus === 'inactive') {
+            timeInBtn.disabled = true;
+            timeOutBtn.disabled = true;
+            setStatusMessage('Your attendance account is inactive.', true);
             return;
         }
 

@@ -18,6 +18,11 @@ const state = {
     rows: [],
     branches: []
 };
+const ACCOUNT_STATUS_LABELS = Object.freeze({
+    active: 'Active',
+    inactive: 'Inactive',
+    suspended: 'Suspended'
+});
 
 initialize();
 
@@ -163,8 +168,9 @@ function renderRows() {
 
     directoryTableBody.innerHTML = rows.map((row) => {
         const role = normalizeRole(row.role);
-        const statusClass = row.is_active === false ? 'suspended' : 'active';
-        const statusLabel = row.is_active === false ? 'Suspended' : 'Active';
+        const accountStatus = getAccountStatus(row);
+        const statusClass = accountStatus;
+        const statusLabel = ACCOUNT_STATUS_LABELS[accountStatus] || ACCOUNT_STATUS_LABELS.active;
         return `
             <tr>
                 <td><strong>${appClient.escapeHtml(row.name || '-')}</strong></td>
@@ -204,6 +210,18 @@ function formatShift(timeIn, timeOut) {
 
 function normalizeRole(value) {
     return String(value || '').trim().toLowerCase();
+}
+
+function normalizeAccountStatusValue(value = '') {
+    return String(value || '').trim().toLowerCase();
+}
+
+function getAccountStatus(row) {
+    const normalized = normalizeAccountStatusValue(row?.account_status);
+    if (Object.prototype.hasOwnProperty.call(ACCOUNT_STATUS_LABELS, normalized)) {
+        return normalized;
+    }
+    return row?.is_active === false ? 'suspended' : 'active';
 }
 
 function sameText(left, right) {

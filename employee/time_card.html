@@ -22,17 +22,21 @@
     <section class="hero-card" style="margin-bottom:20px;">
       <p class="hero-kicker">Attendance History</p>
       <h1 class="page-title">My Weekly Time Card</h1>
-      <p class="hero-copy">Review your current week with cleaner spacing, better readability, and a layout that stays usable on small devices.</p>
+      <p class="hero-copy">Review weekly attendance records by selecting any date to open the week that date belongs to.</p>
       <div class="hero-pills">
-        <span class="pill pill-soft" id="weekRange">Loading current week...</span>
+        <span class="pill pill-soft" id="weekRange">Loading selected week...</span>
       </div>
     </section>
 
     <section class="table-card">
       <div class="table-head">
         <div>
-          <h2>Attendance Records</h2>
-          <p class="section-copy">Daily logs update based on your current work week.</p>
+          <h2 id="recordsTitle">Attendance Records</h2>
+          <p class="section-copy">Daily logs update based on the week of your selected date.</p>
+        </div>
+        <div class="field time-card-filter">
+          <label for="weekDate">Select Date</label>
+          <input type="date" id="weekDate">
         </div>
       </div>
 

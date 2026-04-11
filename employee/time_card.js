@@ -1,10 +1,12 @@
 const appClient = window.appClient;
 const tableBody = document.querySelector('#timeCardTable tbody');
 const backBtn = document.getElementById('backBtn');
-const title = document.querySelector('h2');
+const title = document.getElementById('recordsTitle');
 const subheading = document.getElementById('weekRange');
+const weekDateInput = document.getElementById('weekDate');
 
 let session = null;
+let serverDateKey = formatDateKey(new Date());
 
 initialize();
 
@@ -25,26 +27,63 @@ async function initialize() {
         window.location.href = '/employee/employee.html';
     });
 
+    serverDateKey = await resolveServerDateKey();
+    initSelectors(serverDateKey);
     await renderRecords();
 }
 
-async function renderRecords() {
-    try {
-        const now = new Date();
-        const rows = await appClient.getUserWeeklyTimeCard(session.userId, {
-            dateKey: formatDateKey(now)
-        });
+function initSelectors(dateKey) {
+    const initialDate = clampToServerDate(parseInputDate(dateKey));
+    const initialDateKey = formatDateKey(initialDate);
 
-        const { weekStart, weekEnd } = getWeekBounds(now);
-        const rangeEnd = weekEnd > now ? now : weekEnd;
-        const rangeLabel = `${formatShortDate(weekStart)} - ${formatShortDate(rangeEnd)}`;
+    if (weekDateInput) {
+        weekDateInput.value = initialDateKey;
+        weekDateInput.max = serverDateKey || initialDateKey;
+        weekDateInput.addEventListener('change', () => {
+            const selectedDate = getSelectedDate();
+            updateWeekLabel(selectedDate);
+            void renderRecords(selectedDate);
+        });
+    }
+
+    updateWeekLabel(initialDate);
+}
+
+async function resolveServerDateKey() {
+    try {
+        const serverInfo = await appClient.getServerInfo();
+        const dateKey = String(serverInfo?.dateKey || '').trim();
+        return /^\d{4}-\d{2}-\d{2}$/.test(dateKey)
+            ? dateKey
+            : formatDateKey(new Date());
+    } catch (_error) {
+        return formatDateKey(new Date());
+    }
+}
+
+function getSelectedDate() {
+    return clampToServerDate(parseInputDate(weekDateInput?.value || serverDateKey));
+}
+
+function clampToServerDate(value) {
+    const selectedDate = new Date(value);
+    const serverDate = parseInputDate(serverDateKey);
+    return selectedDate > serverDate ? serverDate : selectedDate;
+}
+
+async function renderRecords(selectedDate = getSelectedDate()) {
+    try {
+        const normalizedDate = clampToServerDate(selectedDate);
+        if (weekDateInput) {
+            weekDateInput.value = formatDateKey(normalizedDate);
+        }
+        const rows = await appClient.getUserWeeklyTimeCard(session.userId, {
+            dateKey: formatDateKey(normalizedDate)
+        });
+        updateWeekLabel(normalizedDate);
 
         if (title) {
-            title.textContent = 'My Weekly Time Card';
-        }
-
-        if (subheading) {
-            subheading.textContent = `Current week: ${rangeLabel}`;
+            title.textContent = 'Attendance Records';
         }
 
         tableBody.innerHTML = '';
@@ -69,6 +108,27 @@ async function renderRecords() {
         console.error('Failed to load employee weekly time card:', error);
         tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#d50000;">${appClient.escapeHtml(error.message)}</td></tr>`;
     }
+}
+
+function updateWeekLabel(value) {
+    if (!subheading) {
+        return;
+    }
+
+    const { weekStart, weekEnd } = getWeekBounds(value);
+    const serverDate = parseInputDate(serverDateKey);
+    const rangeEnd = weekEnd > serverDate ? serverDate : weekEnd;
+    const rangeLabel = `${formatShortDate(weekStart)} - ${formatShortDate(rangeEnd)}`;
+    subheading.textContent = `Selected week: ${rangeLabel}`;
+}
+
+function parseInputDate(value) {
+    if (!value) {
+        return new Date();
+    }
+
+    const parsed = new Date(`${value}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
 function getWeekBounds(value) {
@@ -106,6 +166,8 @@ function statusClass(status) {
             return 'status-excuse';
         case 'day off':
             return 'status-day-off';
+        case 'inactive':
+            return 'status-inactive';
         case 'suspended':
             return 'status-suspended';
         default:

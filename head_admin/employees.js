@@ -25,6 +25,11 @@ const DAYS = [
 ];
 const DEFAULT_TIME_IN = '08:00';
 const DEFAULT_TIME_OUT = '17:00';
+const ACCOUNT_STATUS_LABELS = Object.freeze({
+    active: 'Active',
+    inactive: 'Inactive',
+    suspended: 'Suspended'
+});
 
 const state = {
     employees: [],
@@ -105,6 +110,19 @@ function normalizeBoolean(value, fallback = false) {
     }
 
     return fallback;
+}
+
+function normalizeAccountStatusValue(value = '') {
+    return String(value || '').trim().toLowerCase();
+}
+
+function getEmployeeAccountStatus(employee) {
+    const normalized = normalizeAccountStatusValue(employee?.account_status);
+    if (Object.prototype.hasOwnProperty.call(ACCOUNT_STATUS_LABELS, normalized)) {
+        return normalized;
+    }
+
+    return employee?.is_active === false ? 'suspended' : 'active';
 }
 
 function normalizeWeeklySchedule(source, fallbackTimeIn = DEFAULT_TIME_IN, fallbackTimeOut = DEFAULT_TIME_OUT) {
@@ -233,8 +251,8 @@ async function loadEmployees(filter = '') {
     try {
         const rows = await appClient.listUsers({ role: '', filter });
         rows.sort((left, right) => {
-            const leftRank = left.is_active === false ? 1 : 0;
-            const rightRank = right.is_active === false ? 1 : 0;
+            const leftRank = getEmployeeAccountStatus(left) === 'active' ? 0 : 1;
+            const rightRank = getEmployeeAccountStatus(right) === 'active' ? 0 : 1;
             if (leftRank !== rightRank) {
                 return leftRank - rightRank;
             }
@@ -279,9 +297,10 @@ function renderEmployees(rows) {
         const safeRole = appClient.escapeHtml(formatRoleLabel(emp.role));
         const safeTimeIn = appClient.escapeHtml(appClient.formatDisplayTime(normalizeTime(emp.time_in, DEFAULT_TIME_IN)));
         const safeTimeOut = appClient.escapeHtml(appClient.formatDisplayTime(normalizeTime(emp.time_out, DEFAULT_TIME_OUT)));
-        const isActive = Boolean(emp.is_active);
+        const accountStatus = getEmployeeAccountStatus(emp);
+        const isActive = accountStatus === 'active';
         const isCurrentUser = String(emp.id || '') === state.currentUserId;
-        const statusLabel = isActive ? 'Active' : 'Suspended';
+        const statusLabel = ACCOUNT_STATUS_LABELS[accountStatus] || ACCOUNT_STATUS_LABELS.active;
         const toggleLabel = isCurrentUser ? 'Current User' : (isActive ? 'Suspend' : 'Reactivate');
 
         const tr = document.createElement('tr');
@@ -289,7 +308,7 @@ function renderEmployees(rows) {
             <td><span class="id-label">${safeId}</span></td>
             <td><strong>${safeName}</strong></td>
             <td>${safeRole}</td>
-            <td><span class="status-pill ${isActive ? 'active' : 'suspended'}">${statusLabel}</span></td>
+            <td><span class="status-pill ${accountStatus}">${statusLabel}</span></td>
             <td><span class="time-field">${safeTimeIn}</span></td>
             <td><span class="time-field">${safeTimeOut}</span></td>
             <td style="text-align:center">
@@ -339,7 +358,7 @@ window.toggleEmployeeStatus = async function toggleEmployeeStatus(id) {
         return;
     }
 
-    const nextActive = !Boolean(employee.is_active);
+    const nextActive = getEmployeeAccountStatus(employee) !== 'active';
     const verb = nextActive ? 'reactivate' : 'suspend';
     const confirmed = window.confirm(`${verb.charAt(0).toUpperCase() + verb.slice(1)} account "${employee.name || employee.id}"?`);
     if (!confirmed) {
@@ -348,7 +367,8 @@ window.toggleEmployeeStatus = async function toggleEmployeeStatus(id) {
 
     try {
         await appClient.updateUser(employee.id, {
-            is_active: nextActive
+            is_active: nextActive,
+            account_status: nextActive ? 'active' : 'suspended'
         });
         await loadEmployees(searchInput.value.trim());
     } catch (error) {

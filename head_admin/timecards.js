@@ -13,6 +13,11 @@ const GMS_GWD_ATTENDANCE_POLICY = Object.freeze({
     dailyTargetHours: 8,
     overtimeThresholdHours: 1
 });
+const ACCOUNT_STATUS_LABELS = Object.freeze({
+    active: 'Active',
+    inactive: 'Inactive',
+    suspended: 'Suspended'
+});
 
 let selectedEmployee = null;
 let serverDateKey = formatDateKey(new Date());
@@ -68,6 +73,19 @@ function applyAttendancePolicy(policy = DEFAULT_ATTENDANCE_POLICY) {
     }
 }
 
+function normalizeAccountStatusValue(value = '') {
+    return String(value || '').trim().toLowerCase();
+}
+
+function getEmployeeAccountStatus(employee) {
+    const normalized = normalizeAccountStatusValue(employee?.account_status);
+    if (Object.prototype.hasOwnProperty.call(ACCOUNT_STATUS_LABELS, normalized)) {
+        return normalized;
+    }
+
+    return employee?.is_active === false ? 'suspended' : 'active';
+}
+
 async function resolveServerDateKey() {
     try {
         const serverInfo = await appClient.getServerInfo();
@@ -90,8 +108,9 @@ async function loadEmployees() {
 
         employees.forEach((employee, index) => {
             const div = document.createElement('div');
-            const isSuspended = employee.is_active === false;
-            div.className = `employee-item${isSuspended ? ' is-suspended' : ''}`;
+            const accountStatus = getEmployeeAccountStatus(employee);
+            const statusClass = accountStatus !== 'active' ? ` is-${accountStatus}` : '';
+            div.className = `employee-item${statusClass}`;
             div.innerHTML = `
                 <div class="employee-main">
                     <img src="${appClient.escapeHtml(employee.profile_picture || appClient.buildAvatarUrl(employee.name))}" alt="${appClient.escapeHtml(employee.name)}">
@@ -100,7 +119,7 @@ async function loadEmployees() {
                         <small>${appClient.escapeHtml(employee.id || '')}</small>
                     </div>
                 </div>
-                <span class="account-pill ${isSuspended ? 'suspended' : 'active'}">${isSuspended ? 'Suspended' : 'Active'}</span>
+                <span class="account-pill ${accountStatus}">${ACCOUNT_STATUS_LABELS[accountStatus] || ACCOUNT_STATUS_LABELS.active}</span>
             `;
             div.addEventListener('click', () => {
                 document.querySelectorAll('.employee-item').forEach((item) => item.classList.remove('active'));
@@ -131,8 +150,8 @@ async function listAttendanceUsers() {
     return users
         .filter((user) => !isHeadAdminRole(user.role))
         .sort((left, right) => {
-            const leftRank = left.is_active === false ? 1 : 0;
-            const rightRank = right.is_active === false ? 1 : 0;
+            const leftRank = getEmployeeAccountStatus(left) === 'active' ? 0 : 1;
+            const rightRank = getEmployeeAccountStatus(right) === 'active' ? 0 : 1;
             if (leftRank !== rightRank) {
                 return leftRank - rightRank;
             }
@@ -227,7 +246,7 @@ function resolveSuspendedOn(employee, fallbackDateKey = serverDateKey) {
 }
 
 function shouldOverrideAsSuspended(row, employee) {
-    if (!row || !employee || employee.is_active !== false) {
+    if (!row || !employee || getEmployeeAccountStatus(employee) !== 'suspended') {
         return false;
     }
 
@@ -281,6 +300,10 @@ function getWorkHoursState(row) {
 
     if (normalizedStatus === 'suspended') {
         return { valueLabel, targetLabel: 'Suspended', tone: 'neutral' };
+    }
+
+    if (normalizedStatus === 'inactive') {
+        return { valueLabel, targetLabel: 'Inactive', tone: 'neutral' };
     }
 
     if (normalizedStatus === 'excuse') {
@@ -340,6 +363,8 @@ function statusClass(status) {
             return 'status-excuse';
         case 'day off':
             return 'status-day-off';
+        case 'inactive':
+            return 'status-inactive';
         case 'suspended':
             return 'status-suspended';
         default:
