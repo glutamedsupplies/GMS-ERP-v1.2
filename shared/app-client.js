@@ -1471,17 +1471,20 @@
             ? window.top
             : window;
         if (!shouldAllowAutoNavigation(path)) {
-            return;
+            return false;
         }
 
         if (/^https?:\/\//i.test(path)) {
             targetWindow.location.replace(path);
-            return;
+            return true;
         }
 
         if (targetWindow.location.pathname !== path) {
             targetWindow.location.replace(path);
+            return true;
         }
+
+        return false;
     }
 
     function shouldAllowAutoNavigation(path) {
@@ -1498,9 +1501,35 @@
             const rawValue = sessionStorage.getItem(AUTO_NAVIGATION_GUARD_KEY);
             const previousState = rawValue ? JSON.parse(rawValue) : {};
             const recentEvents = Array.isArray(previousState.events)
-                ? previousState.events.filter((timestamp) => Number.isFinite(timestamp) && (now - timestamp) <= windowMs)
+                ? previousState.events
+                    .map((entry) => (typeof entry === 'number'
+                        ? {
+                            at: entry,
+                            path: String(previousState.lastPath || '').trim()
+                        }
+                        : {
+                            at: Number(entry?.at || 0),
+                            path: String(entry?.path || '').trim()
+                        }))
+                    .filter((entry) => Number.isFinite(entry.at) && (now - entry.at) <= windowMs)
                 : [];
-            recentEvents.push(now);
+            const sameTargetEvents = recentEvents.filter((entry) => entry.path === targetPath);
+
+            if (sameTargetEvents.length >= 1) {
+                console.error(`Blocked repeated auto-navigation to ${targetPath} to prevent a redirect loop.`);
+                sessionStorage.setItem(AUTO_NAVIGATION_GUARD_KEY, JSON.stringify({
+                    events: recentEvents.slice(-maxTransitions),
+                    lastPath: targetPath,
+                    lastAt: now,
+                    blockedAt: now
+                }));
+                return false;
+            }
+
+            recentEvents.push({
+                at: now,
+                path: targetPath
+            });
 
             sessionStorage.setItem(AUTO_NAVIGATION_GUARD_KEY, JSON.stringify({
                 events: recentEvents.slice(-maxTransitions),
@@ -1519,38 +1548,12 @@
         return true;
     }
 
-    function normalizeHost(value = '') {
-        return String(value || '')
-            .trim()
-            .toLowerCase()
-            .split(':')[0];
-    }
-
-    function getBaseDomain(hostname = '') {
-        const normalized = normalizeHost(hostname);
-        if (!normalized || ['localhost', '127.0.0.1', '::1'].includes(normalized)) {
-            return '';
-        }
-        if (/^\d+\.\d+\.\d+\.\d+$/.test(normalized)) {
-            return '';
-        }
-        const parts = normalized.split('.').filter(Boolean);
-        if (parts.length < 2) {
-            return '';
-        }
-        return parts.slice(-2).join('.');
-    }
-
     function getLoginUrl() {
-        const baseDomain = getBaseDomain(window.location.hostname);
-        if (baseDomain) {
-            return `${window.location.protocol}//${baseDomain}/login.html`;
-        }
         return '/login.html';
     }
 
     function redirectToLogin() {
-        navigateTo(getLoginUrl());
+        return navigateTo(getLoginUrl());
     }
 
     function normalizeRole(role) {
@@ -1676,8 +1679,8 @@
         return false;
     }
 
-    function redirectByRole(role) {
-        navigateTo(resolveWorkspaceHomePath(role));
+    function redirectByRole(role, { bootstrap = null } = {}) {
+        return navigateTo(resolveWorkspaceHomePath(role, bootstrap));
     }
 
     function attachEmployeeBackButton(session, {
@@ -1905,6 +1908,7 @@
         clearSession,
         getLoginUrl,
         redirectToLogin,
+        redirectByRole,
         escapeHtml,
         formatDisplayTime,
         getSession,
@@ -2708,6 +2712,7 @@
         getAttendanceByUser: (userId) => request(`/api/attendance/user/${encodeURIComponent(userId)}`),
         getUserTimeCard: (userId, { year, month }) => request(`/api/attendance/user/${encodeURIComponent(userId)}/time-card?year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}`),
         getUserWeeklyTimeCard: (userId, { dateKey = '' } = {}) => request(`/api/attendance/user/${encodeURIComponent(userId)}/weekly-card?dateKey=${encodeURIComponent(dateKey)}`),
+        getUserCutoffTimeCard: (userId, { dateKey = '' } = {}) => request(`/api/attendance/user/${encodeURIComponent(userId)}/cutoff-card?dateKey=${encodeURIComponent(dateKey)}`),
         getTodayAttendanceRecord: (userId) => request(`/api/attendance/user/${encodeURIComponent(userId)}/today`),
         getAttendanceForMonth: ({ userId, year, month }) => request(`/api/attendance/month?userId=${encodeURIComponent(userId)}&year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}`),
         getAttendanceReport: ({ employeeId = 'all', range = 'daily', dateKey = '' }) => request(`/api/attendance/report?employeeId=${encodeURIComponent(employeeId)}&range=${encodeURIComponent(range)}&dateKey=${encodeURIComponent(dateKey)}`),

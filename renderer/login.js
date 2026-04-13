@@ -217,7 +217,7 @@ async function handleLogin() {
             loginId: email
         });
         await playWelcomeTransition(welcomeContext);
-        redirectByRole(user.role, { bootstrap: welcomeContext.bootstrap });
+        await redirectByRole(user.role, { bootstrap: welcomeContext.bootstrap });
     } catch (error) {
         console.error('Login failed:', error);
         welcomeTransitionActive = false;
@@ -235,7 +235,7 @@ async function redirectIfSessionExists() {
             return;
         }
         if (String(user.role || '').toLowerCase() === 'super_admin') {
-            redirectByRole(user.role);
+            await redirectByRole(user.role);
             return;
         }
 
@@ -245,56 +245,41 @@ async function redirectIfSessionExists() {
         } catch (error) {
             console.error('Failed to load bootstrap for session redirect:', error);
         }
-        redirectByRole(user.role, { bootstrap });
+        await redirectByRole(user.role, { bootstrap });
     } catch (error) {
         console.error('Failed to restore session:', error);
     }
 }
 
-function redirectByRole(role, { bootstrap = null } = {}) {
-    const normalizedRole = String(role || '').toLowerCase();
-    if (normalizedRole === 'super_admin') {
-        window.location.replace('/super_admin/dashboard.html');
-        return;
-    }
-
-    const attendanceOnlyMode = String(bootstrap?.workspaceConfig?.experience?.mode || '').trim().toLowerCase() === 'attendance_only';
-    const path = attendanceOnlyMode
-        ? ((normalizedRole === 'head_admin' || normalizedRole === 'company_admin')
-            ? '/head_admin/dashboard.html'
-            : '/employee/employee.html')
-        : ((normalizedRole === 'head_admin' || normalizedRole === 'company_admin')
-            ? '/head_admin/dashboard.html'
-            : '/employee/employee.html');
-    const tenantHost = resolveTenantHost(bootstrap);
-    if (tenantHost && shouldUseTenantHostRedirect(tenantHost)) {
-        const currentHost = normalizeHost(window.location.hostname);
-        if (currentHost && currentHost !== tenantHost) {
-            window.location.replace(`${window.location.protocol}//${tenantHost}${path}`);
-            return;
-        }
-    }
-    window.location.replace(path);
-}
-
-function shouldUseTenantHostRedirect(tenantHost) {
-    const currentHost = normalizeHost(window.location.hostname);
-    const normalizedTenantHost = normalizeHost(tenantHost);
-    if (!currentHost || !normalizedTenantHost) {
-        return false;
-    }
-
-    if (currentHost === normalizedTenantHost) {
+async function redirectByRole(role, { bootstrap = null } = {}) {
+    const redirected = appClient.redirectByRole(role, { bootstrap });
+    if (redirected) {
         return true;
     }
 
-    const currentBaseDomain = getBaseDomain(currentHost);
-    const tenantBaseDomain = getBaseDomain(normalizedTenantHost);
-    if (!currentBaseDomain || !tenantBaseDomain) {
-        return false;
+    await handleRedirectLoopBlock();
+    return false;
+}
+
+async function handleRedirectLoopBlock() {
+    welcomeTransitionActive = false;
+    resetWelcomeTransitionState();
+    setMessage('Stopped a repeated auth redirect loop. Please sign in again.', '#ff7a7a');
+
+    try {
+        await appClient.clearSession();
+    } catch (error) {
+        console.error('Failed to clear the app session after a blocked redirect:', error);
     }
 
-    return currentBaseDomain === tenantBaseDomain;
+    const firebase = getFirebaseContext();
+    if (firebase?.auth?.signOut) {
+        try {
+            await firebase.auth.signOut();
+        } catch (error) {
+            console.error('Failed to clear the Firebase session after a blocked redirect:', error);
+        }
+    }
 }
 
 async function buildWelcomeContext(user, { companyCode = '', loginId = '' } = {}) {
@@ -330,53 +315,6 @@ async function buildWelcomeContext(user, { companyCode = '', loginId = '' } = {}
         branding,
         bootstrap
     };
-}
-
-function normalizeHost(value = '') {
-    return String(value || '')
-        .trim()
-        .toLowerCase()
-        .split(':')[0];
-}
-
-function getBaseDomain(hostname = '') {
-    const normalized = normalizeHost(hostname);
-    if (!normalized || normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1') {
-        return '';
-    }
-    if (/^\d+\.\d+\.\d+\.\d+$/.test(normalized)) {
-        return '';
-    }
-    const parts = normalized.split('.').filter(Boolean);
-    if (parts.length < 2) {
-        return '';
-    }
-    return parts.slice(-2).join('.');
-}
-
-function normalizeSubdomain(value = '') {
-    return String(value || '')
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9-]+/g, '-')
-        .replace(/^-+|-+$/g, '');
-}
-
-function resolveTenantHost(bootstrap) {
-    const company = bootstrap?.company || {};
-    const customDomain = normalizeHost(company.custom_domain || '');
-    if (customDomain) {
-        return customDomain;
-    }
-    const subdomain = normalizeSubdomain(company.subdomain || '');
-    if (!subdomain) {
-        return '';
-    }
-    const baseDomain = getBaseDomain(window.location.hostname);
-    if (!baseDomain) {
-        return '';
-    }
-    return `${subdomain}.${baseDomain}`;
 }
 
 function resolveRoleLabel(role) {
@@ -640,7 +578,7 @@ function handleGoogleLogin() {
                 loginId: result.user?.email || user?.id || ''
             });
             await playWelcomeTransition(welcomeContext);
-            redirectByRole(user.role, { bootstrap: welcomeContext.bootstrap });
+            await redirectByRole(user.role, { bootstrap: welcomeContext.bootstrap });
         })
         .catch((error) => {
             console.error('Google login failed:', error);

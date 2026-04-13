@@ -83,8 +83,8 @@ startServer()
         }
     })
     .catch((error) => {
-        console.error('Failed to start Attendance server:', error);
-        process.exitCode = 1;
+        reportStartupError(error);
+        process.exit(0);
     });
 
 function shutdown(signal) {

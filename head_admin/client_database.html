@@ -373,6 +373,166 @@
     border-color: rgba(220, 38, 38, 0.12);
   }
 
+  .client-insight-panel {
+    margin-bottom: 18px;
+    padding: 20px;
+    border-radius: 20px;
+    border: 1px solid rgba(var(--primary-rgb), 0.12);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(244, 248, 255, 0.9)),
+      rgba(var(--primary-rgb), 0.04);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74);
+  }
+
+  .client-insight-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .client-insight-header h3 {
+    margin: 0 0 6px;
+    font-size: 24px;
+    letter-spacing: -0.03em;
+  }
+
+  .client-insight-copy {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.6;
+    font-size: 14px;
+  }
+
+  .client-insight-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .client-insight-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .client-insight-stat {
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(var(--primary-rgb), 0.12);
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 10px 22px rgba(var(--primary-rgb), 0.05);
+  }
+
+  .client-insight-stat span {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .client-insight-stat strong {
+    display: block;
+    font-size: 22px;
+    line-height: 1.25;
+    letter-spacing: -0.03em;
+  }
+
+  .client-history-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .client-history-item,
+  .client-history-empty,
+  .client-history-note {
+    border-radius: 18px;
+    border: 1px solid rgba(var(--primary-rgb), 0.12);
+    background: rgba(255, 255, 255, 0.88);
+  }
+
+  .client-history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+    padding: 16px;
+  }
+
+  .client-history-copy {
+    min-width: 0;
+    display: grid;
+    gap: 6px;
+  }
+
+  .client-history-copy strong {
+    font-size: 16px;
+    letter-spacing: -0.02em;
+  }
+
+  .client-history-copy small,
+  .client-history-copy span {
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .client-history-copy small {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent-strong);
+    font-weight: 700;
+  }
+
+  .client-history-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .history-status-pill,
+  .history-amount-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 122px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border: 1px solid transparent;
+  }
+
+  .history-status-pill.is-pending,
+  .history-amount-pill.is-pending {
+    color: #b45309;
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.18);
+  }
+
+  .history-status-pill.is-settled,
+  .history-amount-pill.is-settled {
+    color: #047857;
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.18);
+  }
+
+  .client-history-empty,
+  .client-history-note {
+    padding: 18px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
   .table-shell {
     overflow: auto;
     border: 1px solid rgba(var(--primary-rgb), 0.12);
@@ -430,9 +590,18 @@
     box-shadow: inset 4px 0 0 rgba(var(--primary-rgb), 0.34);
   }
 
+  tbody tr[data-client-id].is-selected {
+    box-shadow: inset 4px 0 0 rgba(var(--primary-rgb), 0.68);
+  }
+
   tbody tr[data-client-id]:hover td {
     background:
       linear-gradient(90deg, rgba(var(--primary-rgb), 0.14), rgba(255, 255, 255, 0.96));
+  }
+
+  tbody tr[data-client-id].is-selected td {
+    background:
+      linear-gradient(90deg, rgba(var(--primary-rgb), 0.2), rgba(255, 255, 255, 0.98));
   }
 
   .source-tag {
@@ -456,22 +625,39 @@
   }
 
   .actions-cell {
-    width: 120px;
+    width: 180px;
   }
 
   .row-actions {
     display: flex;
+    gap: 8px;
     justify-content: flex-end;
   }
 
+  .action-btn,
   .danger-btn {
-    background: rgba(220, 38, 38, 0.08);
-    color: #b91c1c;
     min-height: auto;
     padding: 8px 12px;
     border-radius: 10px;
     font-size: 12px;
     font-weight: 700;
+  }
+
+  .action-btn {
+    background: rgba(255, 255, 255, 0.94);
+    color: var(--text);
+    border: 1px solid rgba(var(--primary-rgb), 0.14);
+  }
+
+  .action-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    border-color: rgba(var(--primary-rgb), 0.26);
+    transform: translateY(-1px);
+  }
+
+  .danger-btn {
+    background: rgba(220, 38, 38, 0.08);
+    color: #b91c1c;
     border: 1px solid rgba(248, 113, 113, 0.18);
   }
 
@@ -646,7 +832,9 @@
     .hero,
     .toolbar,
     .actions,
-    .panel-header {
+    .panel-header,
+    .client-insight-header,
+    .client-history-item {
       flex-direction: column;
     }
 
@@ -665,6 +853,8 @@
 
     .actions,
     .actions button,
+    .client-insight-actions,
+    .client-insight-actions button,
     .modal-actions button {
       width: 100%;
     }
@@ -688,8 +878,8 @@
         <p id="pageSubtitle">All client data for your company.</p>
       </div>
       <div class="hero-note">
-        <i class="fa-solid fa-pen-to-square"></i>
-        <span>Click any client row to open edit mode right away.</span>
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        <span>Click any client row to see their saved orders, repeat count, and quick actions.</span>
       </div>
     </div>
 
@@ -729,10 +919,28 @@
       </div>
 
       <div class="rules">
-        Rule: same client name is allowed multiple times if the contact number is different. Philippine mobile variants like <strong>+63</strong>, <strong>09</strong>, and <strong>9</strong> are treated as the same number. Click an existing row to edit and update it.
+        Rule: same client name is allowed multiple times if the contact number is different. Philippine mobile variants like <strong>+63</strong>, <strong>09</strong>, and <strong>9</strong> are treated as the same number. Click an existing row to review order history, then use the Edit button when you need to update the record.
       </div>
 
       <div id="statusText" class="status">Loading client records...</div>
+
+      <div id="clientInsightPanel" class="client-insight-panel">
+        <div class="client-insight-header">
+          <div>
+            <span class="panel-kicker">Client Insight</span>
+            <h3 id="clientInsightTitle">Select a client to review order history.</h3>
+            <p id="clientInsightCopy" class="client-insight-copy">Click any client row below to load their saved orders, repeat count, and receipt status.</p>
+          </div>
+          <div class="client-insight-actions">
+            <button id="editSelectedClientBtn" type="button" class="secondary-btn" disabled><i class="fa-solid fa-pen-to-square"></i> Edit Client</button>
+            <button id="openLatestOrderBtn" type="button" class="primary-btn" hidden><i class="fa-solid fa-receipt"></i> Open Latest Order</button>
+          </div>
+        </div>
+        <div id="clientInsightStats" class="client-insight-stats"></div>
+        <div id="clientHistoryList" class="client-history-list">
+          <div class="client-history-empty">No client selected yet. Pili lang ng row sa list para makita agad ang saved orders nila.</div>
+        </div>
+      </div>
 
       <div class="table-shell">
         <table>

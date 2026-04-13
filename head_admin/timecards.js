@@ -46,13 +46,15 @@ async function initialize() {
 }
 
 function initSelectors(dateKey) {
-    const todayDate = parseInputDate(dateKey);
-    weekDateInput.value = dateKey || formatDateKey(todayDate);
-    updateWeekRangeLabel(todayDate);
+    const initialDate = clampToServerDate(parseInputDate(dateKey));
+    const initialDateKey = formatDateKey(initialDate);
+    weekDateInput.value = initialDateKey;
+    weekDateInput.max = serverDateKey || initialDateKey;
+    updateCutoffRangeLabel(initialDate);
 
     weekDateInput.addEventListener('change', () => {
-        const selectedDate = parseInputDate(weekDateInput.value);
-        updateWeekRangeLabel(selectedDate);
+        const selectedDate = getSelectedDate();
+        updateCutoffRangeLabel(selectedDate);
         if (selectedEmployee) {
             renderTimecard(selectedEmployee);
         }
@@ -69,7 +71,7 @@ function getAttendancePolicyForCompany(company = {}) {
 function applyAttendancePolicy(policy = DEFAULT_ATTENDANCE_POLICY) {
     currentAttendancePolicy = policy;
     if (timecardPolicyNote) {
-        timecardPolicyNote.textContent = `Weekly attendance / ${policy.dailyTargetHours}h target`;
+        timecardPolicyNote.textContent = `Cutoff attendance / ${policy.dailyTargetHours}h target`;
     }
 }
 
@@ -165,14 +167,17 @@ function isHeadAdminRole(role) {
 }
 
 async function renderTimecard(employee) {
-    employeeNameTitle.innerText = `${employee.name}'s Weekly Time Card`;
+    employeeNameTitle.innerText = `${employee.name}'s Semi-Monthly Time Card`;
     timecardTableBody.innerHTML = '';
 
     try {
-        const selectedDate = parseInputDate(weekDateInput.value);
-        updateWeekRangeLabel(selectedDate);
+        const selectedDate = getSelectedDate();
+        if (weekDateInput) {
+            weekDateInput.value = formatDateKey(selectedDate);
+        }
+        updateCutoffRangeLabel(selectedDate);
 
-        const rows = await appClient.getUserWeeklyTimeCard(employee.id, {
+        const rows = await appClient.getUserCutoffTimeCard(employee.id, {
             dateKey: formatDateKey(selectedDate)
         });
         const normalizedRows = applySuspensionOverrides(rows, employee);
@@ -180,7 +185,7 @@ async function renderTimecard(employee) {
         timecardTableBody.innerHTML = '';
 
         if (!normalizedRows.length) {
-            timecardTableBody.innerHTML = '<tr><td colspan="6" class="empty-row">No logs found for this week.</td></tr>';
+            timecardTableBody.innerHTML = '<tr><td colspan="6" class="empty-row">No logs found for this cutoff.</td></tr>';
             return;
         }
 
@@ -203,9 +208,19 @@ async function renderTimecard(employee) {
             timecardTableBody.appendChild(tr);
         });
     } catch (error) {
-        console.error('Failed to render employee time card:', error);
+        console.error('Failed to render employee cutoff time card:', error);
         timecardTableBody.innerHTML = `<tr><td colspan="6" class="empty-row is-error">${appClient.escapeHtml(error.message)}</td></tr>`;
     }
+}
+
+function getSelectedDate() {
+    return clampToServerDate(parseInputDate(weekDateInput?.value || serverDateKey));
+}
+
+function clampToServerDate(value) {
+    const selectedDate = new Date(value);
+    const resolvedServerDate = parseInputDate(serverDateKey);
+    return selectedDate > resolvedServerDate ? resolvedServerDate : selectedDate;
 }
 
 function parseInputDate(value) {
@@ -217,18 +232,23 @@ function parseInputDate(value) {
     return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
-function getWeekBounds(value) {
+function getCutoffBounds(value) {
     const baseDate = new Date(value);
-    const weekStart = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-    const weekEnd = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
-    weekEnd.setDate(weekEnd.getDate() + 6);
-    return { weekStart, weekEnd };
+    const serverDate = parseInputDate(serverDateKey);
+    const isFirstHalf = baseDate.getDate() <= 15;
+    const rangeStart = new Date(baseDate.getFullYear(), baseDate.getMonth(), isFirstHalf ? 1 : 16);
+    const nominalRangeEnd = new Date(
+        baseDate.getFullYear(),
+        baseDate.getMonth(),
+        isFirstHalf ? 15 : new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0).getDate()
+    );
+    const rangeEnd = nominalRangeEnd > serverDate ? serverDate : nominalRangeEnd;
+    return { rangeStart, rangeEnd };
 }
 
-function updateWeekRangeLabel(value) {
-    const { weekStart, weekEnd } = getWeekBounds(value);
-    weekRangeLabel.textContent = `Week range: ${formatShortDate(weekStart)} - ${formatShortDate(weekEnd)}`;
+function updateCutoffRangeLabel(value) {
+    const { rangeStart, rangeEnd } = getCutoffBounds(value);
+    weekRangeLabel.textContent = `Cutoff range: ${formatShortDate(rangeStart)} - ${formatShortDate(rangeEnd)}`;
 }
 
 function formatDateKey(value) {
@@ -298,6 +318,10 @@ function getWorkHoursState(row) {
         return { valueLabel, targetLabel: 'Not scheduled', tone: 'neutral' };
     }
 
+    if (normalizedStatus === 'holiday') {
+        return { valueLabel, targetLabel: 'Holiday', tone: 'neutral' };
+    }
+
     if (normalizedStatus === 'suspended') {
         return { valueLabel, targetLabel: 'Suspended', tone: 'neutral' };
     }
@@ -361,6 +385,8 @@ function statusClass(status) {
             return 'status-absent';
         case 'excuse':
             return 'status-excuse';
+        case 'holiday':
+            return 'status-holiday';
         case 'day off':
             return 'status-day-off';
         case 'inactive':

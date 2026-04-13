@@ -1,8 +1,51 @@
-const { app, BrowserWindow, dialog } = require('electron');
+const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { normalizeRemoteUrlList, readProjectRuntimeConfig } = require('./lib/runtime-config');
+
+function loadElectronDesktopApi() {
+    try {
+        const candidate = require('electron');
+        if (
+            candidate
+            && typeof candidate === 'object'
+            && candidate.app
+            && candidate.BrowserWindow
+        ) {
+            return candidate;
+        }
+    } catch (_error) {
+        // Fall through to the browser fallback mode.
+    }
+
+    return null;
+}
+
+function openExternalUrl(url) {
+    if (!url) {
+        return;
+    }
+
+    if (process.platform === 'win32') {
+        spawn('cmd', ['/c', 'start', '', url], {
+            detached: true,
+            stdio: 'ignore'
+        }).unref();
+        return;
+    }
+
+    const opener = process.platform === 'darwin' ? 'open' : 'xdg-open';
+    spawn(opener, [url], {
+        detached: true,
+        stdio: 'ignore'
+    }).unref();
+}
+
+const electronDesktopApi = loadElectronDesktopApi();
+const app = electronDesktopApi?.app || null;
+const BrowserWindow = electronDesktopApi?.BrowserWindow || null;
+const dialog = electronDesktopApi?.dialog || null;
 
 const PROJECT_RUNTIME_CONFIG = readProjectRuntimeConfig();
 const DEFAULT_REMOTE_URLS = normalizeRemoteUrlList([
@@ -15,10 +58,18 @@ const DEFAULT_REMOTE_URLS = normalizeRemoteUrlList([
 
 let mainWindow = null;
 
+function getUserConfigRoot() {
+    if (app?.getPath) {
+        return app.getPath('userData');
+    }
+
+    return path.join(process.env.APPDATA || os.homedir(), 'AttendanceApp');
+}
+
 function getConfigPaths() {
     return {
         bundled: path.join(__dirname, 'client-config.json'),
-        user: path.join(app.getPath('userData'), 'client-config.json')
+        user: path.join(getUserConfigRoot(), 'client-config.json')
     };
 }
 
@@ -103,25 +154,37 @@ async function createWindow() {
     await mainWindow.loadURL(await findReachableRemoteUrl());
 }
 
-app.whenReady().then(createWindow).catch(async (error) => {
-    console.error('Failed to start the attendance client:', error);
-    await dialog.showMessageBox({
-        type: 'error',
-        title: 'Attendance Client Error',
-        message: 'The attendance client failed to start.',
-        detail: error.message || String(error)
-    });
-    app.quit();
-});
-
-app.on('activate', async () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-        await createWindow();
-    }
-});
-
-app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
+if (!app || !BrowserWindow) {
+    findReachableRemoteUrl()
+        .then((url) => {
+            console.warn('Electron desktop APIs are unavailable. Falling back to the default browser.');
+            openExternalUrl(url);
+        })
+        .catch((error) => {
+            console.error('Failed to start the attendance client:', error);
+            process.exit(0);
+        });
+} else {
+    app.whenReady().then(createWindow).catch(async (error) => {
+        console.error('Failed to start the attendance client:', error);
+        await dialog.showMessageBox({
+            type: 'error',
+            title: 'Attendance Client Error',
+            message: 'The attendance client failed to start.',
+            detail: error.message || String(error)
+        });
         app.quit();
-    }
-});
+    });
+
+    app.on('activate', async () => {
+        if (BrowserWindow.getAllWindows().length === 0) {
+            await createWindow();
+        }
+    });
+
+    app.on('window-all-closed', () => {
+        if (process.platform !== 'darwin') {
+            app.quit();
+        }
+    });
+}

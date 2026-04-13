@@ -444,13 +444,25 @@ function run() {
         const previousRow = monthlyRows.find((row) => row.dateKey === previousDateKey);
         const weeklyRows = store.getUserWeeklyTimeCard('b_suspended_user', todayKey);
         const todayRow = weeklyRows.find((row) => row.dateKey === todayKey);
+        const cutoffRows = store.getUserSemiMonthlyTimeCard('b_suspended_user', todayKey);
+        const todayDay = Number(todayKey.slice(-2));
+        const expectedCutoffStart = todayDay <= 15
+            ? `${todayKey.slice(0, 8)}01`
+            : `${todayKey.slice(0, 8)}16`;
         assert(previousRow, 'monthly time card should include the day before suspension');
         assert(todayRow, 'weekly time card should include the suspension day');
+        assert(cutoffRows.length > 0, 'semi-monthly time card should return rows for the selected cutoff');
+        assert.strictEqual(cutoffRows[0]?.dateKey, expectedCutoffStart, 'semi-monthly time card should start at the correct cutoff day');
+        assert.strictEqual(cutoffRows.at(-1)?.dateKey, todayKey, 'current semi-monthly time card should stop at today');
         assert.strictEqual(previousRow.status, 'Absent', 'dates before suspension should keep their prior absent status');
         assert.strictEqual(todayRow.status, 'Suspended', 'suspension day should show Suspended');
         assert(
             weeklyRows.some((row) => row.status === 'Suspended'),
             'weekly time card should surface Suspended for inactive users without attendance rows'
+        );
+        assert(
+            cutoffRows.some((row) => row.status === 'Suspended'),
+            'semi-monthly time card should surface Suspended for inactive users without attendance rows'
         );
 
         const snapshotRow = store.getDailyAttendanceSnapshot(todayKey)

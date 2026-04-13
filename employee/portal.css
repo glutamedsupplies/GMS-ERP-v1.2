@@ -1292,6 +1292,7 @@ tbody tr:hover td {
 .status-late,
 .status-absent,
 .status-excuse,
+.status-holiday,
 .status-day-off,
 .status-inactive,
 .status-suspended {
@@ -1312,6 +1313,10 @@ tbody tr:hover td {
 
 .status-excuse {
   color: var(--tenant-surface-text);
+}
+
+.status-holiday {
+  color: #b45309;
 }
 
 .status-day-off {

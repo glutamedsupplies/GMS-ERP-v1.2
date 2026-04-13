@@ -279,8 +279,9 @@ function sortTodayRows(rows) {
         late: 2,
         absent: 3,
         excuse: 4,
-        on_time: 5,
-        day_off: 6
+        holiday: 5,
+        on_time: 6,
+        day_off: 7
     };
 
     return [...rows].sort((left, right) => {
@@ -313,6 +314,8 @@ function statusClass(statusGroup) {
             return 'status-suspended';
         case 'excuse':
             return 'status-excuse';
+        case 'holiday':
+            return 'status-holiday';
         case 'day_off':
             return 'status-day-off';
         default:

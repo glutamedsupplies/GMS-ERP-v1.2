@@ -41,12 +41,12 @@ function initSelectors(dateKey) {
         weekDateInput.max = serverDateKey || initialDateKey;
         weekDateInput.addEventListener('change', () => {
             const selectedDate = getSelectedDate();
-            updateWeekLabel(selectedDate);
+            updateCutoffLabel(selectedDate);
             void renderRecords(selectedDate);
         });
     }
 
-    updateWeekLabel(initialDate);
+    updateCutoffLabel(initialDate);
 }
 
 async function resolveServerDateKey() {
@@ -77,10 +77,10 @@ async function renderRecords(selectedDate = getSelectedDate()) {
         if (weekDateInput) {
             weekDateInput.value = formatDateKey(normalizedDate);
         }
-        const rows = await appClient.getUserWeeklyTimeCard(session.userId, {
+        const rows = await appClient.getUserCutoffTimeCard(session.userId, {
             dateKey: formatDateKey(normalizedDate)
         });
-        updateWeekLabel(normalizedDate);
+        updateCutoffLabel(normalizedDate);
 
         if (title) {
             title.textContent = 'Attendance Records';
@@ -89,7 +89,7 @@ async function renderRecords(selectedDate = getSelectedDate()) {
         tableBody.innerHTML = '';
 
         if (!rows.length) {
-            tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No records found for this week.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No records found for this cutoff.</td></tr>';
             return;
         }
 
@@ -105,21 +105,19 @@ async function renderRecords(selectedDate = getSelectedDate()) {
             tableBody.appendChild(row);
         });
     } catch (error) {
-        console.error('Failed to load employee weekly time card:', error);
+        console.error('Failed to load employee cutoff time card:', error);
         tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#d50000;">${appClient.escapeHtml(error.message)}</td></tr>`;
     }
 }
 
-function updateWeekLabel(value) {
+function updateCutoffLabel(value) {
     if (!subheading) {
         return;
     }
 
-    const { weekStart, weekEnd } = getWeekBounds(value);
-    const serverDate = parseInputDate(serverDateKey);
-    const rangeEnd = weekEnd > serverDate ? serverDate : weekEnd;
-    const rangeLabel = `${formatShortDate(weekStart)} - ${formatShortDate(rangeEnd)}`;
-    subheading.textContent = `Selected week: ${rangeLabel}`;
+    const { rangeStart, rangeEnd } = getCutoffBounds(value);
+    const rangeLabel = `${formatShortDate(rangeStart)} - ${formatShortDate(rangeEnd)}`;
+    subheading.textContent = `Selected cutoff: ${rangeLabel}`;
 }
 
 function parseInputDate(value) {
@@ -131,13 +129,18 @@ function parseInputDate(value) {
     return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
-function getWeekBounds(value) {
+function getCutoffBounds(value) {
     const baseDate = new Date(value);
-    const weekStart = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-    const weekEnd = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
-    weekEnd.setDate(weekEnd.getDate() + 6);
-    return { weekStart, weekEnd };
+    const serverDate = parseInputDate(serverDateKey);
+    const isFirstHalf = baseDate.getDate() <= 15;
+    const rangeStart = new Date(baseDate.getFullYear(), baseDate.getMonth(), isFirstHalf ? 1 : 16);
+    const nominalRangeEnd = new Date(
+        baseDate.getFullYear(),
+        baseDate.getMonth(),
+        isFirstHalf ? 15 : new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0).getDate()
+    );
+    const rangeEnd = nominalRangeEnd > serverDate ? serverDate : nominalRangeEnd;
+    return { rangeStart, rangeEnd };
 }
 
 function formatDateKey(value) {
@@ -164,6 +167,8 @@ function statusClass(status) {
             return 'status-absent';
         case 'excuse':
             return 'status-excuse';
+        case 'holiday':
+            return 'status-holiday';
         case 'day off':
             return 'status-day-off';
         case 'inactive':

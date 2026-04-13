@@ -60,18 +60,18 @@
       font-family: "Segoe UI Variable", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
       font-weight: 400;
       display: flex;
-      min-height: 100vh;
+      min-height: 100dvh;
       background: var(--tenant-page-gradient, linear-gradient(155deg, #f8fbff 0%, #eef4ff 55%, #ffffff 100%));
       color: var(--text-strong);
       overflow: hidden;
-      gap: 18px;
-      padding: 18px;
+      gap: 16px;
+      padding: 16px;
     }
 
     .side-panel,
     .main-content {
       min-height: 0;
-      height: calc(100vh - 36px);
+      height: calc(100dvh - 32px);
       border-radius: 30px;
       border: 1px solid var(--surface-line);
       box-shadow: var(--shadow);
@@ -501,6 +501,11 @@
       font-weight: 700;
     }
 
+    .status-holiday {
+      color: #b45309;
+      font-weight: 700;
+    }
+
     .status-day-off {
       color: var(--surface-muted);
       font-weight: 700;
@@ -583,7 +588,7 @@
 <div class="side-panel" id="employeePanel">
   <div class="panel-kicker">Attendance Accounts</div>
   <h3><i class="fa-solid fa-users"></i> Accounts</h3>
-  <p class="side-copy">Select an account to review the weekly time card. Inactive and suspended attendance accounts stay visible here for audit and review.</p>
+  <p class="side-copy">Select an account to review the semi-monthly time card. Inactive and suspended attendance accounts stay visible here for audit and review.</p>
   <div id="employeeList"></div>
 </div>
 
@@ -591,18 +596,18 @@
   <div class="hero-head">
     <div>
       <h2 id="employeeNameTitle">Select an Account</h2>
-      <p>Review weekly time-ins, time-outs, work hours, and attendance status in a cleaner tenant-aware layout.</p>
+      <p>Review 1-15 or 16-katapusan time-ins, time-outs, work hours, and attendance status in a cleaner tenant-aware layout.</p>
     </div>
-                    <span class="surface-note"><i class="fa-regular fa-clock"></i> <span id="timecardPolicyNote">Weekly attendance / 9h target</span></span>
+                    <span class="surface-note"><i class="fa-regular fa-clock"></i> <span id="timecardPolicyNote">Cutoff attendance / 9h target</span></span>
   </div>
 
   <div class="selectors">
     <div>
-      <label>Week Date:</label>
+      <label>Select Date:</label>
       <input type="date" id="weekDate">
     </div>
     <div>
-      <span class="week-note" id="weekRangeLabel">Loading week...</span>
+      <span class="week-note" id="weekRangeLabel">Loading cutoff...</span>
     </div>
   </div>
 

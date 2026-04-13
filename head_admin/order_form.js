@@ -1473,7 +1473,7 @@ async function resetOrderForm(statusMessage = '') {
     state.editIntentOrderNumber = '';
     state.lastReceipt = null;
     resetPendingClientCheck({ clearSelectedProfile: true });
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getLocalDateInputValue();
     saleDateInput.value = today;
     noteInput.value = '';
     paymentTypeInput.value = '';
@@ -2413,7 +2413,7 @@ async function loadOrderForEditing(orderNumber, { statusMessage = '' } = {}) {
             await ensureBranchStockLoaded(invoiceBranch);
             await ensureBranchStockLoaded(cashBranch);
 
-            saleDateInput.value = order.saleDate || new Date().toISOString().slice(0, 10);
+            saleDateInput.value = order.saleDate || getLocalDateInputValue();
             orderNumberInput.value = order.orderNumber || lookupOrderNumber;
             noteInput.value = order.note || '';
             amountPaidInput.value = Number(order.amountPaid || 0) > 0 ? formatNumberInputValue(Number(order.amountPaid)) : '';
@@ -4821,9 +4821,111 @@ function extractTaggedLineValue(text, labels) {
 }
 
 function parseTemplateDate(value) {
-    const rawValue = String(value || '').trim();
+    const rawValue = String(value || '').trim().replace(/\s+/g, ' ');
     if (!rawValue) {
         return '';
+    }
+
+    const currentYear = new Date().getFullYear();
+    const monthNamePattern = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+    const normalizeYear = (yearText = '') => {
+        const normalizedYearText = String(yearText || '').trim();
+        if (!normalizedYearText) {
+            return currentYear;
+        }
+
+        const parsedYear = Number.parseInt(normalizedYearText, 10);
+        if (!Number.isInteger(parsedYear)) {
+            return NaN;
+        }
+
+        if (normalizedYearText.length === 2) {
+            return parsedYear >= 70 ? 1900 + parsedYear : 2000 + parsedYear;
+        }
+
+        return parsedYear;
+    };
+    const normalizeMonthName = (monthText = '') => {
+        const normalizedMonthText = String(monthText || '').trim().toLowerCase().replace(/\.$/, '');
+        const monthLookup = {
+            jan: 1,
+            january: 1,
+            feb: 2,
+            february: 2,
+            mar: 3,
+            march: 3,
+            apr: 4,
+            april: 4,
+            may: 5,
+            jun: 6,
+            june: 6,
+            jul: 7,
+            july: 7,
+            aug: 8,
+            august: 8,
+            sep: 9,
+            sept: 9,
+            september: 9,
+            oct: 10,
+            october: 10,
+            nov: 11,
+            november: 11,
+            dec: 12,
+            december: 12
+        };
+
+        return monthLookup[normalizedMonthText] || 0;
+    };
+    const buildDateInputValue = (year, month, day) => {
+        const normalizedYear = Number.parseInt(String(year || '').trim(), 10);
+        const normalizedMonth = Number.parseInt(String(month || '').trim(), 10);
+        const normalizedDay = Number.parseInt(String(day || '').trim(), 10);
+        if (!Number.isInteger(normalizedYear) || !Number.isInteger(normalizedMonth) || !Number.isInteger(normalizedDay)) {
+            return '';
+        }
+
+        const candidate = new Date(normalizedYear, normalizedMonth - 1, normalizedDay);
+        if (
+            candidate.getFullYear() !== normalizedYear
+            || (candidate.getMonth() + 1) !== normalizedMonth
+            || candidate.getDate() !== normalizedDay
+        ) {
+            return '';
+        }
+
+        return [
+            String(normalizedYear).padStart(4, '0'),
+            String(normalizedMonth).padStart(2, '0'),
+            String(normalizedDay).padStart(2, '0')
+        ].join('-');
+    };
+
+    let matchedDate = rawValue.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+    if (matchedDate) {
+        return buildDateInputValue(matchedDate[1], matchedDate[2], matchedDate[3]);
+    }
+
+    matchedDate = rawValue.match(/^(\d{1,2})[-/.](\d{1,2})(?:[-/.](\d{2,4}))?$/);
+    if (matchedDate) {
+        return buildDateInputValue(normalizeYear(matchedDate[3]), matchedDate[1], matchedDate[2]);
+    }
+
+    matchedDate = rawValue.match(new RegExp(`^${monthNamePattern}\\.?\s+(\\d{1,2})(?:,?\\s+(\\d{2,4}))?$`, 'i'));
+    if (matchedDate) {
+        return buildDateInputValue(
+            normalizeYear(matchedDate[2]),
+            normalizeMonthName(matchedDate[1]),
+            matchedDate[2 - 1]
+        );
+    }
+
+    matchedDate = rawValue.match(new RegExp(`^(\\d{1,2})\\s+${monthNamePattern}\\.?(?:,?\\s+(\\d{2,4}))?$`, 'i'));
+    if (matchedDate) {
+        return buildDateInputValue(
+            normalizeYear(matchedDate[3]),
+            normalizeMonthName(matchedDate[2]),
+            matchedDate[1]
+        );
     }
 
     const parsed = new Date(rawValue);
@@ -4831,10 +4933,22 @@ function parseTemplateDate(value) {
         return '';
     }
 
-    const year = parsed.getFullYear();
-    const month = String(parsed.getMonth() + 1).padStart(2, '0');
-    const day = String(parsed.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const hasExplicitYear = /\b\d{4}\b/.test(rawValue);
+    const resolvedYear = hasExplicitYear ? parsed.getFullYear() : currentYear;
+    return buildDateInputValue(resolvedYear, parsed.getMonth() + 1, parsed.getDate());
+}
+
+function getLocalDateInputValue(input = new Date()) {
+    const date = input instanceof Date ? new Date(input.getTime()) : new Date(input);
+    if (Number.isNaN(date.getTime())) {
+        return '';
+    }
+
+    return [
+        String(date.getFullYear()).padStart(4, '0'),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0')
+    ].join('-');
 }
 
 function parseMoneyValue(value) {

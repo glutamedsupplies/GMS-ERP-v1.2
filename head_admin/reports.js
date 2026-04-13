@@ -172,6 +172,8 @@ function statusClass(status) {
             return 'status-late';
         case 'absent':
             return 'status-absent';
+        case 'holiday':
+            return 'status-holiday';
         case 'inactive':
             return 'status-inactive';
         case 'suspended':
