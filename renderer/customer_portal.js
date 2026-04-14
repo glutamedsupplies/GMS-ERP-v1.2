@@ -105,6 +105,8 @@ const sendMessageBtn = document.getElementById('sendMessageBtn');
 const refreshChatBtn = document.getElementById('refreshChatBtn');
 
 const COMPANY_REGISTRATION_CHECKOUT_STORAGE_KEY = 'gms-company-registration-checkout';
+const PUBLIC_PORTAL_NAV_GUARD_KEY = 'gms-public-portal-nav-guard-v1';
+const PUBLIC_PORTAL_NAV_GUARD_TTL_MS = 1500;
 const DEFAULT_COMPANY_REGISTRATION_PLAN_IDS = Object.freeze(new Set([
     'attendance_starter',
     'sales_growth',
@@ -143,6 +145,7 @@ function initialize() {
     state.companyCode = initialCompanyCode;
     state.intent = intent;
     applyIntentDefaults();
+    armPublicPortalReturnGuard();
 
     createRequestBtn.addEventListener('click', createRequest);
     openRequestBtn.addEventListener('click', openRequestThread);
@@ -303,6 +306,81 @@ function isCompanyRegistrationIntent() {
 
 function isFocusedIntent() {
     return isSignupIntent() || isCompanyRegistrationIntent();
+}
+
+function readPublicPortalNavigationGuard() {
+    try {
+        const rawValue = window.sessionStorage?.getItem(PUBLIC_PORTAL_NAV_GUARD_KEY);
+        if (!rawValue) {
+            return null;
+        }
+
+        const parsed = JSON.parse(rawValue);
+        const intent = normalizeIntent(parsed?.intent);
+        const at = Number(parsed?.at || 0);
+        if (!intent || !Number.isFinite(at) || at <= 0) {
+            return null;
+        }
+
+        return { intent, at };
+    } catch (_error) {
+        return null;
+    }
+}
+
+function clearPublicPortalNavigationGuard() {
+    try {
+        window.sessionStorage?.removeItem(PUBLIC_PORTAL_NAV_GUARD_KEY);
+    } catch (_error) {
+        // Ignore storage cleanup failures.
+    }
+}
+
+function armPublicPortalReturnGuard() {
+    if (!isFocusedIntent()) {
+        clearPublicPortalNavigationGuard();
+        return;
+    }
+
+    const guard = readPublicPortalNavigationGuard();
+    if (!guard || guard.intent !== state.intent) {
+        return;
+    }
+
+    const elapsedMs = Date.now() - guard.at;
+    const remainingMs = PUBLIC_PORTAL_NAV_GUARD_TTL_MS - elapsedMs;
+    if (remainingMs <= 0) {
+        clearPublicPortalNavigationGuard();
+        return;
+    }
+
+    const loginLinks = Array.from(document.querySelectorAll('a[href="/login.html"]'));
+    if (!loginLinks.length) {
+        clearPublicPortalNavigationGuard();
+        return;
+    }
+
+    const interceptReturnClick = (event) => {
+        if ((Date.now() - guard.at) >= PUBLIC_PORTAL_NAV_GUARD_TTL_MS) {
+            clearPublicPortalNavigationGuard();
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        setStatus('Signup page is opening. Tap Back to Login again after a moment if you still want to return.', false);
+    };
+
+    loginLinks.forEach((link) => {
+        link.addEventListener('click', interceptReturnClick);
+    });
+
+    window.setTimeout(() => {
+        loginLinks.forEach((link) => {
+            link.removeEventListener('click', interceptReturnClick);
+        });
+        clearPublicPortalNavigationGuard();
+    }, remainingMs);
 }
 
 function applyIntentDefaults() {

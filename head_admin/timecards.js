@@ -5,6 +5,7 @@ const employeeNameTitle = document.getElementById('employeeNameTitle');
 const weekDateInput = document.getElementById('weekDate');
 const weekRangeLabel = document.getElementById('weekRangeLabel');
 const timecardPolicyNote = document.getElementById('timecardPolicyNote');
+const tableShell = document.querySelector('.table-shell');
 const DEFAULT_ATTENDANCE_POLICY = Object.freeze({
     dailyTargetHours: 9,
     overtimeThresholdHours: 1
@@ -22,8 +23,10 @@ const ACCOUNT_STATUS_LABELS = Object.freeze({
 let selectedEmployee = null;
 let serverDateKey = formatDateKey(new Date());
 let currentAttendancePolicy = DEFAULT_ATTENDANCE_POLICY;
+let compactLayoutFrame = 0;
 
 initialize();
+window.addEventListener('resize', queueCompactLayoutCheck);
 
 async function initialize() {
     const session = await appClient.ensureSession({ role: 'head_admin' });
@@ -105,6 +108,7 @@ async function loadEmployees() {
 
         if (!employees.length) {
             employeeListDiv.innerHTML = '<div class="empty-row" style="padding:12px;">No attendance accounts found.</div>';
+            queueCompactLayoutCheck();
             return;
         }
 
@@ -141,9 +145,11 @@ async function loadEmployees() {
         if (selectedEmployee) {
             await renderTimecard(selectedEmployee);
         }
+        queueCompactLayoutCheck();
     } catch (error) {
         console.error('Failed to load employee list for time cards:', error);
         employeeListDiv.innerHTML = `<div class="empty-row is-error" style="padding:12px;">${appClient.escapeHtml(error.message)}</div>`;
+        queueCompactLayoutCheck();
     }
 }
 
@@ -186,6 +192,7 @@ async function renderTimecard(employee) {
 
         if (!normalizedRows.length) {
             timecardTableBody.innerHTML = '<tr><td colspan="6" class="empty-row">No logs found for this cutoff.</td></tr>';
+            queueCompactLayoutCheck();
             return;
         }
 
@@ -207,10 +214,47 @@ async function renderTimecard(employee) {
             `;
             timecardTableBody.appendChild(tr);
         });
+        queueCompactLayoutCheck();
     } catch (error) {
         console.error('Failed to render employee cutoff time card:', error);
         timecardTableBody.innerHTML = `<tr><td colspan="6" class="empty-row is-error">${appClient.escapeHtml(error.message)}</td></tr>`;
+        queueCompactLayoutCheck();
     }
+}
+
+function queueCompactLayoutCheck() {
+    if (compactLayoutFrame) {
+        cancelAnimationFrame(compactLayoutFrame);
+    }
+
+    compactLayoutFrame = window.requestAnimationFrame(() => {
+        compactLayoutFrame = 0;
+        syncCompactLayout();
+    });
+}
+
+function syncCompactLayout() {
+    if (!tableShell) {
+        return;
+    }
+
+    document.body.classList.remove('layout-fit-tight', 'layout-fit-ultra');
+
+    if (isTableOverflowing()) {
+        document.body.classList.add('layout-fit-tight');
+    }
+
+    if (isTableOverflowing()) {
+        document.body.classList.add('layout-fit-ultra');
+    }
+}
+
+function isTableOverflowing() {
+    if (!tableShell) {
+        return false;
+    }
+
+    return tableShell.scrollHeight - tableShell.clientHeight > 1;
 }
 
 function getSelectedDate() {

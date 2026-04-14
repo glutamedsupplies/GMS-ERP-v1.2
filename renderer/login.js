@@ -27,6 +27,7 @@ const welcomeTitleEl = document.getElementById('welcomeTitle');
 const welcomeCopyEl = document.getElementById('welcomeCopy');
 const DEFAULT_LOGO_PATH = '/logo.png';
 const DEFAULT_PRIMARY_COLOR = '#2575fc';
+const PUBLIC_PORTAL_NAV_GUARD_KEY = 'gms-public-portal-nav-guard-v1';
 const DEFAULT_BRANDING = Object.freeze({
     appName: 'GMS ERP',
     companyName: '',
@@ -106,14 +107,16 @@ if (loginBtn) {
 }
 
 if (signUpBtn) {
-    signUpBtn.addEventListener('click', () => {
-        window.location.assign(getSignUpUrl());
+    signUpBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        navigateToPublicPortal('signup');
     });
 }
 
 if (registerCompanyIdBtn) {
-    registerCompanyIdBtn.addEventListener('click', () => {
-        window.location.assign(getRegisterCompanyIdUrl());
+    registerCompanyIdBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        navigateToPublicPortal('register_company_id');
     });
 }
 
@@ -532,6 +535,24 @@ function getSignUpUrl() {
 
 function getRegisterCompanyIdUrl() {
     return '/renderer/customer_portal.html?intent=register_company_id';
+}
+
+function navigateToPublicPortal(intent = 'signup') {
+    const targetUrl = intent === 'register_company_id'
+        ? getRegisterCompanyIdUrl()
+        : getSignUpUrl();
+
+    try {
+        window.sessionStorage?.setItem(PUBLIC_PORTAL_NAV_GUARD_KEY, JSON.stringify({
+            intent,
+            at: Date.now()
+        }));
+    } catch (_error) {
+        // Ignore storage issues and continue with the navigation.
+    }
+
+    // Replace the login history entry so an immediate bounce cannot reopen it.
+    window.location.replace(targetUrl);
 }
 
 function getGoogleLoginUrl() {
