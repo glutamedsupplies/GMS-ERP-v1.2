@@ -227,6 +227,7 @@ function renderRequestList() {
     requestList.innerHTML = state.requests.map((entry) => {
         const activeClass = entry.requestCode === state.selectedCode ? 'active' : '';
         const detailPreview = truncateText(entry.requestDetails || '', 92);
+        const sourceLabel = formatRequestSourceLabel(entry.source);
         return `
             <div class="request-item ${activeClass}" data-code="${appClient.escapeHtml(entry.requestCode || '')}">
                 <div class="request-title">
@@ -237,7 +238,7 @@ function renderRequestList() {
                     ${appClient.escapeHtml(entry.clientName || '-')} | ${appClient.escapeHtml(entry.contactNumber || '-')}
                 </div>
                 <div class="request-sub">
-                    Messages: ${appClient.escapeHtml(String(entry.messageCount || 0))} | ${appClient.escapeHtml(formatDateTime(entry.updatedAt || entry.createdAt))}
+                    Messages: ${appClient.escapeHtml(String(entry.messageCount || 0))} | ${appClient.escapeHtml(formatDateTime(entry.updatedAt || entry.createdAt))}${sourceLabel ? ` | ${appClient.escapeHtml(sourceLabel)}` : ''}
                 </div>
                 <div class="request-preview">${appClient.escapeHtml(detailPreview || 'No request details.')}</div>
             </div>
@@ -309,7 +310,12 @@ function renderMessages(messages) {
 
         const metaEl = document.createElement('div');
         metaEl.className = 'chat-meta';
-        metaEl.textContent = `${message.senderName || (senderType === 'admin' ? 'Admin' : 'Customer')} | ${formatDateTime(message.createdAt)}`;
+        const sourceLabel = formatRequestSourceLabel(message.source);
+        metaEl.textContent = [
+            message.senderName || (senderType === 'admin' ? 'Admin' : 'Customer'),
+            sourceLabel,
+            formatDateTime(message.createdAt)
+        ].filter(Boolean).join(' | ');
 
         const contentEl = document.createElement('div');
         contentEl.textContent = message.message || '';
@@ -487,6 +493,23 @@ function truncateText(value, maxLength = 90) {
         return text;
     }
     return `${text.slice(0, maxLength - 1)}...`;
+}
+
+function formatRequestSourceLabel(source) {
+    const normalized = String(source || '').trim().toLowerCase();
+    if (normalized === 'ai_assistant') {
+        return 'Ask AI';
+    }
+    if (normalized === 'customer_portal') {
+        return 'Customer Portal';
+    }
+    if (normalized === 'super_admin_panel') {
+        return 'Super Admin';
+    }
+    if (normalized === 'admin_panel') {
+        return 'Admin';
+    }
+    return '';
 }
 
 function sanitizeContactInput(value) {

@@ -4,9 +4,12 @@ const backBtn = document.getElementById('backBtn');
 const title = document.getElementById('recordsTitle');
 const subheading = document.getElementById('weekRange');
 const weekDateInput = document.getElementById('weekDate');
+const TIME_CARD_REFRESH_INTERVAL_MS = 10000;
 
 let session = null;
 let serverDateKey = formatDateKey(new Date());
+let timeCardRefreshPromise = null;
+let timeCardRequestToken = 0;
 
 initialize();
 
@@ -16,20 +19,27 @@ async function initialize() {
         return;
     }
 
+    const [bootstrap, resolvedDateKey] = await Promise.all([
+        appClient.getBootstrap().catch((error) => {
+            console.error('Failed to load employee branding for time card:', error);
+            return null;
+        }),
+        resolveServerDateKey()
+    ]);
+
     try {
-        const bootstrap = await appClient.getBootstrap();
         appClient.applyBootstrapBrandTheme(bootstrap);
-    } catch (error) {
-        console.error('Failed to load employee branding for time card:', error);
+    } catch (_error) {
     }
 
     backBtn?.addEventListener('click', () => {
         window.location.href = '/employee/employee.html';
     });
 
-    serverDateKey = await resolveServerDateKey();
+    serverDateKey = resolvedDateKey;
     initSelectors(serverDateKey);
     await renderRecords();
+    setupAutoRefresh();
 }
 
 function initSelectors(dateKey) {
@@ -71,8 +81,12 @@ function clampToServerDate(value) {
     return selectedDate > serverDate ? serverDate : selectedDate;
 }
 
-async function renderRecords(selectedDate = getSelectedDate()) {
+async function renderRecords(selectedDate = getSelectedDate(), { preserveTable = false } = {}) {
+    const requestToken = ++timeCardRequestToken;
     try {
+        if (!preserveTable) {
+            tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading records...</td></tr>';
+        }
         const normalizedDate = clampToServerDate(selectedDate);
         if (weekDateInput) {
             weekDateInput.value = formatDateKey(normalizedDate);
@@ -80,6 +94,9 @@ async function renderRecords(selectedDate = getSelectedDate()) {
         const rows = await appClient.getUserCutoffTimeCard(session.userId, {
             dateKey: formatDateKey(normalizedDate)
         });
+        if (requestToken !== timeCardRequestToken) {
+            return;
+        }
         updateCutoffLabel(normalizedDate);
 
         if (title) {
@@ -93,6 +110,7 @@ async function renderRecords(selectedDate = getSelectedDate()) {
             return;
         }
 
+        const fragment = document.createDocumentFragment();
         rows.forEach((record) => {
             const row = document.createElement('tr');
             row.innerHTML = `
@@ -102,11 +120,53 @@ async function renderRecords(selectedDate = getSelectedDate()) {
                 <td data-label="Total Hours">${appClient.escapeHtml(record.workedHours || '0.00')}</td>
                 <td data-label="Status" class="${statusClass(record.status)}">${appClient.escapeHtml(record.status)}</td>
             `;
-            tableBody.appendChild(row);
+            fragment.appendChild(row);
         });
+        tableBody.appendChild(fragment);
     } catch (error) {
+        if (requestToken !== timeCardRequestToken) {
+            return;
+        }
         console.error('Failed to load employee cutoff time card:', error);
         tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#d50000;">${appClient.escapeHtml(error.message)}</td></tr>`;
+    }
+}
+
+function setupAutoRefresh() {
+    window.addEventListener('focus', handleAutoRefresh);
+    document.addEventListener('visibilitychange', handleAutoRefresh);
+    window.setInterval(() => {
+        if (document.hidden) {
+            return;
+        }
+        void refreshCurrentCutoff();
+    }, TIME_CARD_REFRESH_INTERVAL_MS);
+}
+
+async function handleAutoRefresh() {
+    if (document.hidden) {
+        return;
+    }
+    await refreshCurrentCutoff();
+}
+
+async function refreshCurrentCutoff() {
+    if (timeCardRefreshPromise) {
+        return timeCardRefreshPromise;
+    }
+
+    timeCardRefreshPromise = (async () => {
+        serverDateKey = await resolveServerDateKey();
+        if (weekDateInput) {
+            weekDateInput.max = serverDateKey || weekDateInput.value;
+        }
+        await renderRecords(undefined, { preserveTable: true });
+    })();
+
+    try {
+        await timeCardRefreshPromise;
+    } finally {
+        timeCardRefreshPromise = null;
     }
 }
 

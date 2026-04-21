@@ -539,9 +539,11 @@
 
         try {
             const recentHistory = state.history.slice(0, -1).slice(-4);
+            const transcriptHistory = state.history.slice(0, -1).slice(-STORAGE.maxMessages);
             const payload = {
                 message: raw,
                 history: recentHistory,
+                transcriptHistory,
                 threadId: state.conversationId,
                 companyCode: state.companyCode || resolveCompanyCode()
             };

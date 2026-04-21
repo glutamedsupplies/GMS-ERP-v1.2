@@ -100,7 +100,8 @@ async function loadVariants() {
         const search = productFilterInput.value.trim();
         const rows = await appClient.listInventoryVariants({
             setName: setFilterInput.value.trim(),
-            search
+            search,
+            bypassCache: true
         });
 
         state.rows = Array.isArray(rows) ? rows : [];

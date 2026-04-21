@@ -856,7 +856,7 @@ function buildReportTemplateData({
         branches[branchKey].sales += Number(order.orderTotal || 0);
         branches[branchKey].overpayment += Number(order.overpaymentAmount || 0);
         branches[branchKey].lbcCollection += Number(order.lbcCollectionAmount || 0);
-        branches[branchKey].clientKeys.add(buildReportClientLookup(order));
+        branches[branchKey].orderCount += 1;
     });
 
     REPORT_TEMPLATE_BRANCHES.forEach((branchLabel) => {
@@ -891,9 +891,7 @@ function buildReportTemplateData({
         overpayment: Object.values(branches).reduce((sum, metrics) => sum + Number(metrics.overpayment || 0), 0),
         pendingPayments: Object.values(branches).reduce((sum, metrics) => sum + Number(metrics.pendingPayments || 0), 0),
         lbcCollection: Object.values(branches).reduce((sum, metrics) => sum + Number(metrics.lbcCollection || 0), 0),
-        clientKeys: {
-            size: Object.values(branches).reduce((sum, metrics) => sum + Number(metrics.clientKeys?.size || 0), 0)
-        }
+        orderCount: Object.values(branches).reduce((sum, metrics) => sum + Number(metrics.orderCount || 0), 0)
     });
 
     return {
@@ -917,7 +915,7 @@ function createReportTemplateBranchMetrics() {
             overpayment: 0,
             pendingPayments: 0,
             lbcCollection: 0,
-            clientKeys: new Set()
+            orderCount: 0
         };
         return metrics;
     }, {});
@@ -997,13 +995,8 @@ function resolveLbcCollectionAmount({
     );
 }
 
-function buildReportClientLookup(order = {}) {
-    const name = normalizeNameLookup(order.clientName);
-    return name || `order:${String(order.key || '').trim()}`;
-}
-
 function finalizeReportBranchMetrics(metrics = {}) {
-    const clientCount = Number(metrics.clientKeys?.size || 0);
+    const clientCount = Number(metrics.orderCount || 0);
     return {
         label: String(metrics.label || '').trim(),
         sales: Number(metrics.sales || 0),
@@ -1096,9 +1089,9 @@ function buildReportTemplateText(templateType = 'daily', reportData = null) {
 
     const heading = getReportTemplateHeading(templateType);
     const periodLabel = getReportTemplatePeriodLineLabel(templateType);
-    const cubao = reportData.branches?.cubao || finalizeReportBranchMetrics({ label: 'Cubao', clientKeys: new Set() });
-    const pampanga = reportData.branches?.pampanga || finalizeReportBranchMetrics({ label: 'Pampanga', clientKeys: new Set() });
-    const totals = reportData.totals || finalizeReportBranchMetrics({ label: 'Total Both Branch', clientKeys: { size: 0 } });
+    const cubao = reportData.branches?.cubao || finalizeReportBranchMetrics({ label: 'Cubao', orderCount: 0 });
+    const pampanga = reportData.branches?.pampanga || finalizeReportBranchMetrics({ label: 'Pampanga', orderCount: 0 });
+    const totals = reportData.totals || finalizeReportBranchMetrics({ label: 'Total Both Branch', orderCount: 0 });
     const attendance = reportData.attendance || summarizeAttendanceRows([]);
     const remarkLines = buildReportRemarkLines(reportData, templateType);
 

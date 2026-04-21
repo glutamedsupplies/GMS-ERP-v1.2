@@ -107,6 +107,15 @@ const refreshChatBtn = document.getElementById('refreshChatBtn');
 const COMPANY_REGISTRATION_CHECKOUT_STORAGE_KEY = 'gms-company-registration-checkout';
 const PUBLIC_PORTAL_NAV_GUARD_KEY = 'gms-public-portal-nav-guard-v1';
 const PUBLIC_PORTAL_NAV_GUARD_TTL_MS = 1500;
+const PUBLIC_PORTAL_DEBUG_STORAGE_KEY = 'gms-debug-public-portal';
+const PUBLIC_PORTAL_DEBUG_ENABLED = (() => {
+    try {
+        return new URLSearchParams(window.location.search).get('debugSignup') === '1'
+            || window.localStorage?.getItem(PUBLIC_PORTAL_DEBUG_STORAGE_KEY) === '1';
+    } catch (_error) {
+        return false;
+    }
+})();
 const DEFAULT_COMPANY_REGISTRATION_PLAN_IDS = Object.freeze(new Set([
     'attendance_starter',
     'sales_growth',
@@ -308,6 +317,23 @@ function isFocusedIntent() {
     return isSignupIntent() || isCompanyRegistrationIntent();
 }
 
+function logPublicPortalDebug(message, context = null) {
+    if (!PUBLIC_PORTAL_DEBUG_ENABLED) {
+        return;
+    }
+
+    if (context !== null) {
+        console.info(`[PublicPortal] ${message}`, context);
+        return;
+    }
+
+    console.info(`[PublicPortal] ${message}`);
+}
+
+function setPublicPortalReturnGuardActive(active) {
+    document.body?.classList.toggle('is-guarding-return', Boolean(active));
+}
+
 function readPublicPortalNavigationGuard() {
     try {
         const rawValue = window.sessionStorage?.getItem(PUBLIC_PORTAL_NAV_GUARD_KEY);
@@ -316,19 +342,22 @@ function readPublicPortalNavigationGuard() {
         }
 
         const parsed = JSON.parse(rawValue);
-        const intent = normalizeIntent(parsed?.intent);
+        const rawIntent = String(parsed?.intent || '').trim();
+        const intent = rawIntent ? normalizeIntent(rawIntent) : '';
+        const targetUrl = String(parsed?.targetUrl || '').trim();
         const at = Number(parsed?.at || 0);
         if (!intent || !Number.isFinite(at) || at <= 0) {
             return null;
         }
 
-        return { intent, at };
+        return { intent, at, targetUrl };
     } catch (_error) {
         return null;
     }
 }
 
 function clearPublicPortalNavigationGuard() {
+    setPublicPortalReturnGuardActive(false);
     try {
         window.sessionStorage?.removeItem(PUBLIC_PORTAL_NAV_GUARD_KEY);
     } catch (_error) {
@@ -337,13 +366,16 @@ function clearPublicPortalNavigationGuard() {
 }
 
 function armPublicPortalReturnGuard() {
-    if (!isFocusedIntent()) {
-        clearPublicPortalNavigationGuard();
-        return;
-    }
-
     const guard = readPublicPortalNavigationGuard();
-    if (!guard || guard.intent !== state.intent) {
+    const currentPath = String(window.location.pathname || '').replace(/\\/g, '/');
+    const targetPath = guard?.targetUrl
+        ? String(new URL(guard.targetUrl, window.location.origin).pathname || '').replace(/\\/g, '/')
+        : '';
+
+    if (!guard || guard.intent !== state.intent || (targetPath && targetPath !== currentPath)) {
+        if (guard && guard.intent !== state.intent) {
+            clearPublicPortalNavigationGuard();
+        }
         return;
     }
 
@@ -354,11 +386,18 @@ function armPublicPortalReturnGuard() {
         return;
     }
 
-    const loginLinks = Array.from(document.querySelectorAll('a[href="/login.html"]'));
+    const loginLinks = Array.from(document.querySelectorAll('a[href^="/login.html"]'));
     if (!loginLinks.length) {
         clearPublicPortalNavigationGuard();
         return;
     }
+
+    setPublicPortalReturnGuardActive(true);
+    logPublicPortalDebug('Armed temporary Back to Login guard.', {
+        intent: state.intent,
+        remainingMs,
+        loginLinkCount: loginLinks.length
+    });
 
     const interceptReturnClick = (event) => {
         if ((Date.now() - guard.at) >= PUBLIC_PORTAL_NAV_GUARD_TTL_MS) {
@@ -367,17 +406,44 @@ function armPublicPortalReturnGuard() {
         }
 
         event.preventDefault();
+        if (typeof event.stopImmediatePropagation === 'function') {
+            event.stopImmediatePropagation();
+        }
         event.stopPropagation();
-        setStatus('Signup page is opening. Tap Back to Login again after a moment if you still want to return.', false);
+        setStatus('This page is still opening. Tap Back to Login again after a moment if you still want to return.', false);
+        logPublicPortalDebug('Blocked an early return to login while the page was still settling.', {
+            eventType: event.type,
+            intent: state.intent
+        });
+    };
+
+    const interceptReturnKeydown = (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+            return;
+        }
+
+        interceptReturnClick(event);
     };
 
     loginLinks.forEach((link) => {
-        link.addEventListener('click', interceptReturnClick);
+        link.classList.add('is-nav-guarded');
+        link.setAttribute('aria-disabled', 'true');
+        link.addEventListener('click', interceptReturnClick, true);
+        link.addEventListener('auxclick', interceptReturnClick, true);
+        link.addEventListener('keydown', interceptReturnKeydown, true);
     });
 
     window.setTimeout(() => {
         loginLinks.forEach((link) => {
-            link.removeEventListener('click', interceptReturnClick);
+            link.classList.remove('is-nav-guarded');
+            link.removeAttribute('aria-disabled');
+            link.removeEventListener('click', interceptReturnClick, true);
+            link.removeEventListener('auxclick', interceptReturnClick, true);
+            link.removeEventListener('keydown', interceptReturnKeydown, true);
+        });
+        setPublicPortalReturnGuardActive(false);
+        logPublicPortalDebug('Released temporary Back to Login guard.', {
+            intent: state.intent
         });
         clearPublicPortalNavigationGuard();
     }, remainingMs);
@@ -517,6 +583,7 @@ function applyIntentDefaults() {
             requestedPlanHelper.textContent = 'Compare the plans below first, then pick the package that fits before filling the rest of the form.';
         }
         renderCompanyRegistrationPlanCatalog();
+        updateCompanyRegistrationPlanHelper();
         renderCompanyRegistrationPaymentPreview();
         return;
     }
@@ -599,6 +666,20 @@ function getPlanModuleLabels(modules = {}) {
     return labels;
 }
 
+function getPublicPlanAudience(plan = {}) {
+    const modules = plan.modules || {};
+    if (modules.attendance && !modules.sales && !modules.inventory && !modules.invoicing) {
+        return 'Best for attendance-focused SaaS teams.';
+    }
+    if (modules.sales && modules.inventory && modules.invoicing && modules.ai_reader) {
+        return 'Best for full ERP SaaS subscriptions.';
+    }
+    if (modules.sales && modules.inventory && modules.invoicing) {
+        return 'Best for sales and inventory SaaS operations.';
+    }
+    return 'Best for growing tenant operations.';
+}
+
 function buildPublicPlanDescription(plan = {}) {
     const branches = Math.max(0, Number(plan.max_branches || 0));
     const users = Math.max(0, Number(plan.max_users || 0));
@@ -614,6 +695,7 @@ function buildPublicPlanDescription(plan = {}) {
     if (summaryParts.length) {
         lines.push(summaryParts.join(' | '));
     }
+    lines.push(getPublicPlanAudience(plan));
     if (modules.length) {
         lines.push(`Modules: ${modules.join(', ')}`);
     }
@@ -622,6 +704,38 @@ function buildPublicPlanDescription(plan = {}) {
     }
 
     return lines.join('\n') || 'Core ERP access package.';
+}
+
+function updateCompanyRegistrationPlanHelper() {
+    if (!requestedPlanHelper) {
+        return;
+    }
+
+    const selectedPlan = getSelectedCompanyRegistrationSubscriptionOption();
+    if (!selectedPlan) {
+        requestedPlanHelper.textContent = 'Compare the plans below first, then pick the package that fits before filling the rest of the form.';
+        return;
+    }
+
+    if (selectedPlan.key === 'lifetime_access') {
+        requestedPlanHelper.textContent = 'Lifetime Access is for one-time pricing after manual review. Prepare your preferred modules, branch count, user count, and setup notes before submitting.';
+        return;
+    }
+
+    const matchingPlan = Array.isArray(state.companyRegistrationPlans)
+        ? state.companyRegistrationPlans.find((plan) => String(plan?.id || '').trim() === selectedPlan.value)
+        : null;
+    const branches = Math.max(0, Number(matchingPlan?.max_branches || 0));
+    const users = Math.max(0, Number(matchingPlan?.max_users || 0));
+    const guidanceParts = [
+        selectedPlan.title,
+        getPublicPlanAudience(matchingPlan || {}),
+        branches ? `Prepare up to ${branches} branch setup.` : '',
+        users ? `Prepare up to ${users} user accounts.` : '',
+        'Include your desired Company ID, Admin ID, and payment method.'
+    ].filter(Boolean);
+
+    requestedPlanHelper.textContent = guidanceParts.join(' ');
 }
 
 function getCompanyRegistrationSubscriptionOptions() {
@@ -1418,6 +1532,7 @@ function renderCompanyRegistrationPlanCatalog() {
     }
 
     if (!options.length) {
+        updateCompanyRegistrationPlanHelper();
         companyRegistrationPlanCatalog.innerHTML = `
             <div class="subscription-card">
                 <div class="subscription-card-head">
@@ -1491,6 +1606,7 @@ function renderCompanyRegistrationPlanCatalog() {
         `;
     }).join('');
 
+    updateCompanyRegistrationPlanHelper();
     updateCompanyRegistrationPaymentAvailability();
 }
 
@@ -1576,6 +1692,14 @@ async function createCustomerSupportRequest() {
 
     setBusy(createRequestBtn, true);
     setStatus(isSignupIntent() ? 'Submitting sign up request...' : 'Starting chat...', false);
+    logPublicPortalDebug('Submitting public request.', {
+        intent: state.intent,
+        companyCode,
+        contactNumber,
+        signupEmail,
+        signupId,
+        signupRole
+    });
 
     try {
         const requestMeta = isSignupIntent()
@@ -1611,6 +1735,11 @@ async function createCustomerSupportRequest() {
         requestCodeInput.value = payload?.request?.requestCode || '';
         lookupContactInput.value = payload?.request?.contactNumber || contactNumber;
         initialMessageInput.value = '';
+        logPublicPortalDebug('Public request submitted successfully.', {
+            intent: state.intent,
+            requestCode: payload?.request?.requestCode || '',
+            requestStatus: payload?.request?.status || ''
+        });
         setStatus(
             isSignupIntent()
                 ? `Sign up request submitted. Your code is ${payload?.request?.requestCode || '-'}. Wait for admin approval.`
@@ -1618,6 +1747,10 @@ async function createCustomerSupportRequest() {
             false
         );
     } catch (error) {
+        logPublicPortalDebug('Public request submission failed.', {
+            intent: state.intent,
+            error: error?.message || String(error || '')
+        });
         setStatus(error.message || 'Unable to submit request.', true);
     } finally {
         setBusy(createRequestBtn, false);
@@ -2953,6 +3086,7 @@ function applyBranding(branding) {
     const titleLabel = companyRegistration ? 'Register Company ID' : (isSignupIntent() ? 'Sign Up' : 'Customer Service');
 
     document.title = `${appName} ${titleLabel}`;
+    appClient?.applyBrandFavicon?.(branding);
     portalTitle.textContent = `${appName} ${titleLabel}`;
 
     if (companyRegistration) {

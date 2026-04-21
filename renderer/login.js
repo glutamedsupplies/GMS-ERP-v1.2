@@ -11,6 +11,7 @@ const companyCodeGroupEl = document.getElementById('companyCodeGroup');
 const signUpBtn = document.getElementById('signUpBtn');
 const registerCompanyIdBtn = document.getElementById('registerCompanyIdBtn');
 const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+const supportLink = document.getElementById('supportLink');
 const googleLoginBtn = document.getElementById('googleLoginBtn');
 const togglePassIcon = document.getElementById('togglePass')?.querySelector('i');
 const loginTitleEl = document.getElementById('loginTitle');
@@ -28,11 +29,13 @@ const welcomeCopyEl = document.getElementById('welcomeCopy');
 const DEFAULT_LOGO_PATH = '/logo.png';
 const DEFAULT_PRIMARY_COLOR = '#2575fc';
 const PUBLIC_PORTAL_NAV_GUARD_KEY = 'gms-public-portal-nav-guard-v1';
+const PUBLIC_PORTAL_DEBUG_STORAGE_KEY = 'gms-debug-public-portal';
 const DEFAULT_BRANDING = Object.freeze({
     appName: 'GMS ERP',
     companyName: '',
     primaryColor: DEFAULT_PRIMARY_COLOR,
     logoPath: DEFAULT_LOGO_PATH,
+    faviconPath: '',
     backgroundImagePath: '',
     whiteLabel: false
 });
@@ -53,6 +56,14 @@ const WELCOME_TIMINGS = {
     exit: prefersReducedMotion ? 0 : 120
 };
 const BOOTSTRAP_TIMEOUT_MS = 650;
+const PUBLIC_PORTAL_DEBUG_ENABLED = (() => {
+    try {
+        return new URLSearchParams(window.location.search).get('debugSignup') === '1'
+            || window.localStorage?.getItem(PUBLIC_PORTAL_DEBUG_STORAGE_KEY) === '1';
+    } catch (_error) {
+        return false;
+    }
+})();
 
 const FIREBASE_FALLBACK_CODES = new Set([
     'auth/user-not-found',
@@ -90,8 +101,10 @@ const FIREBASE_GOOGLE_REDIRECT_CODES = new Set([
     'auth/popup-blocked'
 ]);
 
+writePublicPortalNavigationGuard(null);
 applyQueryPrefill();
 refreshBranding();
+syncPublicPortalLinks();
 
 if (togglePassIcon) {
     togglePassIcon.parentElement.addEventListener('click', () => {
@@ -123,7 +136,14 @@ if (registerCompanyIdBtn) {
 if (forgotPasswordBtn) {
     forgotPasswordBtn.addEventListener('click', (event) => {
         event.preventDefault();
-        window.location.assign(getForgotPasswordUrl());
+        navigateToPublicUrl(getForgotPasswordUrl(), { intent: 'forgot_password' });
+    });
+}
+
+if (supportLink) {
+    supportLink.addEventListener('click', (event) => {
+        event.preventDefault();
+        navigateToPublicUrl(getSupportUrl(), { intent: 'support' });
     });
 }
 
@@ -150,6 +170,7 @@ if (googleLoginBtn) {
 if (companyCodeInput) {
     companyCodeInput.addEventListener('input', () => {
         setBrandingSearchState(Boolean(String(companyCodeInput.value || '').trim()));
+        syncPublicPortalLinks();
         if (brandingTimer) {
             window.clearTimeout(brandingTimer);
         }
@@ -537,22 +558,59 @@ function getRegisterCompanyIdUrl() {
     return '/renderer/customer_portal.html?intent=register_company_id';
 }
 
+function getSupportUrl() {
+    const companyCode = String(companyCodeInput?.value || '').trim();
+    return companyCode
+        ? `/renderer/customer_portal.html?companyCode=${encodeURIComponent(companyCode)}&intent=support`
+        : '/renderer/customer_portal.html?intent=support';
+}
+
+function syncPublicPortalLinks() {
+    if (forgotPasswordBtn) {
+        forgotPasswordBtn.href = getForgotPasswordUrl();
+    }
+    if (supportLink) {
+        supportLink.href = getSupportUrl();
+    }
+}
+
+function writePublicPortalNavigationGuard(guard = null) {
+    try {
+        if (!guard) {
+            window.sessionStorage?.removeItem(PUBLIC_PORTAL_NAV_GUARD_KEY);
+            return;
+        }
+
+        window.sessionStorage?.setItem(PUBLIC_PORTAL_NAV_GUARD_KEY, JSON.stringify(guard));
+    } catch (_error) {
+        // Ignore storage issues and continue without persistence.
+    }
+}
+
+function navigateToPublicUrl(targetUrl = '', { intent = '' } = {}) {
+    const normalizedTargetUrl = String(targetUrl || '').trim();
+    if (!normalizedTargetUrl) {
+        return;
+    }
+
+    if (PUBLIC_PORTAL_DEBUG_ENABLED) {
+        console.info('[PublicPortalNav] Opening public page.', {
+            intent: String(intent || '').trim().toLowerCase(),
+            targetUrl: normalizedTargetUrl,
+            fromPath: window.location.pathname || '/login.html'
+        });
+    }
+
+    writePublicPortalNavigationGuard(null);
+    window.location.assign(normalizedTargetUrl);
+}
+
 function navigateToPublicPortal(intent = 'signup') {
     const targetUrl = intent === 'register_company_id'
         ? getRegisterCompanyIdUrl()
         : getSignUpUrl();
 
-    try {
-        window.sessionStorage?.setItem(PUBLIC_PORTAL_NAV_GUARD_KEY, JSON.stringify({
-            intent,
-            at: Date.now()
-        }));
-    } catch (_error) {
-        // Ignore storage issues and continue with the navigation.
-    }
-
-    // Replace the login history entry so an immediate bounce cannot reopen it.
-    window.location.replace(targetUrl);
+    navigateToPublicUrl(targetUrl, { intent });
 }
 
 function getGoogleLoginUrl() {
@@ -679,6 +737,7 @@ function applyBranding(rawBranding, { companyCode = '' } = {}) {
         branding.companyName,
         branding.primaryColor,
         branding.logoPath,
+        branding.faviconPath,
         branding.backgroundImagePath,
         branding.whiteLabel
     ]);
@@ -686,6 +745,7 @@ function applyBranding(rawBranding, { companyCode = '' } = {}) {
 
     lastBrandingSignature = signature;
     currentBranding = { ...branding };
+    appClient?.applyBrandFavicon?.(branding);
     applyThemePalette(palette);
     applyThemeCopy(branding, companyCode);
     applyThemeLogo(branding.logoPath);
@@ -703,6 +763,7 @@ function normalizeBranding(rawBranding = {}) {
         companyName: String(rawBranding.companyName || '').trim(),
         primaryColor: normalizeHexColor(rawBranding.primaryColor, DEFAULT_BRANDING.primaryColor),
         logoPath: String(rawBranding.logoPath || '').trim() || DEFAULT_BRANDING.logoPath,
+        faviconPath: String(rawBranding.faviconPath || '').trim(),
         backgroundImagePath: String(
             rawBranding.backgroundImagePath
             || rawBranding.loginBackgroundPath

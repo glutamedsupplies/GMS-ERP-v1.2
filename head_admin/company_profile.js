@@ -16,6 +16,10 @@ const fields = {
     appName: document.getElementById('appName'),
     address: document.getElementById('address'),
     contact: document.getElementById('contact'),
+    experienceMode: document.getElementById('experienceMode'),
+    appShellName: document.getElementById('appShellName'),
+    workspaceTag: document.getElementById('workspaceTag'),
+    workspaceCopy: document.getElementById('workspaceCopy'),
     inventoryMenuLabel: document.getElementById('inventoryMenuLabel'),
     inventoryLevelsMenuLabel: document.getElementById('inventoryLevelsMenuLabel'),
     expensesTitle: document.getElementById('expensesTitle'),
@@ -57,10 +61,21 @@ const brandingPreviewTitle = document.getElementById('brandingPreviewTitle');
 const brandingPreviewSubtitle = document.getElementById('brandingPreviewSubtitle');
 const saveBtn = document.getElementById('saveBtn');
 const statusEl = document.getElementById('status');
+const workspaceSkeletonSection = document.getElementById('workspaceSkeletonSection');
+const workspaceGuideGrid = document.getElementById('workspaceGuideGrid');
+const workspacePresetNote = document.getElementById('workspacePresetNote');
+const workspacePresetButtons = Array.from(document.querySelectorAll('[data-workspace-preset]'));
+const workspaceSetupOnlyFields = Array.from(document.querySelectorAll('.setup-only-field'));
 let currentLogoPath = '';
 let pendingUploadedLogoPath = '';
 let currentLoginBackgroundPath = '';
 let pendingUploadedBackgroundPath = '';
+
+const WORKSPACE_PRESET_NOTES = Object.freeze({
+    attendance_starter: 'Attendance Starter keeps the workspace lean for schedules, attendance, and head-admin setup.',
+    sales_growth: 'Sales Growth prepares the tenant for pricing, inventory, order flow, and recurring monthly operations.',
+    business_suite: 'Business Suite enables a fuller ERP-style workspace with invoicing, reports, and AI-ready operations.'
+});
 
 initialize();
 
@@ -79,6 +94,11 @@ async function initialize() {
     clearBackgroundBtn.addEventListener('click', clearBackgroundImage);
     [fields.name, fields.appName, fields.companyCode].forEach((field) => {
         field?.addEventListener('input', updateBrandingPreview);
+    });
+    workspacePresetButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            applyWorkspacePreset(button.dataset.workspacePreset || '');
+        });
     });
     setOrderFormWorkspaceFieldsReadonly();
     await loadProfile();
@@ -106,6 +126,7 @@ async function loadProfile() {
         pendingUploadedBackgroundPath = '';
         fields.address.value = profile.address || '';
         fields.contact.value = profile.contact || '';
+        toggleWorkspaceSkeletonAvailability(profile.company_code || '');
         applyWorkspaceConfig(workspaceConfig || {});
         updateLogoPreview(resolveLogoSourceForPreview());
         updateBackgroundMeta();
@@ -170,6 +191,23 @@ function applyWorkspaceConfig(config) {
     const visibleFields = orderForm?.visibleFields || {};
     const salesReport = config?.salesReport || {};
     const expenses = config?.expenses || {};
+    const experience = config?.experience || {};
+    const shell = config?.shell || {};
+
+    if (fields.experienceMode) {
+        fields.experienceMode.value = String(experience.mode || '').trim().toLowerCase() === 'attendance_only'
+            ? 'attendance_only'
+            : 'default';
+    }
+    if (fields.appShellName) {
+        fields.appShellName.value = shell.appShellName || '';
+    }
+    if (fields.workspaceTag) {
+        fields.workspaceTag.value = shell.workspaceTag || '';
+    }
+    if (fields.workspaceCopy) {
+        fields.workspaceCopy.value = shell.workspaceCopy || '';
+    }
 
     fields.inventoryMenuLabel.value = labels.inventoryMenu || '';
     fields.inventoryLevelsMenuLabel.value = labels.inventoryLevelsMenu || '';
@@ -211,6 +249,7 @@ function applyWorkspaceConfig(config) {
     toggles.srPayment.checked = salesReport.showPaymentFilter !== false;
     toggles.srAdmin.checked = salesReport.showAdminFilter !== false;
     toggles.srSalesRep.checked = salesReport.showSalesRepresentativeFilter !== false;
+    updateWorkspacePresetUi(inferWorkspacePresetKey(config));
 }
 
 function buildWorkspacePayload(baseConfig = {}) {
@@ -235,7 +274,7 @@ function buildWorkspacePayload(baseConfig = {}) {
 
     return {
         experience: {
-            mode: String(baseExperience.mode || '').trim().toLowerCase() === 'attendance_only'
+            mode: String(fields.experienceMode?.value || baseExperience.mode || '').trim().toLowerCase() === 'attendance_only'
                 ? 'attendance_only'
                 : 'default'
         },
@@ -246,9 +285,9 @@ function buildWorkspacePayload(baseConfig = {}) {
         },
         shell: {
             variant: String(baseShell.variant || 'default').trim() || 'default',
-            appShellName: String(baseShell.appShellName || '').trim(),
-            workspaceTag: String(baseShell.workspaceTag || '').trim(),
-            workspaceCopy: String(baseShell.workspaceCopy || '').trim()
+            appShellName: String(fields.appShellName?.value || '').trim() || String(baseShell.appShellName || '').trim(),
+            workspaceTag: String(fields.workspaceTag?.value || '').trim() || String(baseShell.workspaceTag || '').trim(),
+            workspaceCopy: String(fields.workspaceCopy?.value || '').trim() || String(baseShell.workspaceCopy || '').trim()
         },
         labels: {
             inventoryMenu: fields.inventoryMenuLabel.value.trim() || 'Product Pricing',
@@ -293,6 +332,175 @@ function buildWorkspacePayload(baseConfig = {}) {
             copy: fields.expensesCopy.value.trim()
         }
     };
+}
+
+function isProtectedGmsCompany(companyCode = '') {
+    const normalized = String(companyCode || '').trim().toLowerCase();
+    return normalized === 'gms'
+        || normalized === 'default'
+        || normalized === 'gms-erp'
+        || normalized === 'gmserp';
+}
+
+function toggleWorkspaceSkeletonAvailability(companyCode = '') {
+    const isProtected = isProtectedGmsCompany(companyCode);
+    [workspaceSkeletonSection, workspaceGuideGrid, ...workspaceSetupOnlyFields].forEach((element) => {
+        if (element) {
+            element.hidden = isProtected;
+        }
+    });
+
+    if (isProtected) {
+        updateWorkspacePresetUi('', 'GMS company keeps its current setup and is excluded from the SaaS skeleton presets.');
+    }
+}
+
+function applyWorkspacePreset(presetKey = '') {
+    if (isProtectedGmsCompany(fields.companyCode?.value || '')) {
+        setStatus('GMS company is excluded from the SaaS skeleton presets.', true);
+        return;
+    }
+
+    const preset = buildWorkspacePresetConfig(presetKey);
+    if (!preset) {
+        return;
+    }
+
+    if (fields.experienceMode) {
+        fields.experienceMode.value = preset.experienceMode;
+    }
+    if (fields.appShellName) {
+        fields.appShellName.value = preset.appShellName;
+    }
+    if (fields.workspaceTag) {
+        fields.workspaceTag.value = preset.workspaceTag;
+    }
+    if (fields.workspaceCopy) {
+        fields.workspaceCopy.value = preset.workspaceCopy;
+    }
+
+    fields.inventoryMenuLabel.value = preset.inventoryMenuLabel;
+    fields.inventoryLevelsMenuLabel.value = preset.inventoryLevelsMenuLabel;
+    fields.expensesTitle.value = preset.expensesTitle;
+    fields.expensesCopy.value = preset.expensesCopy;
+    fields.salesReportTitle.value = preset.salesReportTitle;
+    fields.salesReportCopy.value = preset.salesReportCopy;
+
+    toggles.showInvoiceSummary.checked = preset.showInvoiceSummary;
+    toggles.showInventoryLevels.checked = preset.showInventoryLevels;
+    toggles.srCashBranch.checked = preset.showCashBranchFilter;
+    toggles.srPayment.checked = preset.showPaymentFilter;
+    toggles.srAdmin.checked = preset.showAdminFilter;
+    toggles.srSalesRep.checked = preset.showSalesRepresentativeFilter;
+
+    updateWorkspacePresetUi(presetKey, preset.note);
+    setStatus(`${preset.label} skeleton applied. Review the details, then click Save Profile.`);
+}
+
+function buildWorkspacePresetConfig(presetKey = '') {
+    const brandLabel = String(fields.appName?.value || fields.name?.value || 'GMS').trim() || 'GMS';
+    const normalizedKey = String(presetKey || '').trim().toLowerCase();
+
+    if (normalizedKey === 'attendance_starter') {
+        return {
+            label: 'Attendance Starter',
+            note: WORKSPACE_PRESET_NOTES.attendance_starter,
+            experienceMode: 'attendance_only',
+            appShellName: `${brandLabel} Time Hub`,
+            workspaceTag: 'Attendance Workspace',
+            workspaceCopy: 'Start with company profile, branches, users, schedules, and attendance policies. This skeleton suits smaller SaaS subscriptions focused on timekeeping first.',
+            inventoryMenuLabel: 'Product Pricing',
+            inventoryLevelsMenuLabel: 'Inventory',
+            expensesTitle: 'Expenses',
+            expensesCopy: 'Track petty cash, reimbursements, or attendance-related operating costs in one place.',
+            salesReportTitle: 'Sales Report',
+            salesReportCopy: 'Sales tools remain available if needed, but this workspace is tuned for attendance and admin setup.',
+            showInvoiceSummary: false,
+            showInventoryLevels: false,
+            showCashBranchFilter: false,
+            showPaymentFilter: false,
+            showAdminFilter: true,
+            showSalesRepresentativeFilter: false
+        };
+    }
+
+    if (normalizedKey === 'sales_growth') {
+        return {
+            label: 'Sales Growth',
+            note: WORKSPACE_PRESET_NOTES.sales_growth,
+            experienceMode: 'default',
+            appShellName: `${brandLabel} Ops Desk`,
+            workspaceTag: 'Sales Workspace',
+            workspaceCopy: 'Set up pricing, inventory levels, order encoding, and payment methods first. This skeleton fits recurring SaaS tenants that need day-to-day sales operations.',
+            inventoryMenuLabel: 'Product Pricing',
+            inventoryLevelsMenuLabel: 'Inventory',
+            expensesTitle: 'Expenses',
+            expensesCopy: 'Track cash outflow and operating expenses alongside daily sales movement.',
+            salesReportTitle: 'Sales Report',
+            salesReportCopy: 'Review branch, payment, admin, and sales rep performance with a layout built for monthly SaaS operations.',
+            showInvoiceSummary: true,
+            showInventoryLevels: true,
+            showCashBranchFilter: true,
+            showPaymentFilter: true,
+            showAdminFilter: true,
+            showSalesRepresentativeFilter: true
+        };
+    }
+
+    if (normalizedKey === 'business_suite') {
+        return {
+            label: 'Business Suite',
+            note: WORKSPACE_PRESET_NOTES.business_suite,
+            experienceMode: 'default',
+            appShellName: `${brandLabel} Business Hub`,
+            workspaceTag: 'Business Suite Workspace',
+            workspaceCopy: 'This skeleton prepares the tenant for broader ERP use: inventory, invoicing, reports, and optional AI-assisted workflows under one subscription.',
+            inventoryMenuLabel: 'Product Pricing',
+            inventoryLevelsMenuLabel: 'Inventory',
+            expensesTitle: 'Operations Expenses',
+            expensesCopy: 'Use this page for expense tracking, cash movement, and operational insights across the full workspace.',
+            salesReportTitle: 'Business Reports',
+            salesReportCopy: 'Use the report center for revenue, payment mix, admin accountability, and sales rep performance across the subscription lifecycle.',
+            showInvoiceSummary: true,
+            showInventoryLevels: true,
+            showCashBranchFilter: true,
+            showPaymentFilter: true,
+            showAdminFilter: true,
+            showSalesRepresentativeFilter: true
+        };
+    }
+
+    return null;
+}
+
+function inferWorkspacePresetKey(config = {}) {
+    const tag = String(config?.shell?.workspaceTag || '').trim().toLowerCase();
+    const mode = String(config?.experience?.mode || '').trim().toLowerCase();
+    const showInventoryLevels = config?.menu?.showInventoryLevels !== false;
+
+    if (tag === 'attendance workspace' || (mode === 'attendance_only' && !showInventoryLevels)) {
+        return 'attendance_starter';
+    }
+    if (tag === 'sales workspace') {
+        return 'sales_growth';
+    }
+    if (tag === 'business suite workspace') {
+        return 'business_suite';
+    }
+    return '';
+}
+
+function updateWorkspacePresetUi(presetKey = '', note = '') {
+    const normalizedKey = String(presetKey || '').trim().toLowerCase();
+    workspacePresetButtons.forEach((button) => {
+        button.classList.toggle('is-active', String(button.dataset.workspacePreset || '').trim().toLowerCase() === normalizedKey);
+    });
+
+    if (workspacePresetNote) {
+        workspacePresetNote.textContent = note
+            || WORKSPACE_PRESET_NOTES[normalizedKey]
+            || 'Apply the closest SaaS package to prefill the workspace mode, shell name, workspace tag, and setup copy.';
+    }
 }
 
 function setOrderFormWorkspaceFieldsReadonly() {

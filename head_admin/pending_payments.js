@@ -64,34 +64,24 @@ async function loadPendingPayments() {
     setPanelStatus('Loading pending payments...', false);
 
     try {
-        const [salesPayload, cashIncomePayload] = await Promise.all([
-            appClient.listSales({
-                dateFrom: dateFromFilter.value,
-                dateTo: dateToFilter.value,
-                adminName: adminFilter.value,
-                search: '',
-                limit: PAGE_SIZE,
-                offset: 0
-            }),
-            appClient.listCashIncome({
-                dateFrom: dateFromFilter.value,
-                dateTo: dateToFilter.value,
-                search: ''
-            })
-        ]);
-
-        const salesRows = Array.isArray(salesPayload?.items) ? salesPayload.items : [];
-        const cashIncomeRows = Array.isArray(cashIncomePayload?.items) ? cashIncomePayload.items : [];
-        const confirmedCashIncomeMap = buildConfirmedCashIncomeMap(cashIncomeRows, salesRows);
-        const pendingItems = buildPendingItems(salesRows, confirmedCashIncomeMap);
+        const pendingPayload = await appClient.listPendingPayments({
+            dateFrom: dateFromFilter.value,
+            dateTo: dateToFilter.value,
+            adminName: adminFilter.value,
+            search: '',
+            limit: PAGE_SIZE,
+            offset: 0
+        });
+        const pendingItems = Array.isArray(pendingPayload?.items) ? pendingPayload.items : [];
+        const totalMatched = Math.max(Number(pendingPayload?.meta?.totalMatched || 0), pendingItems.length);
 
         renderAdminSummary(pendingItems);
         renderPendingList(pendingItems);
         renderPendingMeta(pendingItems);
         activeDateLabel.textContent = buildActiveDateLabel();
 
-        if (salesRows.length >= PAGE_SIZE) {
-            setPanelStatus(`Loaded ${pendingItems.length} pending receipt(s) from the first ${PAGE_SIZE} sales rows. Refine the date range if older orders are missing.`, false);
+        if (totalMatched >= PAGE_SIZE) {
+            setPanelStatus(`Loaded ${pendingItems.length} pending receipt(s) from the first ${PAGE_SIZE} matched results. Refine the date range if older orders are missing.`, false);
             return;
         }
 
@@ -173,7 +163,7 @@ function buildAdminSummaries(items = []) {
 
     items.forEach((item) => {
         const adminName = String(item?.adminName || '').trim() || 'Unassigned Admin';
-        const branchKey = normalizeSummaryBranch(item?.branch);
+        const branchKey = normalizeSummaryBranch(item?.cashBranch || item?.branch);
         const remainingAmount = Math.max(0, Number(item?.remainingAmount || 0));
         const summary = grouped.get(adminName) || {
             adminName,
@@ -581,7 +571,7 @@ function renderPendingList(items) {
                     </div>
                     <div class="pending-field">
                         <span>Branch</span>
-                        <strong>${appClient.escapeHtml(item.branch || '-')}</strong>
+                        <strong>${appClient.escapeHtml(item.cashBranch || item.branch || '-')}</strong>
                         <p>${appClient.escapeHtml(item.paymentMethod || 'Unspecified')}</p>
                     </div>
                     <div class="pending-field">

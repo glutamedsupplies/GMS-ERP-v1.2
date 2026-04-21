@@ -1,11 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GMS ERP Portal</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- social-preview:start -->
+  <meta name="description" content="Use GMS ERP for support requests, sign-up requests, and company onboarding.">
+  <link rel="canonical" href="/renderer/customer_portal.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="GMS ERP">
+  <meta property="og:title" content="GMS ERP Customer Portal">
+  <meta property="og:description" content="Use GMS ERP for support requests, sign-up requests, and company onboarding.">
+  <meta property="og:url" content="/renderer/customer_portal.html">
+  <meta property="og:image" content="/logo.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:image:alt" content="GMS ERP Customer Portal logo">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="GMS ERP Customer Portal">
+  <meta name="twitter:description" content="Use GMS ERP for support requests, sign-up requests, and company onboarding.">
+  <meta name="twitter:image" content="/logo.png">
+  <meta name="twitter:image:alt" content="GMS ERP Customer Portal logo">
+  <!-- social-preview:end -->
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="shortcut icon" type="image/png" href="/logo.png">
+  <link rel="apple-touch-icon" href="/logo.png">
+  <title>GMS ERP Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700&family=Space+Grotesk:wght@500;700&display=swap">
 <style>
@@ -1122,6 +1144,17 @@
     filter: brightness(0.96);
   }
 
+  a.is-nav-guarded {
+    opacity: 0.72;
+    cursor: wait;
+  }
+
+  body.is-guarding-return a[href^="/login.html"] {
+    pointer-events: none;
+    opacity: 0.72;
+    cursor: wait;
+  }
+
   .status {
     margin: 12px 0 0;
     min-height: 22px;
@@ -1598,7 +1631,57 @@
 </head>
 <body>
   <script>
-    const portalIntent = new URLSearchParams(window.location.search).get('intent');
+    function normalizePortalIntent(value) {
+      const normalized = String(value || '').trim().toLowerCase();
+      if (normalized === 'signup' || normalized === 'sign_up') {
+        return 'signup';
+      }
+      if (
+        normalized === 'register_company_id'
+        || normalized === 'register-company-id'
+        || normalized === 'company_registration'
+        || normalized === 'company-registration'
+        || normalized === 'company_signup'
+        || normalized === 'company-signup'
+      ) {
+        return 'register_company_id';
+      }
+      return 'support';
+    }
+
+    const portalIntent = normalizePortalIntent(new URLSearchParams(window.location.search).get('intent'));
+    const publicPortalGuardKey = 'gms-public-portal-nav-guard-v1';
+    const publicPortalGuardTtlMs = 1500;
+    const attachEarlyLoginReturnGuard = (remainingMs) => {
+      const blockReturn = (event) => {
+        const link = event.target && event.target.closest ? event.target.closest('a[href^="/login.html"]') : null;
+        if (!link) {
+          return;
+        }
+        event.preventDefault();
+        if (typeof event.stopImmediatePropagation === 'function') {
+          event.stopImmediatePropagation();
+        }
+        event.stopPropagation();
+      };
+      const blockReturnKeydown = (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+          return;
+        }
+        blockReturn(event);
+      };
+
+      document.addEventListener('click', blockReturn, true);
+      document.addEventListener('auxclick', blockReturn, true);
+      document.addEventListener('keydown', blockReturnKeydown, true);
+      window.setTimeout(() => {
+        document.removeEventListener('click', blockReturn, true);
+        document.removeEventListener('auxclick', blockReturn, true);
+        document.removeEventListener('keydown', blockReturnKeydown, true);
+        document.body.classList.remove('is-guarding-return');
+      }, Math.max(0, remainingMs));
+    };
+
     if (portalIntent === 'signup' || portalIntent === 'register_company_id') {
       document.body.classList.add('is-signup');
       document.title = portalIntent === 'register_company_id'
@@ -1608,6 +1691,27 @@
     if (portalIntent === 'register_company_id') {
       document.body.classList.add('is-company-id-request');
     }
+
+    try {
+      const rawGuard = window.sessionStorage && window.sessionStorage.getItem(publicPortalGuardKey);
+      const parsedGuard = rawGuard ? JSON.parse(rawGuard) : null;
+      const rawGuardIntent = String(parsedGuard && parsedGuard.intent || '').trim();
+      const guardIntent = rawGuardIntent ? normalizePortalIntent(rawGuardIntent) : '';
+      const guardAt = Number(parsedGuard && parsedGuard.at || 0);
+      const guardTargetUrl = String(parsedGuard && parsedGuard.targetUrl || '').trim();
+      const guardTargetPath = guardTargetUrl
+        ? new URL(guardTargetUrl, window.location.origin).pathname
+        : '';
+      const isSameIntent = guardIntent === portalIntent;
+      const isSamePath = !guardTargetPath || guardTargetPath === window.location.pathname;
+      const elapsedMs = Date.now() - guardAt;
+      const isFreshGuard = Number.isFinite(guardAt) && guardAt > 0 && elapsedMs < publicPortalGuardTtlMs;
+
+      if (isSameIntent && isSamePath && isFreshGuard) {
+        document.body.classList.add('is-guarding-return');
+        attachEarlyLoginReturnGuard(publicPortalGuardTtlMs - elapsedMs);
+      }
+    } catch (_error) {}
   </script>
   <div class="page">
     <div class="hero" id="heroHeader">
@@ -1909,7 +2013,7 @@
     </section>
   </div>
 
-  <script src="../shared/app-client.js"></script>
-  <script src="customer_portal.js"></script>
+  <script src="../shared/app-client.js?v=20260414-signup-guard"></script>
+  <script src="customer_portal.js?v=20260414-signup-guard"></script>
 </body>
 </html>

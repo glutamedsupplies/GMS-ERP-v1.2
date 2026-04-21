@@ -13,6 +13,7 @@
     let mobileTableDocumentObserver = null;
     let redirectPending = false;
     const DEFAULT_PRIMARY_COLOR = '#2575fc';
+    const DEFAULT_FAVICON_PATH = '/logo.png';
     const BRAND_THEME_STORAGE_KEY = 'appBrandThemeV1';
     const SUPPORT_SESSION_BANNER_ID = 'appSupportSessionBanner';
     const COMPANY_ANNOUNCEMENT_BANNER_ID = 'appCompanyAnnouncementBanner';
@@ -26,6 +27,7 @@
     function ensureResponsiveDocumentSetup() {
         const metadata = getPathMetadata();
         ensureViewportMeta();
+        applyBrandFavicon();
         applyAppDataAttributes(metadata);
         ensureMobileStylesheet(metadata);
         applyCachedBrandTheme(metadata);
@@ -53,6 +55,57 @@
         viewportMeta.name = 'viewport';
         viewportMeta.content = 'width=device-width, initial-scale=1.0';
         document.head?.appendChild(viewportMeta);
+    }
+
+    function normalizeAssetPath(value, fallback = '') {
+        const text = String(value || '').trim();
+        return text || fallback;
+    }
+
+    function ensureManagedHeadLink(rel, managedKey) {
+        let link = document.querySelector(`link[data-app-favicon="${managedKey}"]`) || document.querySelector(`link[rel="${rel}"]`);
+        if (link) {
+            link.setAttribute('rel', rel);
+        } else {
+            link = document.createElement('link');
+            link.setAttribute('rel', rel);
+            document.head?.appendChild(link);
+        }
+        link.dataset.appFavicon = managedKey;
+        return link;
+    }
+
+    function resolveBrandFaviconPath(source = {}) {
+        return normalizeAssetPath(
+            source.logoPath
+            || source.logo_path
+            || source.branding?.logoPath
+            || source.branding?.logo_path
+            || source.company?.logo_path
+            || source.faviconPath
+            || source.favicon_path
+            || source.branding?.faviconPath
+            || source.branding?.favicon_path
+            || source.company?.favicon_path,
+            DEFAULT_FAVICON_PATH
+        );
+    }
+
+    function applyBrandFavicon(source = {}) {
+        const faviconPath = resolveBrandFaviconPath(source);
+        const primaryIcon = ensureManagedHeadLink('icon', 'primary');
+        const shortcutIcon = ensureManagedHeadLink('shortcut icon', 'shortcut');
+        const appleTouchIcon = ensureManagedHeadLink('apple-touch-icon', 'apple-touch');
+
+        primaryIcon.href = faviconPath;
+        primaryIcon.type = 'image/png';
+
+        shortcutIcon.href = faviconPath;
+        shortcutIcon.type = 'image/png';
+
+        appleTouchIcon.href = faviconPath;
+
+        return faviconPath;
     }
 
     function isCachedBrandThemeDisabled() {
@@ -522,6 +575,7 @@
         );
         const theme = buildBrandTheme(primaryColor);
         writeBrandThemeVariables(theme);
+        applyBrandFavicon(source);
         applyBrandIdentity({ companyCode, shellVariant });
         if (cache) {
             cacheBrandTheme({
@@ -537,7 +591,9 @@
         return applyBrandTheme({
             primaryColor: bootstrap?.branding?.primaryColor || bootstrap?.company?.primary_color || options.primaryColor,
             companyCode: bootstrap?.company?.company_code || options.companyCode,
-            shellVariant: bootstrap?.workspaceConfig?.shell?.variant || options.shellVariant
+            shellVariant: bootstrap?.workspaceConfig?.shell?.variant || options.shellVariant,
+            logoPath: bootstrap?.branding?.logoPath || bootstrap?.company?.logo_path || options.logoPath,
+            faviconPath: bootstrap?.branding?.faviconPath || bootstrap?.company?.favicon_path || options.faviconPath
         }, options);
     }
 
@@ -1596,6 +1652,7 @@
                 '/head_admin/company_profile.html',
                 '/head_admin/invoice_template.html',
                 '/head_admin/timecards.html',
+                '/head_admin/timecards_salary.html',
                 '/head_admin/today_present.html',
                 '/head_admin/time_in_time_out.html',
                 '/head_admin/reports.html',
@@ -1923,6 +1980,7 @@
         hexToRgba,
         mixHexColors,
         buildBrandTheme,
+        applyBrandFavicon,
         applyBrandTheme,
         applyBootstrapBrandTheme,
         readCachedBrandTheme,
@@ -2106,7 +2164,7 @@
         }),
         getSalesReferences: () => requestWithSessionCache('sales-references', 30000, () => request('/api/sales/references')),
         listProducts: (filter = '') => request(`/api/products?filter=${encodeURIComponent(filter)}`),
-        listInventoryVariants: ({ productName = '', setName = '', search = '', limit = 500, offset = 0 } = {}) => {
+        listInventoryVariants: ({ productName = '', setName = '', search = '', limit = 500, offset = 0, bypassCache = false } = {}) => {
             const normalizedProductName = String(productName || '').trim();
             const normalizedSetName = String(setName || '').trim();
             const normalizedSearch = String(search || '').trim();
@@ -2134,7 +2192,8 @@
                 return requestWithSessionCache(
                     `inventory-variants:product=${normalizedProductName}:set=${normalizedSetName}:search=${normalizedSearch}:limit=${normalizedLimit}:offset=${normalizedOffset}`,
                     30000,
-                    requestFactory
+                    requestFactory,
+                    { bypassCache }
                 );
             }
 
@@ -2196,9 +2255,15 @@
         upsertCompositeItem: (payload) => request('/api/composite-items', {
             method: 'POST',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['inventory-variants']);
+            return result;
         }),
         deleteCompositeItem: (compositeKey) => request(`/api/composite-items/${encodeURIComponent(compositeKey)}`, {
             method: 'DELETE'
+        }).then((result) => {
+            invalidateReferenceCaches(['inventory-variants']);
+            return result;
         }),
         listSales: ({ dateFrom = '', dateTo = '', branch = '', cashBranch = '', paymentOption = '', adminName = '', salesRepresentative = '', search = '', limit = 500, offset = 0 } = {}) => request(
             `/api/sales?dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}&branch=${encodeURIComponent(branch)}&cashBranch=${encodeURIComponent(cashBranch)}&paymentOption=${encodeURIComponent(paymentOption)}&adminName=${encodeURIComponent(adminName)}&salesRepresentative=${encodeURIComponent(salesRepresentative)}&search=${encodeURIComponent(search)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`
@@ -2713,6 +2778,11 @@
         getUserTimeCard: (userId, { year, month }) => request(`/api/attendance/user/${encodeURIComponent(userId)}/time-card?year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}`),
         getUserWeeklyTimeCard: (userId, { dateKey = '' } = {}) => request(`/api/attendance/user/${encodeURIComponent(userId)}/weekly-card?dateKey=${encodeURIComponent(dateKey)}`),
         getUserCutoffTimeCard: (userId, { dateKey = '' } = {}) => request(`/api/attendance/user/${encodeURIComponent(userId)}/cutoff-card?dateKey=${encodeURIComponent(dateKey)}`),
+        getUserCutoffPayrollStatus: (userId, { dateKey = '' } = {}) => request(`/api/attendance/user/${encodeURIComponent(userId)}/cutoff-payroll?dateKey=${encodeURIComponent(dateKey)}`),
+        setUserCutoffPayrollStatus: (userId, { dateKey = '', status = '' } = {}) => request(`/api/attendance/user/${encodeURIComponent(userId)}/cutoff-payroll`, {
+            method: 'PATCH',
+            body: { dateKey, status }
+        }),
         getTodayAttendanceRecord: (userId) => request(`/api/attendance/user/${encodeURIComponent(userId)}/today`),
         getAttendanceForMonth: ({ userId, year, month }) => request(`/api/attendance/month?userId=${encodeURIComponent(userId)}&year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}`),
         getAttendanceReport: ({ employeeId = 'all', range = 'daily', dateKey = '' }) => request(`/api/attendance/report?employeeId=${encodeURIComponent(employeeId)}&range=${encodeURIComponent(range)}&dateKey=${encodeURIComponent(dateKey)}`),

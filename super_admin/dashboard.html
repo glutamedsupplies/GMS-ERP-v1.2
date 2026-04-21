@@ -96,6 +96,18 @@
           <h2>Create Plan</h2>
           <p class="section-hint">Define feature access and usage limits</p>
         </div>
+        <div class="preset-panel">
+          <div class="preset-panel-head">
+            <strong>Recommended SaaS Tiers</strong>
+            <span>Load a starting package, then adjust the limits if needed before creating the plan.</span>
+          </div>
+          <div class="preset-panel-actions">
+            <button id="planPresetAttendanceBtn" type="button" class="btn-soft preset-panel-btn" data-plan-preset="attendance_starter">Attendance Starter</button>
+            <button id="planPresetSalesBtn" type="button" class="btn-soft preset-panel-btn" data-plan-preset="sales_growth">Sales Growth</button>
+            <button id="planPresetSuiteBtn" type="button" class="btn-soft preset-panel-btn" data-plan-preset="business_suite">Business Suite</button>
+          </div>
+          <p id="planPresetHelper" class="preset-panel-helper">Use the closest subscription tier as your scaffold so the limits and enabled modules are not blank.</p>
+        </div>
         <div class="form">
           <div><label>Plan ID</label><input id="planId" type="text"></div>
           <div><label>Name</label><input id="planName" type="text"></div>

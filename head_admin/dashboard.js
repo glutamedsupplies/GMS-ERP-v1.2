@@ -81,7 +81,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         sales_inventory_insight: 'sales_inventory_insight.html',
         composite_items: 'composite_items.html',
         order_form: 'order_form.html',
-        communication_panel: 'communication_panel.html',
         sales_report: 'sales_report.html',
         pending_payments: 'pending_payments.html',
         customer_credits: 'customer_credits.html',
@@ -89,6 +88,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         invoice_summary: 'invoice_summary.html',
         expenses: 'expenses.html',
         timecards: 'timecards.html',
+        timecards_salary: 'timecards_salary.html',
         today: 'today_present.html',
         time_in_out: 'time_in_time_out.html',
         reports: 'reports.html',
@@ -107,7 +107,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         sales_inventory_insight: ['sales', 'inventory'],
         composite_items: ['inventory'],
         order_form: ['invoicing'],
-        communication_panel: [],
         sales_report: ['sales', 'reports'],
         pending_payments: ['sales', 'reports'],
         customer_credits: ['sales', 'invoicing'],
@@ -115,6 +114,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         invoice_summary: ['invoicing'],
         expenses: ['sales'],
         timecards: ['attendance'],
+        timecards_salary: ['attendance'],
         today: ['attendance'],
         time_in_out: ['attendance'],
         reports: ['reports'],
@@ -159,6 +159,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             label: 'Attendance',
             panels: [
                 'timecards',
+                'timecards_salary',
                 'today',
                 'time_in_out',
                 'reports'
@@ -178,14 +179,6 @@ window.addEventListener('DOMContentLoaded', async () => {
                 'settings'
             ]
         },
-        {
-            id: 'communication_panel',
-            iconClass: 'fa-solid fa-comments',
-            label: 'Communication Panel',
-            panels: [
-                'communication_panel'
-            ]
-        }
     ];
     const panelDescriptions = {
         employees: 'Create, update, and schedule employee accounts without losing readability on smaller screens.',
@@ -195,7 +188,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         sales_inventory_insight: 'Review fast movers, slow movers, expired stock, and near-expiry items from one focused panel.',
         composite_items: 'Manage bundled and recipe-based items in a layout built for quick scanning.',
         order_form: 'Encode customer orders quickly while keeping important actions visible.',
-        communication_panel: 'Stay on top of tenant and customer messages from a dedicated communication view.',
         sales_report: 'Read sales performance summaries with faster navigation between report panels.',
         pending_payments: 'Follow up unpaid and partially paid orders from a separate non-LBC payment panel.',
         customer_credits: 'Track customer credits, overpayments, and manual credit adjustments from one dedicated panel.',
@@ -203,6 +195,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         invoice_summary: 'Review invoice activity with a simpler, more focused summary panel.',
         expenses: 'Capture expenses and cash flow entries in a cleaner transactional workspace.',
         timecards: 'Open employee time cards and attendance history from one organized section.',
+        timecards_salary: 'Compute daily salary, deductions, and net cutoff pay from a dedicated attendance payroll panel.',
         today: 'Check who is present today with fewer clicks and a more readable layout.',
         time_in_out: 'Manage attendance station actions and live time controls.',
         reports: 'Generate attendance reports with better access to filters and output panels.',
@@ -507,6 +500,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             'company_profile',
             'invoice_template',
             'timecards',
+            'timecards_salary',
             'today',
             'time_in_out',
             'reports',
@@ -572,9 +566,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (panel === 'lbc_tracking') {
             return isGmsOrGwdCompany();
         }
-        if (panel === 'communication_panel') {
-            return isGmsOrGwdCompany();
-        }
         if (panel === 'customer_requests') {
             return false;
         }
@@ -616,8 +607,6 @@ window.addEventListener('DOMContentLoaded', async () => {
             const salesInventoryGroup = panelGroups.find((group) => group.id === 'sales_inventory');
             const attendanceGroup = panelGroups.find((group) => group.id === 'attendance');
             const adminSetupGroup = panelGroups.find((group) => group.id === 'admin_setup');
-            const communicationGroup = panelGroups.find((group) => group.id === 'communication_panel');
-
             if (salesInventoryGroup) {
                 salesInventoryGroup.label = 'Counter & Menu';
                 salesInventoryGroup.iconClass = 'fa-solid fa-bowl-food';
@@ -644,10 +633,6 @@ window.addEventListener('DOMContentLoaded', async () => {
                 adminSetupGroup.label = 'Store Setup';
                 adminSetupGroup.iconClass = 'fa-solid fa-shop';
             }
-            if (communicationGroup) {
-                communicationGroup.label = 'Messages';
-            }
-
             setNavItemLabel('employees', 'Crew Profiles');
             setNavItemLabel('client_database', 'Customers');
             setNavItemLabel('inventory_manager', inventoryLabel === 'Pricing' ? 'Menu Items' : inventoryLabel);
@@ -659,6 +644,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             setNavItemLabel('customer_credits', 'Credits / Overpayment');
             setNavItemLabel('expenses', labels.expensesMenu || 'Cash Log');
             setNavItemLabel('timecards', 'Time Cards');
+            setNavItemLabel('timecards_salary', 'Time Cards With Salary');
             setNavItemLabel('today', "Today's Crew");
             setNavItemLabel('reports', 'Attendance Reports');
             setNavItemLabel('users', 'User Access');
@@ -679,6 +665,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             updatePanelDescription('customer_credits', 'Track guest credits, old overpayments, and manual credit adjustments without crowding the POS view.');
             updatePanelDescription('expenses', 'Record cash-outs, petty cash, and operating expenses without leaving the restaurant workspace.');
             updatePanelDescription('timecards', 'Open crew time cards and shift history from the attendance section.');
+            updatePanelDescription('timecards_salary', 'Compute crew cutoff pay, daily salary, and attendance deductions from a separate payroll view.');
             updatePanelDescription('today', 'See who is on shift today before the lunch or dinner rush starts.');
             updatePanelDescription('time_in_out', 'Launch the attendance station for quick crew time in and time out actions.');
             updatePanelDescription('reports', 'Generate attendance summaries for payroll, shift review, and compliance.');

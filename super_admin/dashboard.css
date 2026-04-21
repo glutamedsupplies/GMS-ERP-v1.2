@@ -353,6 +353,60 @@ button {
   gap: 12px;
 }
 
+.preset-panel {
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top right, rgba(var(--sa-accent-rgb), 0.18) 0%, rgba(var(--sa-accent-rgb), 0) 68%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.03);
+  box-shadow: var(--sa-shadow-soft);
+}
+
+.preset-panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.preset-panel-head strong {
+  color: #ffffff;
+  font-size: 15px;
+}
+
+.preset-panel-head span,
+.preset-panel-helper {
+  color: var(--sa-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.preset-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.preset-panel-btn {
+  min-height: 40px;
+  padding-inline: 16px;
+}
+
+.preset-panel-btn.is-active {
+  border-color: rgba(var(--sa-accent-rgb), 0.42);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 14px 30px rgba(var(--sa-accent-rgb), 0.14);
+}
+
+.preset-panel-helper {
+  margin: 10px 0 0;
+}
+
 .support-actions {
   display: flex;
   align-items: center;

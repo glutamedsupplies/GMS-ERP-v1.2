@@ -22,6 +22,7 @@ const NEAR_EXPIRY_DAYS = 7;
 const HEADER_FOCUS_ORDER = ['branch', 'cashBranch', 'courier', 'admin', 'salesRep', 'paymentMethods', 'clientName'];
 const ZERO_AMOUNT_PAYMENT_METHODS = ['LBC Collection'];
 const MEDICAL_SUPPLY_HINTS = ['butterfly', '1cc insulin', '10cc syringe', '3cc syringe', 'cannula', '100ml pnss', '50ml pnss', '10ml sterile water'];
+const T_SET_ONLY_COMPANY_CODES = new Set(['default', 'gms', 'gms-erp', 'gmserp']);
 const CHOW_QUICK_POS_DEFAULTS = Object.freeze({
     companyCode: 'chow',
     clientName: 'Walk-in Customer',
@@ -516,8 +517,42 @@ function normalizeCompanyCode(value = '') {
     return String(value || '').trim().toLowerCase();
 }
 
+function supportsTSetForCurrentCompany() {
+    const companyCode = normalizeCompanyCode(state.companyCode);
+    return !companyCode || T_SET_ONLY_COMPANY_CODES.has(companyCode);
+}
+
+function sanitizeSetOptionsForCurrentCompany(values = []) {
+    const options = [...new Set(
+        (Array.isArray(values) ? values : [])
+            .map((value) => String(value || '').trim())
+            .filter(Boolean)
+    )];
+
+    if (supportsTSetForCurrentCompany()) {
+        return options;
+    }
+
+    return options.filter((value) => normalizeLookup(value) !== 't');
+}
+
 function isChowQuickPosWorkspace() {
     return normalizeCompanyCode(state.companyCode) === CHOW_QUICK_POS_DEFAULTS.companyCode;
+}
+
+function getPreferredMedicalSupplySet(quantity = 1, quantityUnit = '') {
+    const normalizedUnit = normalizeLookup(quantityUnit);
+    if (normalizedUnit === 'box' || normalizedUnit === 'boxes') {
+        return 'M';
+    }
+
+    if (['pc', 'pcs', 'piece', 'pieces'].includes(normalizedUnit)) {
+        return supportsTSetForCurrentCompany() && Number(quantity || 0) < 100
+            ? 'T'
+            : 'M';
+    }
+
+    return '';
 }
 
 function canCustomizeOrderForm(role) {
@@ -1083,6 +1118,7 @@ async function loadBootstrapData() {
             ...EXACT_REFS,
             ...(references || {})
         };
+        state.references.setOptions = sanitizeSetOptionsForCurrentCompany(state.references.setOptions);
         if (!Array.isArray(state.references.branches) || !state.references.branches.length) {
             state.references.branches = [...EXACT_REFS.branches];
         }
@@ -1976,7 +2012,9 @@ function buildInventoryCache(rows) {
 
     grouped.forEach((variants) => {
         const hasTrackedT = variants.some((variant) => normalizeLookup(variant.setName) === 't');
-        const virtualTTemplate = pickVirtualTTemplateVariant(variants);
+        const virtualTTemplate = supportsTSetForCurrentCompany()
+            ? pickVirtualTTemplateVariant(variants)
+            : null;
         if (!hasTrackedT && virtualTTemplate) {
             variants.push(buildVirtualTOrderFormVariant(virtualTTemplate));
         }
@@ -5290,8 +5328,9 @@ function scorePastedVariantMatch(variant, { descriptor = '', productHint = '', s
         }
     }
 
-    if (isMedicalSupplyDescriptor(descriptor) && quantityUnit && ['pc', 'pcs', 'piece', 'pieces'].includes(quantityUnit)) {
-        score += normalizeCompactLookup(variant.setName) === normalizeCompactLookup(Number(quantity || 0) >= 100 ? 'M' : 'T') ? 38 : -22;
+    const preferredMedicalSupplySet = getPreferredMedicalSupplySet(quantity, quantityUnit);
+    if (isMedicalSupplyDescriptor(descriptor) && preferredMedicalSupplySet) {
+        score += normalizeCompactLookup(variant.setName) === normalizeCompactLookup(preferredMedicalSupplySet) ? 38 : -22;
     }
 
     return score;
@@ -5327,6 +5366,10 @@ function extractPastedSetHint(descriptor, { quantity = 1, quantityUnit = '' } = 
     }
 
     for (const alias of PASTED_SET_ALIASES) {
+        if (normalizeLookup(alias.setName) === 't' && !supportsTSetForCurrentCompany()) {
+            continue;
+        }
+
         const matchedPattern = alias.patterns.find((pattern) => pattern.test(normalizedDescriptor));
         if (!matchedPattern) {
             continue;
@@ -5345,12 +5388,10 @@ function extractPastedSetHint(descriptor, { quantity = 1, quantityUnit = '' } = 
         };
     }
 
-    if (isMedicalSupplyDescriptor(normalizedDescriptor) && ['pc', 'pcs', 'piece', 'pieces', 'box', 'boxes'].includes(quantityUnit)) {
-        const inferredSet = ['pc', 'pcs', 'piece', 'pieces'].includes(quantityUnit)
-            ? (Number(quantity || 0) >= 100 ? 'M' : 'T')
-            : 'M';
+    const inferredMedicalSupplySet = getPreferredMedicalSupplySet(quantity, quantityUnit);
+    if (isMedicalSupplyDescriptor(normalizedDescriptor) && inferredMedicalSupplySet) {
         return {
-            setName: inferredSet,
+            setName: inferredMedicalSupplySet,
             productText: stripPastedProductDecorators(normalizedDescriptor)
         };
     }

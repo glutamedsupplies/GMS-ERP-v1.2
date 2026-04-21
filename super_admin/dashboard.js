@@ -40,6 +40,8 @@ const mInventory = document.getElementById('mInventory');
 const mInvoicing = document.getElementById('mInvoicing');
 const mReports = document.getElementById('mReports');
 const mAi = document.getElementById('mAi');
+const planPresetHelper = document.getElementById('planPresetHelper');
+const planPresetButtons = Array.from(document.querySelectorAll('[data-plan-preset]'));
 
 const companyFilter = document.getElementById('companyFilter');
 const supportCompanyCodeInput = document.getElementById('supportCompanyCodeInput');
@@ -106,6 +108,62 @@ const DEFAULT_PRIMARY_COLOR = '#2575fc';
 const COMPANY_STATUS_OPTIONS = ['active', 'inactive', 'suspended'];
 const MAX_LOGO_BYTES = 700 * 1024;
 const MAX_LOGO_DIMENSION = 900;
+const PLAN_PRESETS = Object.freeze({
+    attendance_starter: {
+        id: 'attendance_starter',
+        name: 'Attendance Starter',
+        price_monthly: 19,
+        max_branches: 1,
+        max_users: 15,
+        max_invoices_monthly: 0,
+        ai_monthly_quota: 0,
+        modules: {
+            attendance: true,
+            sales: false,
+            inventory: false,
+            invoicing: false,
+            reports: true,
+            ai_reader: false
+        },
+        helper: 'Good for attendance-only SaaS tenants that need employee timekeeping, reports, and small-team limits.'
+    },
+    sales_growth: {
+        id: 'sales_growth',
+        name: 'Sales Growth',
+        price_monthly: 49,
+        max_branches: 2,
+        max_users: 25,
+        max_invoices_monthly: 150,
+        ai_monthly_quota: 0,
+        modules: {
+            attendance: true,
+            sales: true,
+            inventory: true,
+            invoicing: true,
+            reports: true,
+            ai_reader: false
+        },
+        helper: 'Good for recurring SaaS subscriptions that need pricing, inventory, order flow, invoicing, and reports.'
+    },
+    business_suite: {
+        id: 'business_suite',
+        name: 'Business Suite',
+        price_monthly: 99,
+        max_branches: 10,
+        max_users: 100,
+        max_invoices_monthly: 1000,
+        ai_monthly_quota: 250,
+        modules: {
+            attendance: true,
+            sales: true,
+            inventory: true,
+            invoicing: true,
+            reports: true,
+            ai_reader: true
+        },
+        helper: 'Good for full ERP-style SaaS tenants that need broader limits, invoicing volume, and optional AI quota.'
+    }
+});
 const state = {
     session: null,
     bootstrap: null,
@@ -154,6 +212,11 @@ async function initialize() {
     });
     createCompanyBtn.addEventListener('click', createCompany);
     createPlanBtn.addEventListener('click', createPlan);
+    planPresetButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            applyPlanPreset(button.dataset.planPreset || '');
+        });
+    });
     if (saveCustomerServiceConfigBtn) {
         saveCustomerServiceConfigBtn.addEventListener('click', saveCustomerServiceConfig);
     }
@@ -500,6 +563,7 @@ function renderDashboardCustomerChatRequestList() {
     customerChatRequestList.innerHTML = state.customerChat.requests.map((entry) => {
         const activeClass = entry.requestCode === state.customerChat.selectedCode ? 'is-active' : '';
         const detailPreview = truncateText(entry.requestDetails || '', 92);
+        const sourceLabel = formatCustomerChatSourceLabel(entry.source);
         return `
             <div class="row customer-chat-request-item ${activeClass}" data-code="${escape(entry.requestCode || '')}">
                 <div class="customer-chat-title">
@@ -510,7 +574,7 @@ function renderDashboardCustomerChatRequestList() {
                     ${escape(entry.clientName || '-')} | ${escape(entry.contactNumber || '-')}
                 </div>
                 <div class="customer-chat-sub">
-                    Messages: ${escape(String(entry.messageCount || 0))} | ${escape(formatCustomerChatDateTime(entry.updatedAt || entry.createdAt))}
+                    Messages: ${escape(String(entry.messageCount || 0))} | ${escape(formatCustomerChatDateTime(entry.updatedAt || entry.createdAt))}${sourceLabel ? ` | ${escape(sourceLabel)}` : ''}
                 </div>
                 <div class="customer-chat-preview">${escape(detailPreview || 'No request details.')}</div>
             </div>
@@ -584,7 +648,12 @@ function renderDashboardCustomerChatMessages(messages) {
 
         const metaEl = document.createElement('div');
         metaEl.className = 'customer-chat-meta-line';
-        metaEl.textContent = `${message.senderName || (senderType === 'admin' ? 'Admin' : 'Customer')} | ${formatCustomerChatDateTime(message.createdAt)}`;
+        const sourceLabel = formatCustomerChatSourceLabel(message.source);
+        metaEl.textContent = [
+            message.senderName || (senderType === 'admin' ? 'Admin' : 'Customer'),
+            sourceLabel,
+            formatCustomerChatDateTime(message.createdAt)
+        ].filter(Boolean).join(' | ');
 
         const contentEl = document.createElement('div');
         contentEl.textContent = message.message || '';
@@ -755,6 +824,23 @@ function formatCustomerChatDateTime(value) {
         minute: '2-digit',
         hour12: true
     });
+}
+
+function formatCustomerChatSourceLabel(source) {
+    const normalized = String(source || '').trim().toLowerCase();
+    if (normalized === 'ai_assistant') {
+        return 'Ask AI';
+    }
+    if (normalized === 'customer_portal') {
+        return 'Customer Portal';
+    }
+    if (normalized === 'super_admin_panel') {
+        return 'Super Admin';
+    }
+    if (normalized === 'admin_panel') {
+        return 'Admin';
+    }
+    return '';
 }
 
 function sanitizeContactInput(value) {
@@ -1458,6 +1544,37 @@ function setBoolSelectValue(element, value) {
         return;
     }
     element.value = value ? 'true' : 'false';
+}
+
+function applyPlanPreset(presetKey = '') {
+    const normalizedKey = String(presetKey || '').trim().toLowerCase();
+    const preset = PLAN_PRESETS[normalizedKey];
+    if (!preset) {
+        return;
+    }
+
+    planId.value = preset.id;
+    planName.value = preset.name;
+    planPrice.value = String(preset.price_monthly);
+    planBranches.value = String(preset.max_branches);
+    planUsers.value = String(preset.max_users);
+    planInvoices.value = String(preset.max_invoices_monthly);
+    planAiQuota.value = String(preset.ai_monthly_quota);
+
+    setBoolSelectValue(mAttendance, preset.modules.attendance);
+    setBoolSelectValue(mSales, preset.modules.sales);
+    setBoolSelectValue(mInventory, preset.modules.inventory);
+    setBoolSelectValue(mInvoicing, preset.modules.invoicing);
+    setBoolSelectValue(mReports, preset.modules.reports);
+    setBoolSelectValue(mAi, preset.modules.ai_reader);
+
+    planPresetButtons.forEach((button) => {
+        button.classList.toggle('is-active', String(button.dataset.planPreset || '').trim().toLowerCase() === normalizedKey);
+    });
+    if (planPresetHelper) {
+        planPresetHelper.textContent = preset.helper;
+    }
+    setStatus(`${preset.name} preset loaded. Review the limits, then create or adjust the plan.`);
 }
 
 function buildPlanPayloadFromInputs(inputs = {}) {

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' https: data:">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Time Cards</title>
+  <title>Time Cards With Salary</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="../shared/theme-preload.js"></script>
   <style>
@@ -135,13 +135,12 @@
       padding: 12px;
       border-radius: 18px;
       cursor: pointer;
-      transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+      transition: background 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
       border: 1px solid rgba(255, 255, 255, 0.08);
       background: rgba(255, 255, 255, 0.08);
     }
 
     .employee-item:hover {
-      transform: translateY(-1px);
       background: rgba(255, 255, 255, 0.12);
     }
 
@@ -307,6 +306,24 @@
       white-space: nowrap;
     }
 
+    body.is-salary-timecard-view .hero-head {
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    body.is-salary-timecard-view .hero-head p {
+      margin-top: 4px;
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    body.is-salary-timecard-view .surface-note {
+      min-height: 30px;
+      padding: 0 9px;
+      font-size: 10px;
+    }
+
     .selectors {
       display: flex;
       gap: 12px;
@@ -318,6 +335,15 @@
       flex-wrap: wrap;
       border: 1px solid var(--surface-line);
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
+
+    body.is-salary-timecard-view .selectors {
+      display: grid;
+      grid-template-columns: auto minmax(180px, 1fr) auto;
+      gap: 8px 12px;
+      margin-bottom: 8px;
+      padding: 8px 12px;
+      align-items: center;
     }
 
     .view-mode-toggle {
@@ -365,6 +391,10 @@
       min-width: 180px;
     }
 
+    body.is-salary-timecard-view .selector-note {
+      min-width: 0;
+    }
+
     .selectors label {
       font-weight: 600;
       margin-right: 6px;
@@ -393,12 +423,36 @@
       font-weight: 500;
     }
 
+    body.is-salary-timecard-view .week-note {
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     .payroll-controls {
       display: flex;
       align-items: center;
       gap: 10px;
       flex-wrap: wrap;
       margin-left: auto;
+    }
+
+    .salary-panel {
+      min-width: 0;
+    }
+
+    body.is-salary-timecard-view .salary-panel {
+      display: contents;
+    }
+
+    body.is-salary-timecard-view .payroll-controls {
+      grid-column: 3;
+      justify-self: end;
+      margin-left: 0;
+      gap: 8px;
+      align-items: center;
+      align-content: center;
     }
 
     .payroll-rate-field {
@@ -463,11 +517,44 @@
       transform: none;
     }
 
+    .payroll-secondary-button {
+      min-height: 36px;
+      padding: 0 14px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--surface-text-strong);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 160ms ease, opacity 160ms ease, background 160ms ease;
+    }
+
+    .payroll-secondary-button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .payroll-secondary-button:disabled {
+      cursor: wait;
+      opacity: 0.7;
+      transform: none;
+    }
+
     .payroll-status {
       min-height: 18px;
       color: var(--surface-muted);
       font-size: 11px;
       font-weight: 600;
+    }
+
+    .payroll-status:empty {
+      display: none;
+    }
+
+    body.is-salary-timecard-view .payroll-status {
+      min-height: 0;
+      font-size: 10px;
     }
 
     .payroll-status.is-success {
@@ -481,8 +568,14 @@
     .payroll-summary {
       width: 100%;
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       gap: 10px;
+    }
+
+    body.is-salary-timecard-view .payroll-summary {
+      grid-column: 1 / -1;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
     }
 
     .payroll-stat {
@@ -494,6 +587,11 @@
         linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)),
         rgba(255, 255, 255, 0.03);
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    body.is-salary-timecard-view .payroll-stat {
+      padding: 7px 10px;
+      border-radius: 14px;
     }
 
     .payroll-stat-label {
@@ -513,6 +611,67 @@
       font-weight: 700;
       line-height: 1.1;
       overflow-wrap: anywhere;
+    }
+
+    body.is-salary-timecard-view .payroll-stat-value {
+      margin-top: 3px;
+      font-size: 15px;
+      line-height: 1.05;
+    }
+
+    body.is-salary-timecard-view .payroll-stat-label {
+      font-size: 9px;
+    }
+
+    .payroll-payment-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    body.is-salary-timecard-view .payroll-payment-badge {
+      min-height: 26px;
+      padding: 0 10px;
+      font-size: 10px;
+    }
+
+    .payroll-payment-badge.is-paid {
+      background: rgba(15, 118, 110, 0.18);
+      border-color: rgba(15, 118, 110, 0.24);
+      color: #d1fae5;
+    }
+
+    .payroll-payment-badge.is-pending {
+      background: rgba(245, 158, 11, 0.16);
+      border-color: rgba(245, 158, 11, 0.22);
+      color: #fef3c7;
+    }
+
+    .payroll-payment-meta {
+      display: block;
+      margin-top: 6px;
+      color: var(--surface-muted);
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+
+    body.is-salary-timecard-view .payroll-payment-meta {
+      margin-top: 4px;
+      font-size: 9px;
+      line-height: 1.1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .salary-panel[hidden] {
@@ -536,6 +695,54 @@
       width: 100%;
       min-width: 680px;
       border-collapse: collapse;
+    }
+
+    body.is-salary-timecard-view table {
+      min-width: 0;
+      table-layout: fixed;
+    }
+
+    body.is-salary-timecard-view .table-shell {
+      overflow-x: hidden;
+    }
+
+    body.is-salary-timecard-view #timecardTable th,
+    body.is-salary-timecard-view #timecardTable td {
+      padding: 7px 8px;
+    }
+
+    body.is-salary-timecard-view #timecardTable th:nth-child(1),
+    body.is-salary-timecard-view #timecardTable td:nth-child(1) {
+      width: 12%;
+    }
+
+    body.is-salary-timecard-view #timecardTable th:nth-child(2),
+    body.is-salary-timecard-view #timecardTable td:nth-child(2),
+    body.is-salary-timecard-view #timecardTable th:nth-child(3),
+    body.is-salary-timecard-view #timecardTable td:nth-child(3) {
+      width: 10%;
+    }
+
+    body.is-salary-timecard-view #timecardTable th:nth-child(4),
+    body.is-salary-timecard-view #timecardTable td:nth-child(4),
+    body.is-salary-timecard-view #timecardTable th:nth-child(5),
+    body.is-salary-timecard-view #timecardTable td:nth-child(5) {
+      width: 9%;
+    }
+
+    body.is-salary-timecard-view #timecardTable th:nth-child(6),
+    body.is-salary-timecard-view #timecardTable td:nth-child(6) {
+      width: 11%;
+    }
+
+    body.is-salary-timecard-view #timecardTable th:nth-child(7),
+    body.is-salary-timecard-view #timecardTable td:nth-child(7) {
+      width: 27%;
+    }
+
+    body.is-salary-timecard-view #timecardTable th:nth-child(8),
+    body.is-salary-timecard-view #timecardTable td:nth-child(8) {
+      width: 12%;
     }
 
     th,
@@ -569,13 +776,26 @@
     }
 
     .hours-cell {
-      min-width: 210px;
+      min-width: 280px;
     }
 
     .hours-stack {
       display: inline-grid;
       justify-items: center;
       gap: 4px;
+    }
+
+    body.is-salary-timecard-view .hours-cell {
+      min-width: 210px;
+      text-align: left;
+    }
+
+    body.is-salary-timecard-view .hours-stack {
+      display: grid;
+      justify-items: start;
+      width: 100%;
+      text-align: left;
+      gap: 6px;
     }
 
     .hours-value {
@@ -613,12 +833,170 @@
       color: #bfdbfe;
     }
 
+    .minutes-cell {
+      min-width: 0;
+      white-space: nowrap;
+    }
+
+    .minutes-value {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--surface-text-strong);
+    }
+
+    .minutes-value.is-empty {
+      color: var(--surface-muted);
+      font-weight: 600;
+    }
+
+    .minutes-value.is-late {
+      color: #fde68a;
+    }
+
+    .minutes-value.is-warning {
+      color: #fdba74;
+    }
+
+    .minutes-value.is-deduction {
+      color: #fca5a5;
+    }
+
+    .pay-cell,
+    .short-cell {
+      white-space: nowrap;
+    }
+
+    body.is-salary-timecard-view .pay-cell {
+      min-width: 0;
+      text-align: left;
+    }
+
+    .pay-stack {
+      display: grid;
+      justify-items: start;
+      gap: 6px;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .short-value {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--surface-text-strong);
+    }
+
+    .short-value.is-empty {
+      color: var(--surface-muted);
+      font-weight: 600;
+    }
+
+    .short-value.is-short {
+      color: #fde68a;
+    }
+
+    .short-value.is-missing {
+      color: #fecaca;
+    }
+
+    .hours-details {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    .hours-details summary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      color: var(--surface-muted);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      list-style: none;
+      user-select: none;
+    }
+
+    .hours-details summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .hours-details summary::after {
+      content: "+";
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(var(--primary-rgb), 0.18);
+      background: rgba(var(--primary-rgb), 0.08);
+      color: var(--surface-text-strong);
+      font-size: 11px;
+      line-height: 1;
+    }
+
+    .hours-details[open] summary::after {
+      content: "-";
+    }
+
+    .hours-details-list {
+      display: grid;
+      gap: 6px;
+      margin-top: 8px;
+      padding: 10px 12px;
+      width: min(100%, 220px);
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+      border-radius: 16px;
+      border: 1px solid rgba(var(--primary-rgb), 0.12);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+        rgba(3, 8, 16, 0.24);
+    }
+
+    .hours-detail-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: flex-start;
+      gap: 8px;
+      text-align: left;
+      font-size: 10px;
+      line-height: 1.3;
+    }
+
+    .hours-detail-row span {
+      color: var(--surface-muted);
+      min-width: 0;
+    }
+
+    .hours-detail-row strong {
+      color: var(--surface-text);
+      font-size: 11px;
+      font-weight: 600;
+      text-align: right;
+      min-width: 0;
+      white-space: normal;
+    }
+
     .hours-reason {
       color: var(--surface-muted);
       font-size: 10px;
       font-weight: 500;
       line-height: 1.1;
       text-align: center;
+      max-width: 260px;
     }
 
     .hours-target.met {
@@ -812,6 +1190,11 @@
       border-radius: 18px;
     }
 
+    body.layout-fit-tight.is-salary-timecard-view .selectors {
+      grid-template-columns: auto minmax(150px, 1fr) auto;
+      gap: 6px 10px;
+    }
+
     body.layout-fit-tight .selectors label,
     body.layout-fit-tight .week-note {
       font-size: 11px;
@@ -843,6 +1226,12 @@
       font-size: 11px;
     }
 
+    body.layout-fit-tight .payroll-secondary-button {
+      min-height: 34px;
+      padding: 0 12px;
+      font-size: 11px;
+    }
+
     body.layout-fit-tight .payroll-status {
       font-size: 10px;
     }
@@ -851,12 +1240,28 @@
       gap: 8px;
     }
 
+    body.layout-fit-tight.is-salary-timecard-view .payroll-summary {
+      gap: 6px;
+    }
+
     body.layout-fit-tight .payroll-stat {
       padding: 8px 10px;
     }
 
+    body.layout-fit-tight.is-salary-timecard-view .payroll-stat {
+      padding: 7px 9px;
+    }
+
     body.layout-fit-tight .payroll-stat-value {
       font-size: 16px;
+    }
+
+    body.layout-fit-tight.is-salary-timecard-view .payroll-stat-value {
+      font-size: 14px;
+    }
+
+    body.layout-fit-tight .payroll-payment-meta {
+      font-size: 10px;
     }
 
     body.layout-fit-tight .table-shell {
@@ -878,7 +1283,11 @@
     }
 
     body.layout-fit-tight .hours-cell {
-      min-width: 182px;
+      min-width: 230px;
+    }
+
+    body.layout-fit-tight.is-salary-timecard-view .hours-cell {
+      min-width: 190px;
     }
 
     body.layout-fit-tight .hours-value {
@@ -893,6 +1302,18 @@
 
     body.layout-fit-tight .hours-pay {
       font-size: 10px;
+    }
+
+    body.layout-fit-tight .minutes-value {
+      font-size: 10px;
+    }
+
+    body.layout-fit-tight .short-value {
+      font-size: 10px;
+    }
+
+    body.layout-fit-tight .hours-details summary {
+      font-size: 9px;
     }
 
     body.layout-fit-tight .hours-reason {
@@ -971,6 +1392,11 @@
       padding: 7px 10px;
     }
 
+    body.layout-fit-ultra.is-salary-timecard-view .selectors {
+      grid-template-columns: auto minmax(140px, 1fr) auto;
+      gap: 6px 8px;
+    }
+
     body.layout-fit-ultra .selectors label,
     body.layout-fit-ultra .week-note {
       font-size: 10px;
@@ -1007,6 +1433,12 @@
       font-size: 10px;
     }
 
+    body.layout-fit-ultra .payroll-secondary-button {
+      min-height: 32px;
+      padding: 0 10px;
+      font-size: 10px;
+    }
+
     body.layout-fit-ultra .payroll-status {
       font-size: 9px;
     }
@@ -1016,6 +1448,11 @@
       gap: 6px;
     }
 
+    body.layout-fit-ultra.is-salary-timecard-view .payroll-summary {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 5px;
+    }
+
     body.layout-fit-ultra .payroll-stat {
       padding: 7px 9px;
       border-radius: 14px;
@@ -1023,6 +1460,14 @@
 
     body.layout-fit-ultra .payroll-stat-value {
       font-size: 14px;
+    }
+
+    body.layout-fit-ultra.is-salary-timecard-view .payroll-stat-value {
+      font-size: 13px;
+    }
+
+    body.layout-fit-ultra .payroll-payment-meta {
+      font-size: 9px;
     }
 
     body.layout-fit-ultra th,
@@ -1036,6 +1481,10 @@
 
     body.layout-fit-ultra .hours-cell {
       min-width: 170px;
+    }
+
+    body.layout-fit-ultra.is-salary-timecard-view .hours-cell {
+      min-width: 155px;
     }
 
     body.layout-fit-ultra .hours-stack {
@@ -1053,6 +1502,18 @@
 
     body.layout-fit-ultra .hours-pay {
       font-size: 9px;
+    }
+
+    body.layout-fit-ultra .minutes-value {
+      font-size: 9px;
+    }
+
+    body.layout-fit-ultra .short-value {
+      font-size: 9px;
+    }
+
+    body.layout-fit-ultra .hours-details summary {
+      font-size: 8px;
     }
 
     body.layout-fit-ultra .hours-reason {
@@ -1093,6 +1554,25 @@
         align-items: stretch;
       }
 
+      body.is-salary-timecard-view .selectors {
+        grid-template-columns: 1fr;
+      }
+
+      body.is-salary-timecard-view .payroll-controls {
+        grid-column: 1 / -1;
+        justify-self: stretch;
+      }
+
+      body.is-salary-timecard-view .week-note {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+      }
+
+      body.is-salary-timecard-view .payroll-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
       .hours-cell {
         min-width: 150px;
       }
@@ -1101,6 +1581,26 @@
         display: inline-grid;
         gap: 6px;
         justify-items: center;
+      }
+
+      body.is-salary-timecard-view .hours-cell {
+        min-width: 180px;
+      }
+
+      body.is-salary-timecard-view .pay-cell {
+        min-width: 0;
+      }
+
+      body.is-salary-timecard-view .hours-stack {
+        justify-items: start;
+      }
+
+      body.is-salary-timecard-view .hours-details-list {
+        padding: 9px 10px;
+      }
+
+      body.is-salary-timecard-view .hours-detail-row {
+        gap: 8px;
       }
 
       .payroll-controls {
@@ -1114,12 +1614,12 @@
     }
   </style>
 </head>
-<body data-timecard-mode="normal">
+<body data-timecard-mode="salary">
 
 <div class="side-panel" id="employeePanel">
   <div class="panel-kicker">Attendance Accounts</div>
   <h3><i class="fa-solid fa-users"></i> Accounts</h3>
-  <p class="side-copy">Select an account to review the semi-monthly time card. Inactive and suspended attendance accounts stay visible here for audit and review.</p>
+  <p class="side-copy">Select an account to review the semi-monthly time card, daily salary, and cutoff pay summary. Inactive and suspended attendance accounts stay visible here for audit and review.</p>
   <div id="employeeList"></div>
 </div>
 
@@ -1127,7 +1627,7 @@
   <div class="hero-head">
     <div>
       <h2 id="employeeNameTitle">Select an Account</h2>
-      <p>Review 1-15 or 16-katapusan time-ins, time-outs, work hours, and attendance status in a cleaner tenant-aware layout.</p>
+      <p>Review 1-15 or 16-katapusan time-ins, time-outs, work hours, deductions, and net cutoff salary in one payroll-ready view.</p>
     </div>
                     <span class="surface-note"><i class="fa-regular fa-clock"></i> <span id="timecardPolicyNote">Cutoff attendance / 9h target</span></span>
   </div>
@@ -1139,6 +1639,46 @@
     </div>
     <div class="selector-field selector-note">
       <span class="week-note" id="weekRangeLabel">Loading cutoff...</span>
+    </div>
+    <div class="salary-panel" id="salaryPanel">
+      <div class="payroll-controls">
+        <div class="selector-field payroll-rate-field">
+          <label for="dailySalaryInput">Daily Salary</label>
+          <div class="payroll-rate-input">
+            <span>PHP</span>
+            <input type="number" id="dailySalaryInput" min="0" step="0.01" inputmode="decimal" placeholder="0.00">
+          </div>
+        </div>
+        <button type="button" class="payroll-save-button" id="saveDailySalaryButton">Save Rate</button>
+        <button type="button" class="payroll-secondary-button" id="toggleCutoffPaymentButton">Mark Paid</button>
+        <span class="payroll-status" id="dailySalaryStatus" aria-live="polite"></span>
+        <span class="payroll-status" id="cutoffPaymentStatus" aria-live="polite"></span>
+      </div>
+      <div class="payroll-summary" id="payrollSummary">
+        <div class="payroll-stat">
+          <span class="payroll-stat-label">Present Days</span>
+          <span class="payroll-stat-value" id="presentDaysValue">0</span>
+        </div>
+        <div class="payroll-stat">
+          <span class="payroll-stat-label">Pending Days</span>
+          <span class="payroll-stat-value" id="pendingDaysValue">0</span>
+        </div>
+        <div class="payroll-stat">
+          <span class="payroll-stat-label">Total Deductions</span>
+          <span class="payroll-stat-value" id="totalDeductionsValue">PHP 0.00</span>
+        </div>
+        <div class="payroll-stat">
+          <span class="payroll-stat-label">Net Cutoff Salary</span>
+          <span class="payroll-stat-value" id="netCutoffSalaryValue">PHP 0.00</span>
+        </div>
+        <div class="payroll-stat">
+          <span class="payroll-stat-label">Payout Status</span>
+          <span class="payroll-stat-value">
+            <span class="payroll-payment-badge is-pending" id="cutoffPaymentStatusValue">Pending</span>
+          </span>
+          <span class="payroll-payment-meta" id="cutoffPaymentMeta">Not yet marked as paid.</span>
+        </div>
+      </div>
     </div>
   </div>
 

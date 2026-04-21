@@ -74,7 +74,8 @@
       letter-spacing: .35px;
       font-weight: 700;
     }
-    input {
+    input,
+    select {
       width: 100%;
       height: 42px;
       padding: 10px 12px;
@@ -87,11 +88,13 @@
       transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
     }
     input::placeholder,
+    select::placeholder,
     textarea::placeholder {
       color: var(--muted);
       opacity: .92;
     }
-    input:focus {
+    input:focus,
+    select:focus {
       outline: none;
       border-color: rgba(var(--primary-rgb), 0.44);
       box-shadow:
@@ -292,6 +295,91 @@
       font-size: 13px;
       line-height: 1.45;
     }
+    .setup-skeleton {
+      margin-bottom: 16px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(var(--primary-rgb), 0.14);
+      background:
+        radial-gradient(circle at top right, rgba(var(--primary-rgb), 0.1) 0%, transparent 40%),
+        linear-gradient(165deg, rgba(255, 255, 255, 0.96), rgba(var(--primary-rgb), 0.05));
+      box-shadow: var(--shadow-soft);
+    }
+    .setup-skeleton-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .setup-skeleton-head h3 {
+      margin: 0;
+      font-size: 17px;
+      color: var(--text);
+    }
+    .setup-skeleton-head p {
+      margin: 4px 0 0;
+      max-width: 560px;
+      font-size: 12px;
+    }
+    .preset-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .preset-chip {
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .preset-chip.is-active,
+    .secondary-btn.is-active {
+      background: rgba(var(--primary-rgb), 0.14);
+      color: var(--primary-dark);
+      border-color: rgba(var(--primary-rgb), 0.28);
+      box-shadow: 0 12px 24px rgba(var(--primary-rgb), 0.12);
+    }
+    .setup-note {
+      margin: 0;
+      padding: 11px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(var(--primary-rgb), 0.12);
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--text-soft);
+      font-size: 12px;
+      line-height: 1.55;
+      font-weight: 600;
+    }
+    .setup-helper-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .setup-helper-card {
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(var(--primary-rgb), 0.14);
+      background: rgba(255, 255, 255, 0.82);
+    }
+    .setup-helper-card strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .setup-helper-card span {
+      display: block;
+      color: var(--text-soft);
+      font-size: 12px;
+      line-height: 1.5;
+    }
     .toggle-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -474,7 +562,56 @@
         <h2>Workspace Setup</h2>
         <p>Per-company setup para sa menu labels, visibility, payment modes, at basic screen preferences.</p>
 
+        <div id="workspaceSkeletonSection" class="setup-skeleton">
+          <div class="setup-skeleton-head">
+            <div>
+              <h3>Quick SaaS Skeleton</h3>
+              <p>Pumili ng recommended starting point para hindi blanko ang tenant setup. Pagkatapos nito, puwede mo pang i-fine tune ang labels at visibility sa ibaba.</p>
+            </div>
+          </div>
+          <div class="preset-chip-row">
+            <button type="button" class="secondary-btn preset-chip" data-workspace-preset="attendance_starter">Attendance Starter</button>
+            <button type="button" class="secondary-btn preset-chip" data-workspace-preset="sales_growth">Sales Growth</button>
+            <button type="button" class="secondary-btn preset-chip" data-workspace-preset="business_suite">Business Suite</button>
+          </div>
+          <p id="workspacePresetNote" class="setup-note">Apply the closest SaaS package to prefill the workspace mode, shell name, workspace tag, and setup copy.</p>
+        </div>
+
+        <div id="workspaceGuideGrid" class="setup-helper-grid">
+          <div class="setup-helper-card">
+            <strong>Attendance</strong>
+            <span>Best for time-in/time-out, schedules, attendance reports, at simple admin onboarding.</span>
+          </div>
+          <div class="setup-helper-card">
+            <strong>Sales</strong>
+            <span>Best for pricing, inventory, order encoding, at recurring monthly SaaS workflows.</span>
+          </div>
+          <div class="setup-helper-card">
+            <strong>Suite</strong>
+            <span>Best for full ERP-style tenants na may inventory, invoicing, reports, at optional AI quota.</span>
+          </div>
+        </div>
+
         <div class="grid">
+          <div class="setup-only-field">
+            <label for="experienceMode">Workspace Mode</label>
+            <select id="experienceMode">
+              <option value="default">Default ERP Workspace</option>
+              <option value="attendance_only">Attendance-Focused Workspace</option>
+            </select>
+          </div>
+          <div class="setup-only-field">
+            <label for="appShellName">Workspace Shell Name</label>
+            <input id="appShellName" type="text" placeholder="Example: GMS Control">
+          </div>
+          <div class="setup-only-field">
+            <label for="workspaceTag">Workspace Tag</label>
+            <input id="workspaceTag" type="text" placeholder="Example: Tenant Workspace">
+          </div>
+          <div class="setup-only-field">
+            <label for="workspaceCopy">Workspace Summary Copy</label>
+            <textarea id="workspaceCopy" placeholder="Short setup note shown on the dashboard."></textarea>
+          </div>
           <div>
             <label for="inventoryMenuLabel">Pricing Menu Label</label>
             <input id="inventoryMenuLabel" type="text" placeholder="Product Pricing">

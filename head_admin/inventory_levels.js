@@ -57,6 +57,17 @@ async function initialize() {
     state.canDeleteInventory = canRoleDeleteInventory(session.role);
     appClient.attachEmployeeBackButton(session);
 
+    try {
+        const bootstrap = await appClient.getBootstrap();
+        if (!state.assignedBranch) {
+            state.assignedBranch = normalizeBranchName(
+                bootstrap?.user?.branch_name || bootstrap?.user?.branchName || ''
+            );
+        }
+    } catch (_error) {
+        // Keep the page usable even if bootstrap is temporarily unavailable.
+    }
+
     await applyWorkspaceConfig();
     bindEvents();
     await loadBranches();
@@ -84,7 +95,7 @@ function bindEvents() {
     inventoryBody.addEventListener('input', handleTableInput);
     inventoryBody.addEventListener('change', handleTableChange);
     inventoryBody.addEventListener('keydown', (event) => {
-        if (!canEditSelectedBranch() || event.key !== 'Enter') {
+        if (!canEditSelectedBranch(getSelectedBranchName()) || event.key !== 'Enter') {
             return;
         }
 
@@ -142,7 +153,11 @@ async function loadBranches() {
         branchFilter.innerHTML = branches.map((branch) =>
             `<option value="${appClient.escapeHtml(branch.branch_name || '')}">${appClient.escapeHtml(branch.branch_name || '')}</option>`
         ).join('');
-        if (!branchFilter.value && branches.length) {
+
+        const assignedBranchOption = branches.find((branch) => sameBranch(branch?.branch_name || '', state.assignedBranch));
+        if (isStaffRole(state.session?.role) && assignedBranchOption) {
+            branchFilter.value = String(assignedBranchOption.branch_name || '');
+        } else if (!branchFilter.value && branches.length) {
             branchFilter.value = String(branches[0].branch_name || '');
         }
     } catch (error) {
@@ -684,7 +699,7 @@ function renderSummary() {
 }
 
 function updateLoadedStatus() {
-    const modeLabel = canEditSelectedBranch()
+    const modeLabel = canEditSelectedBranch(getSelectedBranchName())
         ? 'edit mode'
         : (state.canEditInventory ? 'read-only mode for other branch' : 'read-only mode');
     const visibleRows = getVisibleRows().length;
@@ -698,7 +713,7 @@ function updateLoadedStatus() {
 }
 
 function handleTableClick(event) {
-    if (!canEditSelectedBranch()) {
+    if (!canEditSelectedBranch(getSelectedBranchName())) {
         return;
     }
     const button = event.target.closest('button[data-action]');
@@ -718,7 +733,7 @@ function handleTableClick(event) {
 }
 
 function handleTableInput(event) {
-    if (!canEditSelectedBranch()) {
+    if (!canEditSelectedBranch(getSelectedBranchName())) {
         return;
     }
 
@@ -797,7 +812,7 @@ function handleTableInput(event) {
 }
 
 function handleTableChange(event) {
-    if (!canEditSelectedBranch()) {
+    if (!canEditSelectedBranch(getSelectedBranchName())) {
         return;
     }
 
@@ -1350,6 +1365,10 @@ function isStaffRole(role) {
     return String(role || '').trim().toLowerCase() === 'staff';
 }
 
+function getSelectedBranchName() {
+    return String(branchFilter?.value || '').trim();
+}
+
 function normalizeBranchName(value) {
     return String(value || '').replace(/\s+/g, ' ').trim();
 }
@@ -1382,7 +1401,7 @@ function canDeleteSelectedBranch(branchName = '') {
 
 function getInventoryEditRestrictionMessage(branchName = '') {
     if (!state.canEditInventory) {
-        return 'Inventory editing is allowed for staff and company admins only.';
+        return 'Inventory editing is allowed for staff, head admins, and company admins only.';
     }
     if (isStaffRole(state.session?.role) && !sameBranch(branchName, state.assignedBranch)) {
         return `Staff can edit inventory only in ${state.assignedBranch || 'their assigned branch'}.`;
@@ -1392,7 +1411,7 @@ function getInventoryEditRestrictionMessage(branchName = '') {
 
 function getInventoryDeleteRestrictionMessage(branchName = '') {
     if (!state.canDeleteInventory) {
-        return 'Only company admins can delete inventory items.';
+        return 'Only head admins and company admins can delete inventory items.';
     }
     if (isStaffRole(state.session?.role) && !sameBranch(branchName, state.assignedBranch)) {
         return `Staff can delete inventory only in ${state.assignedBranch || 'their assigned branch'}.`;

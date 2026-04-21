@@ -23,8 +23,8 @@ const DAYS = [
     { key: 'friday', label: 'Friday' },
     { key: 'saturday', label: 'Saturday' }
 ];
-const DEFAULT_TIME_IN = '08:00';
-const DEFAULT_TIME_OUT = '17:00';
+const DEFAULT_TIME_IN = '09:00';
+const DEFAULT_TIME_OUT = '18:00';
 const ACCOUNT_STATUS_LABELS = Object.freeze({
     active: 'Active',
     inactive: 'Inactive',

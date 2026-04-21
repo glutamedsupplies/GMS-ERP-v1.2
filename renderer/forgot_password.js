@@ -406,6 +406,7 @@ function applyBranding(branding) {
     const rgb = appClient?.hexToRgb ? appClient.hexToRgb(primaryColor) : [14, 165, 164];
 
     document.title = `${appName} Forgot Password`;
+    appClient?.applyBrandFavicon?.(branding);
 
     if (forgotTitle) {
         forgotTitle.textContent = `${appName} Forgot Password`;

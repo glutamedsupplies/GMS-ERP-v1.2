@@ -1,4 +1,4 @@
-const STATIC_CACHE = 'attendance-static-v13';
+const STATIC_CACHE = 'attendance-static-v14';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -12,6 +12,8 @@ const STATIC_ASSETS = [
     '/shared/ai-assistant.js',
     '/shared/pwa.js',
     '/renderer/login.js',
+    '/renderer/customer_portal.html',
+    '/renderer/customer_portal.js',
     '/renderer/forgot_password.html',
     '/renderer/forgot_password.js'
 ];
@@ -20,9 +22,15 @@ const NETWORK_ONLY_PATHS = new Set([
     '/shared/app-client.js',
     '/shared/pwa.js',
     '/renderer/login.js',
-    '/shared/firebase.js',
-    '/renderer/forgot_password.html',
-    '/renderer/forgot_password.js'
+    '/shared/firebase.js'
+]);
+
+const DOCUMENT_CACHE_FALLBACKS = new Map([
+    ['/renderer/customer_portal.html', '/renderer/customer_portal.html'],
+    ['/renderer/forgot_password.html', '/renderer/forgot_password.html'],
+    ['/login.html', '/login.html'],
+    ['/index.html', '/index.html'],
+    ['/', '/index.html']
 ]);
 
 function shouldCache(requestUrl) {
@@ -31,6 +39,29 @@ function shouldCache(requestUrl) {
     }
 
     return STATIC_ASSETS.includes(requestUrl.pathname) || requestUrl.pathname.startsWith('/assets/icons/');
+}
+
+function isDocumentRequest(request) {
+    return request.mode === 'navigate' || request.destination === 'document';
+}
+
+async function findCachedResponse(request, requestUrl) {
+    const directMatch = await caches.match(request, { ignoreSearch: true });
+    if (directMatch) {
+        return directMatch;
+    }
+
+    const pathMatch = await caches.match(requestUrl.pathname, { ignoreSearch: true });
+    if (pathMatch) {
+        return pathMatch;
+    }
+
+    const fallbackPath = DOCUMENT_CACHE_FALLBACKS.get(requestUrl.pathname);
+    if (fallbackPath) {
+        return caches.match(fallbackPath);
+    }
+
+    return null;
 }
 
 self.addEventListener('install', (event) => {
@@ -64,11 +95,22 @@ self.addEventListener('fetch', (event) => {
             .then((response) => {
                 if (response.ok) {
                     const cloned = response.clone();
-                    caches.open(STATIC_CACHE).then((cache) => cache.put(event.request, cloned));
+                    caches.open(STATIC_CACHE).then((cache) => cache.put(requestUrl.pathname, cloned));
                 }
 
                 return response;
             })
-            .catch(() => caches.match(event.request).then((cached) => cached || caches.match('/index.html')))
+            .catch(async () => {
+                const cached = await findCachedResponse(event.request, requestUrl);
+                if (cached) {
+                    return cached;
+                }
+
+                if (isDocumentRequest(event.request)) {
+                    return caches.match('/login.html');
+                }
+
+                throw new Error(`No cached response for ${requestUrl.pathname}`);
+            })
     );
 });
