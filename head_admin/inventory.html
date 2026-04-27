@@ -82,6 +82,56 @@
         </table>
       </div>
     </section>
+
+    <section class="panel pricelist-studio">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Pricelist Studio</p>
+          <h2>Auto Copy Pricelist</h2>
+          <p class="hero-copy">Whenever prices change here, the reseller copy below refreshes from the same data source. This keeps the message ready to copy after every pricing update.</p>
+        </div>
+        <div class="hero-actions">
+          <button id="savePricelistSettingsBtn" type="button" class="secondary-btn"><i class="fa-solid fa-floppy-disk"></i> Save Pricelist Setup</button>
+          <button id="copyPricelistBtn" type="button" class="secondary-btn"><i class="fa-solid fa-copy"></i> Copy Pricelist Text</button>
+        </div>
+      </div>
+
+      <div class="studio-grid">
+        <div class="panel-inset studio-settings">
+          <div class="field">
+            <label for="audienceLabelInput">Audience Label</label>
+            <input id="audienceLabelInput" type="text" placeholder="RESELLERS">
+          </div>
+          <div class="field">
+            <label for="headerTitleInput">Header Title</label>
+            <input id="headerTitleInput" type="text" placeholder="Updated Price List">
+          </div>
+          <div class="field field-span-2">
+            <label for="introLineInput">Intro Line</label>
+            <input id="introLineInput" type="text" placeholder="ALL PRODUCTS AVAILABLE FOR PER SESSION OR HALF BOX">
+          </div>
+          <div class="field">
+            <label for="footerNotePrimaryInput">Footer Note 1</label>
+            <input id="footerNotePrimaryInput" type="text" placeholder="Prices may change without prior notice">
+          </div>
+          <div class="field">
+            <label for="footerNoteSecondaryInput">Footer Note 2</label>
+            <input id="footerNoteSecondaryInput" type="text" placeholder="Bulk / reseller discounts available">
+          </div>
+        </div>
+
+        <div class="panel-inset studio-copy-card">
+          <div class="studio-copy-header">
+            <div>
+              <p class="eyebrow">Copy Ready</p>
+              <h3>Generated Text Pricelist</h3>
+            </div>
+            <small>Updates live from the visible pricing rows.</small>
+          </div>
+          <textarea id="pricelistTextOutput" readonly spellcheck="false" aria-label="Generated pricelist text"></textarea>
+        </div>
+      </div>
+    </section>
   </div>
 
   <div id="variantModal" class="modal" aria-hidden="true">
@@ -117,6 +167,35 @@
           <label for="costPriceInput">Cost Price</label>
           <input id="costPriceInput" type="number" min="0" step="0.01" placeholder="0.00">
         </div>
+
+        <div class="field field-span-2 section-field">
+          <label>Pricelist Details</label>
+          <small>Optional display settings used by the generated text copy.</small>
+        </div>
+        <div class="field">
+          <label for="pricelistCategoryInput">Pricelist Category</label>
+          <input id="pricelistCategoryInput" type="text" placeholder="GLUTATHIONE / DRIPS">
+        </div>
+        <div class="field">
+          <label for="pricelistDisplayNameInput">Display Name</label>
+          <input id="pricelistDisplayNameInput" type="text" placeholder="Name shown in the pricelist">
+        </div>
+        <div class="field">
+          <label for="pricelistPackLabelInput">Pack Label</label>
+          <input id="pricelistPackLabelInput" type="text" placeholder="Example: 10 Vials">
+        </div>
+        <div class="field">
+          <label for="pricelistLineLabelInput">Public Price Label</label>
+          <input id="pricelistLineLabelInput" type="text" placeholder="Example: BOX, PUSH, DRIP">
+        </div>
+        <div class="field">
+          <label for="pricelistSortOrderInput">Pricelist Sort Order</label>
+          <input id="pricelistSortOrderInput" type="number" step="1" placeholder="0">
+        </div>
+        <label class="checkbox-field" for="pricelistHiddenInput">
+          <input id="pricelistHiddenInput" type="checkbox">
+          <span>Hide this product from generated pricelist output</span>
+        </label>
       </div>
 
       <div class="modal-actions">

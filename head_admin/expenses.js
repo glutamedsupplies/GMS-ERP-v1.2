@@ -108,7 +108,7 @@ async function applyWorkspaceConfig() {
     }
     if (expensesPageCopy) {
         expensesPageCopy.textContent = expenses.copy
-            || 'Dito mo na puwedeng i-manage ang branch expenses at cash income records per branch, kasama ang sales-linked at manual entries. Puwede nang mag-add, edit, delete, at reset-all ng entries per module.';
+            || 'Dito mo na puwedeng i-manage ang branch expenses at cash income records per branch, kasama ang sales-linked at manual entries. Puwede nang mag-add, edit, at delete ng individual entries.';
     }
 }
 
@@ -170,7 +170,8 @@ function bindEvents() {
 
         refs.saveBtn.addEventListener('click', () => saveEntry(module.key));
         refs.resetBtn.addEventListener('click', () => resetForm(module.key));
-        refs.clearBtn.addEventListener('click', () => clearAllEntries(module.key));
+        refs.clearBtn.addEventListener('click', () => deleteSelectedEntry(module.key));
+        syncSelectedDeleteButton(module.key);
         refs.applyFiltersBtn.addEventListener('click', () => loadRecords(module.key));
         refs.resetFiltersBtn.addEventListener('click', () => resetFilters(module.key));
         refs.periodFilter.addEventListener('change', () => applyPeriodPreset(module.key, refs.periodFilter.value || 'this_month'));
@@ -323,6 +324,7 @@ function resetForm(moduleKey) {
     refs.saveBtn.textContent = `Save ${module.label}`;
     refs.resetBtn.textContent = 'Clear';
     updateModeBadge(moduleKey, false);
+    syncSelectedDeleteButton(moduleKey);
     setFormStatus(moduleKey, `${module.label} form cleared.`, false);
 }
 
@@ -1099,7 +1101,7 @@ function renderTable(moduleKey, rows) {
                         <div class="table-actions">
                             ${status === 'Pending' ? `<button type="button" class="primary-btn tiny-btn" data-action="confirm" data-id="${row.id}">Confirm</button>` : ''}
                             <button type="button" class="secondary-btn tiny-btn" data-action="edit" data-id="${row.id}">Edit</button>
-                            ${isAuto ? '' : `<button type="button" class="danger-btn tiny-btn" data-action="delete" data-id="${row.id}">Delete</button>`}
+                            <button type="button" class="danger-btn tiny-btn" data-action="delete" data-id="${row.id}">Delete</button>
                         </div>
                     </td>
                 </tr>
@@ -1180,10 +1182,45 @@ function beginEdit(moduleKey, entryId) {
     refs.saveBtn.textContent = `Update ${module.label}`;
     refs.resetBtn.textContent = 'Cancel Edit';
     updateModeBadge(moduleKey, true, row.id);
+    syncSelectedDeleteButton(moduleKey, row);
     setFormStatus(moduleKey, `Editing ${module.searchPlaceholder} entry #${row.id}.`, false);
     setActiveModule(moduleKey);
     scrollModulePanelIntoView(moduleKey, 'form');
     refs.aboutInput.focus();
+}
+
+function syncSelectedDeleteButton(moduleKey) {
+    const module = MODULES[moduleKey];
+    const moduleState = state.modules[moduleKey];
+    const refs = moduleState?.refs;
+    if (!module || !refs?.clearBtn) {
+        return;
+    }
+
+    const selectedId = Number(moduleState.editingId || 0);
+    const canDelete = Number.isInteger(selectedId) && selectedId > 0;
+    refs.clearBtn.hidden = !canDelete;
+    refs.clearBtn.disabled = !canDelete;
+    refs.clearBtn.textContent = canDelete
+        ? `Delete Selected ${module.label} #${selectedId}`
+        : `Delete Selected ${module.label}`;
+    if (canDelete) {
+        refs.clearBtn.removeAttribute('aria-hidden');
+    } else {
+        refs.clearBtn.setAttribute('aria-hidden', 'true');
+    }
+}
+
+async function deleteSelectedEntry(moduleKey) {
+    const module = MODULES[moduleKey];
+    const moduleState = state.modules[moduleKey];
+    const selectedId = Number(moduleState?.editingId || 0);
+    if (!Number.isInteger(selectedId) || selectedId <= 0) {
+        setFormStatus(moduleKey, `Pumili muna ng ${module.searchPlaceholder} sa records table bago mag-delete.`, true);
+        return;
+    }
+
+    await deleteEntry(moduleKey, selectedId);
 }
 
 async function deleteEntry(moduleKey, entryId) {
@@ -1222,9 +1259,14 @@ async function confirmCashIncomeEntry(entryId) {
 
 async function clearAllEntries(moduleKey) {
     const module = MODULES[moduleKey];
-    const promptMessage = moduleKey === 'cashIncome'
-        ? 'Delete all manual cash income records? Auto-linked sales cash and collection entries will stay.'
-        : `Delete all ${module.pluralLabel.toLowerCase()} records? This cannot be undone.`;
+    if (moduleKey === 'cashIncome') {
+        const message = 'Bulk delete ng manual cash income ay disabled. Gamitin ang Delete button sa table para individual entry lang ang mabura.';
+        setFormStatus(moduleKey, message, true);
+        setReportStatus(moduleKey, message, true);
+        return;
+    }
+
+    const promptMessage = `Delete all ${module.pluralLabel.toLowerCase()} records? This cannot be undone.`;
 
     if (!window.confirm(promptMessage)) {
         return;

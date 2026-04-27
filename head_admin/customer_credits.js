@@ -19,10 +19,12 @@ const manualAmountInput = document.getElementById('manualAmountInput');
 const manualNoteInput = document.getElementById('manualNoteInput');
 const saveManualAdjustmentBtn = document.getElementById('saveManualAdjustmentBtn');
 const clearManualAdjustmentBtn = document.getElementById('clearManualAdjustmentBtn');
+const manualEditState = document.getElementById('manualEditState');
 const clientBalancesMeta = document.getElementById('clientBalancesMeta');
 const clientBalancesBody = document.getElementById('clientBalancesBody');
 const creditActivityMeta = document.getElementById('creditActivityMeta');
 const creditActivityBody = document.getElementById('creditActivityBody');
+const adjustmentPanel = document.querySelector('.adjustment-panel');
 
 const CLIENT_LIMIT = 250;
 const ENTRY_LIMIT = 250;
@@ -31,7 +33,10 @@ const state = {
     syncingPeriod: false,
     loading: false,
     saving: false,
-    lastPayload: null
+    lastPayload: null,
+    editingEntryId: 0,
+    editingEntryLabel: '',
+    editingClientName: ''
 };
 
 initialize();
@@ -160,7 +165,7 @@ function renderClientBalances(clients = []) {
 
     if (clientBalancesMeta) {
         clientBalancesMeta.textContent = clients.length
-            ? `${clients.length} client balance card(s) loaded. Click "Use This Client" to prefill the manual adjustment form.`
+            ? `${clients.length} client balance card(s) loaded. Click "Use This Client" to prefill the manual adjustment form, or edit the latest manual credit when available.`
             : 'No client balances matched the current filters.';
     }
 
@@ -230,6 +235,23 @@ function renderClientBalances(clients = []) {
                         >
                             Use This Client
                         </button>
+                        ${client.lastEntryEditable ? `
+                            <button
+                                type="button"
+                                class="ghost-btn"
+                                data-edit-credit-entry="true"
+                                data-entry-id="${appClient.escapeHtml(String(client.lastEntryId || ''))}"
+                                data-entry-action="${appClient.escapeHtml(client.lastEntryAction || 'add')}"
+                                data-entry-amount="${appClient.escapeHtml(String(client.lastEntryAmount || '0'))}"
+                                data-entry-note="${appClient.escapeHtml(encodeURIComponent(client.lastNote || ''))}"
+                                data-entry-source-label="${appClient.escapeHtml(encodeURIComponent(client.lastSourceLabel || 'Manual Adjustment'))}"
+                                data-client-name="${appClient.escapeHtml(encodeURIComponent(client.clientName || ''))}"
+                                data-client-contact="${appClient.escapeHtml(encodeURIComponent(client.clientContact || ''))}"
+                                data-client-address="${appClient.escapeHtml(encodeURIComponent(client.clientAddress || ''))}"
+                            >
+                                Edit Latest Manual
+                            </button>
+                        ` : ''}
                         <button
                             type="button"
                             class="ghost-btn"
@@ -322,6 +344,23 @@ function renderCreditActivity(entries = []) {
                         >
                             Use This Client
                         </button>
+                        ${entry.editable ? `
+                            <button
+                                type="button"
+                                class="ghost-btn"
+                                data-edit-credit-entry="true"
+                                data-entry-id="${appClient.escapeHtml(String(entry.id || ''))}"
+                                data-entry-action="${appClient.escapeHtml(entry.action || 'add')}"
+                                data-entry-amount="${appClient.escapeHtml(String(entry.amountAbsolute || '0'))}"
+                                data-entry-note="${appClient.escapeHtml(encodeURIComponent(entry.note || ''))}"
+                                data-entry-source-label="${appClient.escapeHtml(encodeURIComponent(entry.sourceLabel || 'Manual Adjustment'))}"
+                                data-client-name="${appClient.escapeHtml(encodeURIComponent(entry.clientName || ''))}"
+                                data-client-contact="${appClient.escapeHtml(encodeURIComponent(entry.clientContact || ''))}"
+                                data-client-address="${appClient.escapeHtml(encodeURIComponent(entry.clientAddress || ''))}"
+                            >
+                                Edit
+                            </button>
+                        ` : ''}
                         <button
                             type="button"
                             class="ghost-btn"
@@ -338,6 +377,21 @@ function renderCreditActivity(entries = []) {
 }
 
 function handleFillClientClick(event) {
+    const editButton = event.target.closest('[data-edit-credit-entry]');
+    if (editButton) {
+        beginManualAdjustmentEdit({
+            entryId: Number(editButton.dataset.entryId || 0),
+            action: String(editButton.dataset.entryAction || 'add'),
+            amount: Number(editButton.dataset.entryAmount || 0),
+            note: decodeURIComponent(String(editButton.dataset.entryNote || '')),
+            sourceLabel: decodeURIComponent(String(editButton.dataset.entrySourceLabel || 'Manual Adjustment')),
+            clientName: decodeURIComponent(String(editButton.dataset.clientName || '')),
+            clientContact: decodeURIComponent(String(editButton.dataset.clientContact || '')),
+            clientAddress: decodeURIComponent(String(editButton.dataset.clientAddress || ''))
+        });
+        return;
+    }
+
     const fillButton = event.target.closest('[data-fill-credit-client]');
     if (fillButton) {
         populateManualAdjustmentForm({
@@ -368,6 +422,45 @@ function handleFillClientClick(event) {
     }
 
     window.location.href = `order_form.html?orderNumber=${encodeURIComponent(orderNumber)}`;
+}
+
+function beginManualAdjustmentEdit(data = {}) {
+    const entryId = Math.max(0, Number(data.entryId || 0));
+    if (!entryId) {
+        return;
+    }
+
+    state.editingEntryId = entryId;
+    state.editingEntryLabel = String(data.sourceLabel || 'Manual Adjustment').trim() || 'Manual Adjustment';
+    state.editingClientName = String(data.clientName || '').trim();
+
+    if (manualActionInput) {
+        manualActionInput.value = String(data.action || 'add').trim().toLowerCase() === 'remove'
+            ? 'remove'
+            : 'add';
+    }
+    populateManualAdjustmentForm({
+        clientName: data.clientName || '',
+        clientContact: data.clientContact || '',
+        clientAddress: data.clientAddress || ''
+    });
+    if (manualAmountInput) {
+        manualAmountInput.value = formatAmountInput(data.amount || 0);
+    }
+    if (manualNoteInput) {
+        manualNoteInput.value = data.note || '';
+    }
+
+    syncManualAdjustmentUi();
+    setPanelStatus(`Editing ${state.editingEntryLabel.toLowerCase()} for ${state.editingClientName || 'this client'}. Save the form to update the credit entry.`, false);
+    adjustmentPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    manualAmountInput?.focus();
+}
+
+function resetManualAdjustmentEditState() {
+    state.editingEntryId = 0;
+    state.editingEntryLabel = '';
+    state.editingClientName = '';
 }
 
 function populateManualAdjustmentForm(data = {}) {
@@ -418,13 +511,21 @@ async function saveManualAdjustment() {
 
     state.saving = true;
     syncActionButtons();
-    setPanelStatus(payload.action === 'remove' ? 'Removing customer credit...' : 'Saving customer credit...', false);
+    const isEditing = Boolean(state.editingEntryId);
+    setPanelStatus(
+        isEditing
+            ? 'Updating customer credit...'
+            : (payload.action === 'remove' ? 'Removing customer credit...' : 'Saving customer credit...'),
+        false
+    );
 
     try {
-        const result = await appClient.addManualCustomerCredit(payload);
-        clearManualAdjustmentForm({ preserveClient: true });
+        const result = isEditing
+            ? await appClient.updateManualCustomerCredit(state.editingEntryId, payload)
+            : await appClient.addManualCustomerCredit(payload);
+        clearManualAdjustmentForm({ preserveClient: !isEditing });
         setPanelStatus(
-            `${payload.action === 'remove' ? 'Removed' : 'Saved'} ${result.amountDisplay || formatMoney(payload.amount)} for ${result.clientName || payload.clientName}. Remaining available credit: ${result.availableCreditDisplay || formatMoney(0)}.`,
+            `${isEditing ? 'Updated' : (payload.action === 'remove' ? 'Removed' : 'Saved')} ${result.amountDisplay || formatMoney(payload.amount)} for ${result.clientName || payload.clientName}. Remaining available credit: ${result.availableCreditDisplay || formatMoney(0)}.`,
             false
         );
         await loadCustomerCredits();
@@ -437,7 +538,7 @@ async function saveManualAdjustment() {
     }
 }
 
-function clearManualAdjustmentForm({ preserveClient = false } = {}) {
+function clearManualAdjustmentForm({ preserveClient = false, preserveEdit = false } = {}) {
     if (!preserveClient) {
         if (manualClientNameInput) manualClientNameInput.value = '';
         if (manualClientContactInput) manualClientContactInput.value = '';
@@ -446,6 +547,10 @@ function clearManualAdjustmentForm({ preserveClient = false } = {}) {
     if (manualAmountInput) manualAmountInput.value = '';
     if (manualNoteInput) manualNoteInput.value = '';
     if (manualActionInput) manualActionInput.value = 'add';
+    if (!preserveEdit) {
+        resetManualAdjustmentEditState();
+    }
+    syncManualAdjustmentUi();
 }
 
 function syncActionButtons() {
@@ -454,6 +559,30 @@ function syncActionButtons() {
     if (resetFiltersBtn) resetFiltersBtn.disabled = disabled;
     if (saveManualAdjustmentBtn) saveManualAdjustmentBtn.disabled = disabled;
     if (clearManualAdjustmentBtn) clearManualAdjustmentBtn.disabled = disabled;
+    syncManualAdjustmentUi();
+}
+
+function syncManualAdjustmentUi() {
+    const isEditing = Boolean(state.editingEntryId);
+    if (saveManualAdjustmentBtn) {
+        saveManualAdjustmentBtn.textContent = isEditing ? 'Update Adjustment' : 'Save Adjustment';
+    }
+    if (clearManualAdjustmentBtn) {
+        clearManualAdjustmentBtn.textContent = isEditing ? 'Cancel Edit' : 'Clear Form';
+    }
+    if (manualEditState) {
+        if (!isEditing) {
+            manualEditState.hidden = true;
+            manualEditState.innerHTML = '';
+            return;
+        }
+
+        manualEditState.hidden = false;
+        manualEditState.innerHTML = `
+            <strong>Edit Mode</strong>
+            You are editing ${appClient.escapeHtml(state.editingEntryLabel || 'a manual credit entry')} for ${appClient.escapeHtml(state.editingClientName || 'this client')}. Click "Update Adjustment" to save changes, or "Cancel Edit" to exit without saving.
+        `;
+    }
 }
 
 function resetFilters() {
@@ -515,6 +644,18 @@ function formatMoney(value) {
         style: 'currency',
         currency: 'PHP'
     });
+}
+
+function formatAmountInput(value) {
+    const numericValue = Number(value || 0);
+    if (!Number.isFinite(numericValue) || numericValue <= 0) {
+        return '';
+    }
+    return String(roundAmountInput(numericValue));
+}
+
+function roundAmountInput(value) {
+    return Math.round(Number(value || 0) * 100) / 100;
 }
 
 function formatDate(value) {

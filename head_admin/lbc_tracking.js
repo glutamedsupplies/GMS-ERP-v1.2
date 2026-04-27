@@ -82,6 +82,15 @@ const collectionPendingCount = document.getElementById('collectionPendingCount')
 const collectionConfirmedCount = document.getElementById('collectionConfirmedCount');
 const collectionPendingAmount = document.getElementById('collectionPendingAmount');
 const collectionConfirmedAmount = document.getElementById('collectionConfirmedAmount');
+const collectionScanInput = document.getElementById('collectionScanInput');
+const collectionConfirmBtn = document.getElementById('collectionConfirmBtn');
+const collectionConfirmModal = document.getElementById('collectionConfirmModal');
+const collectionConfirmModalBackdrop = document.getElementById('collectionConfirmModalBackdrop');
+const collectionConfirmModalTitle = document.getElementById('collectionConfirmModalTitle');
+const collectionConfirmModalSubtitle = document.getElementById('collectionConfirmModalSubtitle');
+const collectionConfirmModalDetails = document.getElementById('collectionConfirmModalDetails');
+const collectionConfirmModalCancelBtn = document.getElementById('collectionConfirmModalCancelBtn');
+const collectionConfirmModalConfirmBtn = document.getElementById('collectionConfirmModalConfirmBtn');
 const workspaceViewButtons = Array.from(document.querySelectorAll('#workspaceSwitch [data-workspace-view]'));
 const trackingWorkspacePanel = document.getElementById('trackingWorkspacePanel');
 const collectionWorkspacePanel = document.getElementById('collectionWorkspacePanel');
@@ -160,6 +169,8 @@ const state = {
     expandedOrderKeys: new Set(),
     editingTrackingKey: '',
     savingTrackingKey: '',
+    collectionScanPreview: null,
+    collectionScanModalOpen: false,
     loading: false,
     locked: false
 };
@@ -200,7 +211,7 @@ async function initialize() {
     }
 
     bindEvents();
-    focusTrackingInput({ select: true });
+    focusActiveWorkspaceInput({ select: true });
     await loadRows();
 }
 
@@ -215,7 +226,9 @@ function bindEvents() {
             applyWorkspaceView();
             if (nextView === 'tracking') {
                 focusTrackingInput({ select: true });
+                return;
             }
+            focusCollectionConfirmInput({ select: true });
         });
     });
 
@@ -309,6 +322,30 @@ function bindEvents() {
 
     saveBulkBtn?.addEventListener('click', async () => {
         await handleBulkTrackingSave();
+    });
+
+    collectionConfirmBtn?.addEventListener('click', async () => {
+        await handleCollectionScanConfirm();
+    });
+
+    collectionScanInput?.addEventListener('keydown', async (event) => {
+        if (event.key !== 'Enter') {
+            return;
+        }
+        event.preventDefault();
+        await handleCollectionScanConfirm();
+    });
+
+    collectionConfirmModalBackdrop?.addEventListener('click', () => {
+        closeCollectionScanModal();
+    });
+
+    collectionConfirmModalCancelBtn?.addEventListener('click', () => {
+        closeCollectionScanModal();
+    });
+
+    collectionConfirmModalConfirmBtn?.addEventListener('click', async () => {
+        await handleCollectionScanModalConfirm();
     });
 
     trackingTableBody?.addEventListener('click', async (event) => {
@@ -430,32 +467,85 @@ function bindEvents() {
             setStatus('Order key is missing for collection action.', true);
             return;
         }
+        const trackingEntryId = normalizeText(target.getAttribute('data-tracking-entry-id') || '');
+        const trackingNumber = normalizeText(target.getAttribute('data-tracking-number') || '');
 
         if (action === 'confirm-collection') {
-            await handleConfirmCollection(orderLookup);
+            await handleConfirmCollection(orderLookup, trackingEntryId, trackingNumber);
             return;
         }
         if (action === 'undo-collection-confirm') {
-            await handleUndoCollectionConfirmation(orderLookup);
+            await handleUndoCollectionConfirmation(orderLookup, trackingEntryId, trackingNumber);
             return;
         }
-        await handleCollectionReturnToTransit(orderLookup);
+        await handleCollectionReturnToTransit(orderLookup, trackingEntryId, trackingNumber);
     });
 
     document.addEventListener('keydown', async (event) => {
-        if (state.locked) {
-            return;
-        }
-        if (!isTrackingWorkspaceActive()) {
-            return;
-        }
-        if (!canUseTrackingWriteActions()) {
+        if (state.collectionScanModalOpen) {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeCollectionScanModal();
+                return;
+            }
+            if (
+                event.key === 'Enter'
+                && !event.defaultPrevented
+                && !event.ctrlKey
+                && !event.metaKey
+                && !event.altKey
+            ) {
+                event.preventDefault();
+                await handleCollectionScanModalConfirm();
+                return;
+            }
             return;
         }
 
-        if (event.key === 'Enter' && !isTypingTarget(event.target) && normalizeText(trackingScanInput?.value)) {
+        if (state.locked) {
+            return;
+        }
+        if (isTrackingWorkspaceActive()) {
+            if (!canUseTrackingWriteActions()) {
+                return;
+            }
+
+            if (event.key === 'Enter' && !isTypingTarget(event.target) && normalizeText(trackingScanInput?.value)) {
+                event.preventDefault();
+                await handleSingleTrackingSave();
+                return;
+            }
+
+            if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) {
+                return;
+            }
+
+            if (isTypingTarget(event.target)) {
+                return;
+            }
+
+            if (!trackingScanInput || event.key.length !== 1 || !/[A-Za-z0-9]/.test(event.key)) {
+                return;
+            }
+
+            trackingScanInput.focus();
+            trackingScanInput.setRangeText(
+                event.key,
+                trackingScanInput.selectionStart ?? trackingScanInput.value.length,
+                trackingScanInput.selectionEnd ?? trackingScanInput.value.length,
+                'end'
+            );
             event.preventDefault();
-            await handleSingleTrackingSave();
+            return;
+        }
+
+        if (!isCollectionWorkspaceActive() || !canOwnerConfirmCollection()) {
+            return;
+        }
+
+        if (event.key === 'Enter' && !isTypingTarget(event.target) && normalizeText(collectionScanInput?.value)) {
+            event.preventDefault();
+            await handleCollectionScanConfirm();
             return;
         }
 
@@ -467,22 +557,22 @@ function bindEvents() {
             return;
         }
 
-        if (!trackingScanInput || event.key.length !== 1 || !/[A-Za-z0-9]/.test(event.key)) {
+        if (!collectionScanInput || event.key.length !== 1 || !/[A-Za-z0-9]/.test(event.key)) {
             return;
         }
 
-        trackingScanInput.focus();
-        trackingScanInput.setRangeText(
+        collectionScanInput.focus();
+        collectionScanInput.setRangeText(
             event.key,
-            trackingScanInput.selectionStart ?? trackingScanInput.value.length,
-            trackingScanInput.selectionEnd ?? trackingScanInput.value.length,
+            collectionScanInput.selectionStart ?? collectionScanInput.value.length,
+            collectionScanInput.selectionEnd ?? collectionScanInput.value.length,
             'end'
         );
         event.preventDefault();
     });
 
     window.addEventListener('focus', () => {
-        focusTrackingInput();
+        focusActiveWorkspaceInput();
     });
 }
 
@@ -505,6 +595,10 @@ function normalizeWorkspaceView(value) {
 
 function isTrackingWorkspaceActive() {
     return normalizeWorkspaceView(state.workspaceView) === 'tracking';
+}
+
+function isCollectionWorkspaceActive() {
+    return normalizeWorkspaceView(state.workspaceView) === 'collection';
 }
 
 function normalizeQuickFilter(value) {
@@ -710,6 +804,9 @@ function formatDateTimeLocal(value) {
 
 function lockPanel(message) {
     state.locked = true;
+    if (state.collectionScanModalOpen) {
+        closeCollectionScanModal({ clearPreview: true, restoreFocus: false });
+    }
     [
         ...branchButtons,
         ...quickFilterButtons,
@@ -723,7 +820,11 @@ function lockPanel(message) {
         autoDetectBtn,
         saveTrackingBtn,
         bulkTrackingInput,
-        saveBulkBtn
+        saveBulkBtn,
+        collectionScanInput,
+        collectionConfirmBtn,
+        collectionConfirmModalCancelBtn,
+        collectionConfirmModalConfirmBtn
     ].forEach((control) => {
         if (control) {
             control.disabled = true;
@@ -775,6 +876,9 @@ function applyWorkspaceView() {
     }
     if (collectionWorkspacePanel) {
         collectionWorkspacePanel.hidden = activeView !== 'collection';
+    }
+    if (activeView !== 'collection' && state.collectionScanModalOpen) {
+        closeCollectionScanModal({ clearPreview: true, restoreFocus: false });
     }
 }
 
@@ -1349,6 +1453,7 @@ function renderCollectionRows() {
         const trackingNumber = trackingSummaryText(row) || '-';
         const collectionStatus = normalizeText(row.collectionStatus) || 'Pending';
         const encodedOrderLookup = encodeURIComponent(orderLookup);
+        const trackingEntryId = normalizeText(row.trackingEntryId || '');
         const confirmedBy = normalizeText(row.collectionConfirmedBy);
         const confirmedAt = formatDateTime(row.collectionConfirmedAt);
         const hasOrderLookup = Boolean(orderLookup);
@@ -1362,8 +1467,8 @@ function renderCollectionRows() {
                         <div class="collection-action-stack">
                           <span class="collection-note">Confirmed${confirmedBy ? ` by ${appClient.escapeHtml(confirmedBy)}` : ''}${confirmedAt ? ` on ${appClient.escapeHtml(confirmedAt)}` : ''}</span>
                           <div class="collection-action-buttons">
-                            <button class="btn secondary btn-inline" type="button" data-action="undo-collection-confirm" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}">Undo Confirm</button>
-                            <button class="btn warning btn-inline" type="button" data-action="return-in-transit" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}">Return to In Transit</button>
+                            <button class="btn secondary btn-inline" type="button" data-action="undo-collection-confirm" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}" data-tracking-entry-id="${appClient.escapeHtml(trackingEntryId)}" data-tracking-number="${appClient.escapeHtml(trackingNumber)}">Undo Confirm</button>
+                            <button class="btn warning btn-inline" type="button" data-action="return-in-transit" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}" data-tracking-entry-id="${appClient.escapeHtml(trackingEntryId)}" data-tracking-number="${appClient.escapeHtml(trackingNumber)}">Return to In Transit</button>
                           </div>
                         </div>
                       `
@@ -1374,8 +1479,8 @@ function renderCollectionRows() {
                     ? `
                         <div class="collection-action-stack">
                           <div class="collection-action-buttons">
-                            <button class="btn primary btn-inline" type="button" data-action="confirm-collection" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}">Confirm Collected</button>
-                            <button class="btn warning btn-inline" type="button" data-action="return-in-transit" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}">Return to In Transit</button>
+                            <button class="btn primary btn-inline" type="button" data-action="confirm-collection" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}" data-tracking-entry-id="${appClient.escapeHtml(trackingEntryId)}" data-tracking-number="${appClient.escapeHtml(trackingNumber)}">Confirm Collected</button>
+                            <button class="btn warning btn-inline" type="button" data-action="return-in-transit" data-order-key="${appClient.escapeHtml(encodedOrderLookup)}" data-tracking-entry-id="${appClient.escapeHtml(trackingEntryId)}" data-tracking-number="${appClient.escapeHtml(trackingNumber)}">Return to In Transit</button>
                           </div>
                         </div>
                       `
@@ -1515,6 +1620,172 @@ function formatAmount(value) {
 function canOwnerConfirmCollection() {
     const role = normalizeText(state.session?.role).toLowerCase();
     return role === 'head_admin' || role === 'company_admin' || role === 'super_admin';
+}
+
+function buildCollectionScanPreviewDetailItems(row = {}) {
+    return [
+        ['Client', normalizeText(row.clientName) || '-'],
+        ['Amount', formatAmount(row.amountToCollect)],
+        ['Date', formatDate(row.saleDate)],
+        ['Tracking Number', normalizeText(row.trackingNumber) || '-'],
+        ['Order Number', normalizeText(row.orderNumber || row.receiptNumber || row.orderKey) || '-'],
+        ['Receipt Number', normalizeText(row.receiptNumber || row.orderNumber || row.orderKey) || '-'],
+        ['Branch', normalizeText(row.branch) || '-'],
+        ['Courier', normalizeText(row.courier) || '-'],
+        ['Payment Method', normalizeText(row.paymentMethod) || '-'],
+        ['Collection Status', normalizeText(row.collectionStatus) || '-']
+    ];
+}
+
+function renderCollectionScanModal() {
+    if (!collectionConfirmModal || !collectionConfirmModalDetails || !collectionConfirmModalTitle || !collectionConfirmModalSubtitle) {
+        return;
+    }
+
+    const row = state.collectionScanPreview;
+    const isOpen = Boolean(state.collectionScanModalOpen && row);
+    collectionConfirmModal.hidden = !isOpen;
+    collectionConfirmModal.setAttribute('aria-hidden', String(!isOpen));
+    if (!isOpen) {
+        collectionConfirmModalDetails.innerHTML = '';
+        return;
+    }
+
+    const trackingNumber = normalizeText(row.trackingNumber) || 'Scanned tracking';
+    const clientName = normalizeText(row.clientName) || 'Unknown client';
+    collectionConfirmModalTitle.textContent = `${trackingNumber} ready for confirmation`;
+    collectionConfirmModalSubtitle.textContent = `Review ${clientName}'s delivery details below, then press Enter to confirm collection.`;
+    collectionConfirmModalDetails.innerHTML = buildCollectionScanPreviewDetailItems(row)
+        .map(([label, value]) => `
+            <article class="collection-confirm-modal-detail">
+              <span class="collection-confirm-modal-label">${appClient.escapeHtml(label)}</span>
+              <span class="collection-confirm-modal-value">${appClient.escapeHtml(normalizeText(value) || '-')}</span>
+            </article>
+        `)
+        .join('');
+}
+
+function openCollectionScanModal(row = {}) {
+    state.collectionScanPreview = row;
+    state.collectionScanModalOpen = true;
+    renderCollectionScanModal();
+    focusCollectionScanModalConfirm();
+}
+
+function closeCollectionScanModal({ clearPreview = true, restoreFocus = true } = {}) {
+    state.collectionScanModalOpen = false;
+    if (clearPreview) {
+        state.collectionScanPreview = null;
+    }
+    renderCollectionScanModal();
+    if (restoreFocus) {
+        focusCollectionConfirmInput({ select: true });
+    }
+}
+
+async function handleCollectionScanModalConfirm() {
+    if (state.locked || state.loading) {
+        return;
+    }
+
+    const targetRow = state.collectionScanPreview;
+    if (!targetRow) {
+        closeCollectionScanModal();
+        return;
+    }
+
+    const orderLookup = resolveOrderLookup(targetRow);
+    const trackingEntryId = normalizeText(targetRow.trackingEntryId || '');
+    const trackingNumber = normalizeText(targetRow.trackingNumber || '');
+    const success = await handleConfirmCollection(orderLookup, trackingEntryId, trackingNumber);
+    if (!success) {
+        focusCollectionScanModalConfirm();
+        return;
+    }
+
+    if (collectionScanInput) {
+        collectionScanInput.value = '';
+    }
+    closeCollectionScanModal({ clearPreview: true, restoreFocus: false });
+    focusCollectionConfirmInput({ select: true });
+}
+
+async function handleCollectionScanConfirm() {
+    if (state.locked) {
+        return;
+    }
+
+    if (!canOwnerConfirmCollection()) {
+        setStatus('Owner confirmation is required for this action.', true);
+        focusCollectionConfirmInput({ select: true });
+        return;
+    }
+
+    const trackingNumber = normalizeText(collectionScanInput?.value).toUpperCase();
+    if (!trackingNumber) {
+        setStatus('Tracking number is required for collection confirmation.', true);
+        focusCollectionConfirmInput({ select: true });
+        return;
+    }
+
+    if (!TRACKING_NUMBER_REGEX.test(trackingNumber)) {
+        setStatus('Tracking number must be alphanumeric and up to 12 characters.', true);
+        focusCollectionConfirmInput({ select: true });
+        return;
+    }
+
+    setActionLoading(true);
+    setStatus(`Looking up delivered tracking ${trackingNumber}...`);
+
+    try {
+        const payload = await appClient.listLbcCollections({
+            branch: state.filters.branch,
+            search: trackingNumber,
+            status: 'all',
+            dateFrom: getSelectedDateFrom()
+        });
+        const matches = (Array.isArray(payload?.items) ? payload.items : []).filter((row) =>
+            normalizeText(row.trackingNumber || '').toUpperCase() === trackingNumber
+        );
+
+        if (!matches.length) {
+            setStatus(`No delivered collection row found for ${trackingNumber} in the current branch/date scope.`, true);
+            return;
+        }
+
+        const pendingMatches = matches.filter((row) => normalizeText(row.collectionStatus).toLowerCase() !== 'confirmed');
+        if (pendingMatches.length > 1 || (!pendingMatches.length && matches.length > 1)) {
+            setStatus(`Multiple delivered rows matched ${trackingNumber}. Open the table and confirm the correct row manually.`, true);
+            return;
+        }
+
+        const targetRow = pendingMatches[0] || matches[0];
+        const targetStatus = normalizeText(targetRow.collectionStatus).toLowerCase();
+        if (targetStatus === 'confirmed') {
+            setStatus(`${trackingNumber} is already collection-confirmed.`);
+            if (collectionScanInput) {
+                collectionScanInput.value = '';
+            }
+            return;
+        }
+
+        const orderLookup = resolveOrderLookup(targetRow);
+        const trackingEntryId = normalizeText(targetRow.trackingEntryId || '');
+        if (!orderLookup || !trackingEntryId) {
+            setStatus(`Tracking ${trackingNumber} is missing confirmation metadata.`, true);
+            return;
+        }
+        openCollectionScanModal(targetRow);
+        setStatus(`Scanned ${trackingNumber}. Review the popup details, then press Enter to confirm collection.`);
+    } catch (error) {
+        console.error('Failed to confirm collection by tracking scan:', error);
+        setStatus(error.message || 'Failed to confirm collection by tracking.', true);
+    } finally {
+        setActionLoading(false);
+        if (!state.collectionScanModalOpen) {
+            focusCollectionConfirmInput({ select: true });
+        }
+    }
 }
 
 function setAutoDetectResult(message, isError = false) {
@@ -1801,20 +2072,20 @@ async function handleRefreshTracking() {
     }
 }
 
-async function handleConfirmCollection(orderKey = '') {
+async function handleConfirmCollection(orderKey = '', trackingEntryId = '', trackingNumber = '') {
     if (state.locked) {
-        return;
+        return false;
     }
 
     if (!canOwnerConfirmCollection()) {
         setStatus('Owner confirmation is required for this action.', true);
-        return;
+        return false;
     }
 
     const normalizedOrderKey = normalizeText(orderKey);
     if (!normalizedOrderKey) {
         setStatus('Order key is missing for collection confirmation.', true);
-        return;
+        return false;
     }
 
     setActionLoading(true);
@@ -1822,20 +2093,24 @@ async function handleConfirmCollection(orderKey = '') {
 
     try {
         const updated = await appClient.confirmLbcCollection(normalizedOrderKey, {
-            status: 'Confirmed'
+            status: 'Confirmed',
+            trackingEntryId
         });
         await loadRows({ keepStatus: true });
         const orderLabel = normalizeText(updated?.orderNumber || updated?.receiptNumber || normalizedOrderKey);
-        setStatus(`Collection confirmed for ${orderLabel}.`);
+        const targetLabel = normalizeText(trackingNumber || orderLabel);
+        setStatus(`Collection confirmed for ${targetLabel}.`);
+        return true;
     } catch (error) {
         console.error('Failed to confirm LBC collection:', error);
         setStatus(error.message || 'Failed to confirm LBC collection.', true);
+        return false;
     } finally {
         setActionLoading(false);
     }
 }
 
-async function handleUndoCollectionConfirmation(orderKey = '') {
+async function handleUndoCollectionConfirmation(orderKey = '', trackingEntryId = '', trackingNumber = '') {
     if (state.locked) {
         return;
     }
@@ -1856,11 +2131,13 @@ async function handleUndoCollectionConfirmation(orderKey = '') {
 
     try {
         const updated = await appClient.confirmLbcCollection(normalizedOrderKey, {
-            status: 'Pending'
+            status: 'Pending',
+            trackingEntryId
         });
         await loadRows({ keepStatus: true });
         const orderLabel = normalizeText(updated?.orderNumber || updated?.receiptNumber || normalizedOrderKey);
-        setStatus(`Collection confirmation reverted for ${orderLabel}.`);
+        const targetLabel = normalizeText(trackingNumber || orderLabel);
+        setStatus(`Collection confirmation reverted for ${targetLabel}.`);
     } catch (error) {
         console.error('Failed to revert collection confirmation:', error);
         setStatus(error.message || 'Failed to revert collection confirmation.', true);
@@ -1869,7 +2146,7 @@ async function handleUndoCollectionConfirmation(orderKey = '') {
     }
 }
 
-async function handleCollectionReturnToTransit(orderKey = '') {
+async function handleCollectionReturnToTransit(orderKey = '', trackingEntryId = '', trackingNumber = '') {
     if (state.locked) {
         return;
     }
@@ -1891,11 +2168,13 @@ async function handleCollectionReturnToTransit(orderKey = '') {
     try {
         const updated = await appClient.updateLbcTracking(normalizedOrderKey, {
             deliveryStatus: 'In Transit',
-            dateMonitored: new Date().toISOString()
+            dateMonitored: new Date().toISOString(),
+            trackingEntryId
         });
         await loadRows({ keepStatus: true });
         const orderLabel = normalizeText(updated?.orderNumber || updated?.receiptNumber || normalizedOrderKey);
-        setStatus(`${orderLabel} moved back to In Transit.`);
+        const targetLabel = normalizeText(trackingNumber || orderLabel);
+        setStatus(`${targetLabel} moved back to In Transit.`);
     } catch (error) {
         console.error('Failed to return delivery status to In Transit:', error);
         setStatus(error.message || 'Failed to return delivery status to In Transit.', true);
@@ -1907,6 +2186,7 @@ async function handleCollectionReturnToTransit(orderKey = '') {
 function setActionLoading(isLoading) {
     const disabled = Boolean(isLoading || state.locked || state.loading);
     const writeDisabled = Boolean(disabled || !canUseTrackingWriteActions());
+    const collectionDisabled = Boolean(disabled || !canOwnerConfirmCollection());
     [
         ...branchButtons,
         ...quickFilterButtons,
@@ -1927,9 +2207,20 @@ function setActionLoading(isLoading) {
         autoDetectBtn,
         saveTrackingBtn,
         saveBulkBtn
-    ].forEach((button) => {
-        if (button) {
-            button.disabled = writeDisabled;
+    ].forEach((control) => {
+        if (control) {
+            control.disabled = writeDisabled;
+        }
+    });
+
+    [
+        collectionScanInput,
+        collectionConfirmBtn,
+        collectionConfirmModalCancelBtn,
+        collectionConfirmModalConfirmBtn
+    ].forEach((control) => {
+        if (control) {
+            control.disabled = collectionDisabled;
         }
     });
 
@@ -1957,6 +2248,43 @@ function focusTrackingInput({ select = false } = {}) {
     if (select) {
         trackingScanInput.select();
     }
+}
+
+function focusCollectionConfirmInput({ select = false } = {}) {
+    if (!collectionScanInput || state.locked || !isCollectionWorkspaceActive()) {
+        return;
+    }
+    try {
+        collectionScanInput.focus({ preventScroll: true });
+    } catch (_error) {
+        collectionScanInput.focus();
+    }
+    if (select) {
+        collectionScanInput.select();
+    }
+}
+
+function focusCollectionScanModalConfirm() {
+    if (!collectionConfirmModalConfirmBtn || !state.collectionScanModalOpen) {
+        return;
+    }
+    try {
+        collectionConfirmModalConfirmBtn.focus({ preventScroll: true });
+    } catch (_error) {
+        collectionConfirmModalConfirmBtn.focus();
+    }
+}
+
+function focusActiveWorkspaceInput({ select = false } = {}) {
+    if (state.collectionScanModalOpen) {
+        focusCollectionScanModalConfirm();
+        return;
+    }
+    if (isCollectionWorkspaceActive()) {
+        focusCollectionConfirmInput({ select });
+        return;
+    }
+    focusTrackingInput({ select });
 }
 
 function isTypingTarget(target) {

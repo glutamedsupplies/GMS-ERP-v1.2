@@ -843,6 +843,7 @@ function getReceiptSignatureSrc() {
 function bindStaticEvents() {
     document.addEventListener('input', handleOrderFormDraftInteraction, true);
     document.addEventListener('change', handleOrderFormDraftInteraction, true);
+    document.addEventListener('wheel', handleNumberInputWheel, { capture: true, passive: true });
     window.addEventListener('pagehide', flushOrderFormDraftSave);
     window.addEventListener('beforeunload', flushOrderFormDraftSave);
     window.addEventListener('scroll', updateBackToTopButtonVisibility, { passive: true });
@@ -1502,6 +1503,19 @@ function initializeStaticControls() {
         }
         schedulePendingClientCheck();
     });
+}
+
+function handleNumberInputWheel(event) {
+    const target = event.target instanceof HTMLElement
+        ? event.target.closest('input[type="number"]')
+        : null;
+    if (!target || !(target instanceof HTMLInputElement) || target.readOnly || target.disabled) {
+        return;
+    }
+
+    if (document.activeElement === target) {
+        target.blur();
+    }
 }
 
 async function resetOrderForm(statusMessage = '') {

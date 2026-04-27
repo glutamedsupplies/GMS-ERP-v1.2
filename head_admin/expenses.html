@@ -278,6 +278,15 @@
     background: #fffdfb;
     color: var(--ink);
   }
+  input[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
   input:focus,
   select:focus {
     outline: none;
@@ -512,7 +521,7 @@
         <div>
           <p class="eyebrow">Finance Monitor</p>
           <h1 id="expensesPageTitle">Expenses and Cash Income</h1>
-          <p id="expensesPageCopy" class="hero-copy">Dito mo na puwedeng i-manage ang branch expenses at cash income records per branch, kasama ang sales-linked at manual entries. Puwede nang mag-add, edit, delete, at reset-all ng entries per module.</p>
+          <p id="expensesPageCopy" class="hero-copy">Dito mo na puwedeng i-manage ang branch expenses at cash income records per branch, kasama ang sales-linked at manual entries. Puwede nang mag-add, edit, at delete ng individual entries.</p>
         </div>
 
         <div class="hero-metrics">
@@ -591,7 +600,7 @@
             <div class="actions">
               <button id="saveExpenseBtn" type="button" class="primary-btn">Save Expense</button>
               <button id="resetExpenseBtn" type="button" class="secondary-btn">Clear</button>
-              <button id="clearExpensesBtn" type="button" class="danger-btn">Delete All Expenses</button>
+              <button id="clearExpensesBtn" type="button" class="danger-btn" hidden disabled>Delete Selected Expense</button>
             </div>
 
             <div id="expenseFormStatus" class="status">Loading expense manager...</div>
@@ -739,7 +748,7 @@
             <div class="actions">
               <button id="saveCashIncomeBtn" type="button" class="primary-btn">Save Cash Income</button>
               <button id="resetCashIncomeBtn" type="button" class="secondary-btn">Clear</button>
-              <button id="clearCashIncomeBtn" type="button" class="danger-btn">Delete Manual Cash Income</button>
+              <button id="clearCashIncomeBtn" type="button" class="danger-btn" hidden disabled>Delete Selected Cash Income</button>
             </div>
 
             <div id="cashIncomeFormStatus" class="status">Loading cash income manager...</div>

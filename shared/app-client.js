@@ -2337,9 +2337,7 @@
         deleteExpense: (entryId) => request(`/api/expenses/${encodeURIComponent(entryId)}`, {
             method: 'DELETE'
         }),
-        clearExpenses: () => request('/api/expenses', {
-            method: 'DELETE'
-        }),
+        clearExpenses: () => Promise.reject(new Error('Bulk delete for expenses is disabled. Delete individual rows from the records table instead.')),
         listCashIncome: ({ dateFrom = '', dateTo = '', branch = '', search = '' } = {}) => request(
             `/api/cash-income?dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}&branch=${encodeURIComponent(branch)}&search=${encodeURIComponent(search)}`
         ),
@@ -2354,9 +2352,7 @@
         deleteCashIncome: (entryId) => request(`/api/cash-income/${encodeURIComponent(entryId)}`, {
             method: 'DELETE'
         }),
-        clearCashIncome: () => request('/api/cash-income', {
-            method: 'DELETE'
-        }),
+        clearCashIncome: () => Promise.reject(new Error('Bulk delete for manual cash income is disabled. Delete individual rows from the records table instead.')),
         createOrder: (payload) => request('/api/sales', {
             method: 'POST',
             body: payload
@@ -2391,6 +2387,20 @@
         }),
         addManualCustomerCredit: ({ clientName = '', clientContact = '', clientAddress = '', amount = 0, note = '', action = 'add' } = {}) => request('/api/orders/customer-credit/manual-entry', {
             method: 'POST',
+            body: {
+                clientName,
+                clientContact,
+                clientAddress,
+                amount,
+                note,
+                action
+            }
+        }).then((result) => {
+            invalidateReferenceCaches(['customer-credits', 'orders:pending-client']);
+            return result;
+        }),
+        updateManualCustomerCredit: (entryId, { clientName = '', clientContact = '', clientAddress = '', amount = 0, note = '', action = 'add' } = {}) => request(`/api/orders/customer-credit/manual-entry/${encodeURIComponent(entryId)}`, {
+            method: 'PUT',
             body: {
                 clientName,
                 clientContact,
@@ -2573,6 +2583,11 @@
         }).then((result) => {
             invalidateReferenceCaches(['bootstrap', 'sales-references']);
             return result;
+        }),
+        getCompanyPricelistConfig: () => request('/api/company/pricelist-config'),
+        updateCompanyPricelistConfig: (payload) => request('/api/company/pricelist-config', {
+            method: 'PUT',
+            body: payload
         }),
         getCompanyInvoiceTemplate: () => request('/api/company/invoice-template'),
         updateCompanyInvoiceTemplate: (payload) => request('/api/company/invoice-template', {

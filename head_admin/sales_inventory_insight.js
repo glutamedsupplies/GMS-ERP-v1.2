@@ -2,6 +2,8 @@ const appClient = window.appClient;
 
 const NEAR_EXPIRY_DAYS = 7;
 const LOW_SALES_THRESHOLD = 2;
+const MOVEMENT_VIEW_TOP = 'top_sellers';
+const MOVEMENT_VIEW_UNSOLD = 'unsold_products';
 
 const rangePresetInput = document.getElementById('rangePreset');
 const dateFromInput = document.getElementById('dateFrom');
@@ -25,9 +27,13 @@ const nearExpiryValue = document.getElementById('nearExpiryValue');
 const bestSellerValue = document.getElementById('bestSellerValue');
 const bestSellerMeta = document.getElementById('bestSellerMeta');
 
-const topSellerBody = document.getElementById('topSellerBody');
-const slowMoverSummary = document.getElementById('slowMoverSummary');
-const slowMoverBody = document.getElementById('slowMoverBody');
+const movementPanelTitle = document.getElementById('movementPanelTitle');
+const movementPanelCopy = document.getElementById('movementPanelCopy');
+const movementPanelMeta = document.getElementById('movementPanelMeta');
+const movementSummary = document.getElementById('movementSummary');
+const movementTableHead = document.getElementById('movementTableHead');
+const movementTableBody = document.getElementById('movementTableBody');
+const movementViewButtons = Array.from(document.querySelectorAll('[data-movement-view]'));
 const expiredBody = document.getElementById('expiredBody');
 const nearExpiryBody = document.getElementById('nearExpiryBody');
 
@@ -36,6 +42,14 @@ const state = {
     branchOptions: [],
     renderToken: 0,
     serverDateKey: '',
+    activeMovementView: MOVEMENT_VIEW_TOP,
+    lastMovementData: {
+        topSellers: [],
+        productMovementRows: [],
+        productMovementSummary: null,
+        slowMovers: [],
+        slowMoverSummary: null
+    },
     lastUnsoldReportText: '',
     lastUnsoldFilters: null
 };
@@ -73,6 +87,18 @@ async function initialize() {
 }
 
 function wireEvents() {
+    movementViewButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const requestedView = String(button.dataset.movementView || '').trim().toLowerCase();
+            const nextView = requestedView === MOVEMENT_VIEW_UNSOLD ? MOVEMENT_VIEW_UNSOLD : MOVEMENT_VIEW_TOP;
+            if (nextView === state.activeMovementView) {
+                return;
+            }
+            state.activeMovementView = nextView;
+            renderMovementPanel();
+        });
+    });
+
     rangePresetInput?.addEventListener('change', () => {
         const preset = String(rangePresetInput.value || 'this_month').trim().toLowerCase();
         if (preset === 'custom') {
@@ -230,6 +256,8 @@ async function renderInsights() {
         const salesAnalytics = buildSalesAnalytics(salesRows);
         const slowMovers = buildSlowMovers(scopedInventory, salesAnalytics.byBranchProduct);
         const slowMoverTotals = summarizeSlowMovers(slowMovers);
+        const productMovementRows = buildProductMovementRows(scopedInventory, salesAnalytics.byProduct);
+        const productMovementSummary = summarizeProductMovementRows(productMovementRows);
         const expiredRows = buildExpiryRows(scopedInventory, 'expired');
         const nearExpiryRows = buildExpiryRows(scopedInventory, 'near');
         const bestSeller = salesAnalytics.topSellers[0] || null;
@@ -245,21 +273,33 @@ async function renderInsights() {
             nearExpiry: nearExpiryRows.length,
             bestSeller
         });
-        renderTopSellers(salesAnalytics.topSellers);
-        renderSlowMoverSummary(slowMoverTotals);
-        renderSlowMovers(slowMovers);
+        state.lastMovementData = {
+            topSellers: salesAnalytics.topSellers,
+            productMovementRows,
+            productMovementSummary,
+            slowMovers,
+            slowMoverSummary: slowMoverTotals
+        };
         updateUnsoldReportState(filters, slowMoverTotals, slowMovers);
+        renderMovementPanel();
         renderExpired(expiredRows);
         renderNearExpiry(nearExpiryRows);
 
         const searchNote = filters.search ? ` matching "${filters.search}"` : '';
         setStatus(
-            `Loaded ${salesAnalytics.topSellers.length} sold item group(s), ${slowMovers.length} unsold product row(s), ${expiredRows.length} expired row(s), and ${nearExpiryRows.length} near-expiry row(s)${searchNote}.`,
+            `Loaded ${productMovementRows.length} product movement row(s), ${slowMovers.length} unsold product row(s), ${expiredRows.length} expired row(s), and ${nearExpiryRows.length} near-expiry row(s)${searchNote}.`,
             false
         );
     } catch (error) {
         console.error('Failed to render sales and inventory insight panel:', error);
         setStatus(error.message || 'Unable to load movement and expiry insights.', true);
+        state.lastMovementData = {
+            topSellers: [],
+            productMovementRows: [],
+            productMovementSummary: null,
+            slowMovers: [],
+            slowMoverSummary: null
+        };
         clearTables();
         updateUnsoldReportState(null, null, []);
         renderMetrics({
@@ -272,7 +312,6 @@ async function renderInsights() {
             nearExpiry: 0,
             bestSeller: null
         });
-        renderSlowMoverSummary();
     }
 }
 
@@ -437,6 +476,7 @@ function buildSalesAnalytics(rows) {
 
     return {
         totalSoldQty,
+        byProduct,
         byBranchProduct,
         topSellers
     };
@@ -526,6 +566,131 @@ function summarizeSlowMovers(rows = []) {
     };
 }
 
+function buildProductMovementRows(rows, byProduct) {
+    const movementMap = new Map();
+    const salesMap = byProduct instanceof Map ? byProduct : new Map();
+
+    salesMap.forEach((productMeta, productKey) => {
+        movementMap.set(productKey, {
+            itemName: productMeta.itemName || 'Unspecified item',
+            itemCode: productMeta.itemCode || '',
+            inventoryUnit: '',
+            qtySold: Number(productMeta.qtySold || 0),
+            lineSales: Number(productMeta.lineSales || 0),
+            onHand: 0,
+            remainingValue: 0,
+            unitPrice: 0,
+            branches: new Set(productMeta.branches || []),
+            lastSoldDate: productMeta.lastSoldDate || '',
+            signal: 'Moving product',
+            signalClass: 'good'
+        });
+    });
+
+    rows
+        .filter((row) => isUnsoldProductRow(row))
+        .forEach((row) => {
+            const productKey = buildProductKey(row.item_code, row.item_name);
+            const movementMeta = movementMap.get(productKey) || {
+                itemName: row.item_name || 'Unspecified item',
+                itemCode: row.item_code || '',
+                inventoryUnit: row.inventory_unit || '',
+                qtySold: 0,
+                lineSales: 0,
+                onHand: 0,
+                remainingValue: 0,
+                unitPrice: 0,
+                branches: new Set(),
+                lastSoldDate: '',
+                signal: 'No recorded sales',
+                signalClass: 'danger'
+            };
+
+            const quantityOnHand = Math.max(0, Number(row.quantity || 0));
+            const unitPrice = Math.max(0, Number(row.catalog_price || 0));
+            movementMeta.itemName = movementMeta.itemName || row.item_name || 'Unspecified item';
+            movementMeta.itemCode = movementMeta.itemCode || row.item_code || '';
+            movementMeta.inventoryUnit = movementMeta.inventoryUnit || row.inventory_unit || '';
+            movementMeta.onHand += quantityOnHand;
+            movementMeta.remainingValue += quantityOnHand * unitPrice;
+            movementMeta.unitPrice = Math.max(Number(movementMeta.unitPrice || 0), unitPrice);
+            if (row.branch) {
+                movementMeta.branches.add(String(row.branch).trim());
+            }
+            movementMap.set(productKey, movementMeta);
+        });
+
+    return Array.from(movementMap.values())
+        .map((row) => {
+            const qtySold = Number(row.qtySold || 0);
+            const onHand = Number(row.onHand || 0);
+            let signal = 'Moving product';
+            let signalClass = 'good';
+
+            if (qtySold <= 0) {
+                signal = 'No recorded sales';
+                signalClass = 'danger';
+            } else if (qtySold <= LOW_SALES_THRESHOLD) {
+                signal = 'Minimal movement';
+                signalClass = 'warn';
+            } else if (onHand > 0 && qtySold < onHand) {
+                signal = 'Slow-moving inventory';
+                signalClass = 'muted';
+            }
+
+            return {
+                itemName: row.itemName || 'Unspecified item',
+                itemCode: row.itemCode || '',
+                inventoryUnit: row.inventoryUnit || '',
+                qtySold,
+                lineSales: Number(row.lineSales || 0),
+                onHand,
+                remainingValue: Number(row.remainingValue || 0),
+                unitPrice: Number(row.unitPrice || 0),
+                branches: row.branches instanceof Set ? row.branches : new Set(),
+                lastSoldDate: row.lastSoldDate || '',
+                signal,
+                signalClass
+            };
+        })
+        .sort((left, right) => {
+            if (right.qtySold !== left.qtySold) {
+                return right.qtySold - left.qtySold;
+            }
+            if (right.lineSales !== left.lineSales) {
+                return right.lineSales - left.lineSales;
+            }
+            if (right.remainingValue !== left.remainingValue) {
+                return right.remainingValue - left.remainingValue;
+            }
+            return left.itemName.localeCompare(right.itemName);
+        });
+}
+
+function summarizeProductMovementRows(rows = []) {
+    const summary = {
+        totalProducts: 0,
+        withSales: 0,
+        noSales: 0,
+        slowMoving: 0
+    };
+
+    rows.forEach((row) => {
+        summary.totalProducts += 1;
+        if (Number(row.qtySold || 0) > 0) {
+            summary.withSales += 1;
+        } else {
+            summary.noSales += 1;
+        }
+
+        if (row.signal === 'Minimal movement' || row.signal === 'Slow-moving inventory') {
+            summary.slowMoving += 1;
+        }
+    });
+
+    return summary;
+}
+
 function buildExpiryRows(rows, mode) {
     return rows
         .filter((row) => Number(row.quantity || 0) > 0)
@@ -588,8 +753,133 @@ function renderMetrics(metrics) {
     bestSellerMeta.textContent = 'Top moving product in the selected period.';
 }
 
+function renderMovementPanel() {
+    const movementData = state.lastMovementData || {
+        topSellers: [],
+        productMovementRows: [],
+        productMovementSummary: null,
+        slowMovers: [],
+        slowMoverSummary: null
+    };
+
+    if (state.activeMovementView === MOVEMENT_VIEW_UNSOLD) {
+        renderMovementPanelChrome({
+            title: 'Unsold Products',
+            copy: 'Product stock na may natitira pa sa branch. Kita rito ang remaining quantity, nabenta sa selected period, at estimated remaining value.',
+            metaIconClass: 'fa-solid fa-box-open',
+            metaLabel: 'On Hand by Branch',
+            showSummary: true,
+            showCopyButton: true
+        });
+        renderSlowMoverSummary(movementData.slowMoverSummary);
+        renderSlowMovers(Array.isArray(movementData.slowMovers) ? movementData.slowMovers : []);
+        return;
+    }
+
+    renderMovementPanelChrome({
+        title: 'Mabenta',
+        copy: 'Complete product movement list ranked by sales, with slow-moving and no-sales products included.',
+        metaIconClass: 'fa-solid fa-arrow-trend-up',
+        metaLabel: 'Complete Movement',
+        showSummary: true,
+        showCopyButton: false
+    });
+    renderProductMovementSummary(movementData.productMovementSummary);
+    renderTopSellers(Array.isArray(movementData.productMovementRows) ? movementData.productMovementRows : []);
+}
+
+function renderMovementPanelChrome({
+    title,
+    copy,
+    metaIconClass,
+    metaLabel,
+    showSummary,
+    showCopyButton
+}) {
+    if (movementPanelTitle) {
+        movementPanelTitle.textContent = title || 'Product Movement';
+    }
+    if (movementPanelCopy) {
+        movementPanelCopy.textContent = copy || '';
+    }
+    if (movementPanelMeta) {
+        movementPanelMeta.innerHTML = `<i class="${metaIconClass}"></i> ${appClient.escapeHtml(metaLabel || 'Movement')}`;
+    }
+    if (movementSummary) {
+        movementSummary.classList.toggle('hidden-section', !showSummary);
+        if (!showSummary) {
+            movementSummary.innerHTML = '';
+        }
+    }
+    if (copyUnsoldReportBtn) {
+        copyUnsoldReportBtn.classList.toggle('hidden-section', !showCopyButton);
+        copyUnsoldReportBtn.disabled = showCopyButton
+            ? !String(state.lastUnsoldReportText || '').trim()
+            : true;
+    }
+
+    movementViewButtons.forEach((button) => {
+        const buttonView = String(button.dataset.movementView || '').trim().toLowerCase();
+        button.classList.toggle('active', buttonView === state.activeMovementView);
+        button.setAttribute('aria-pressed', buttonView === state.activeMovementView ? 'true' : 'false');
+    });
+}
+
+function renderMovementTableHead(labels = []) {
+    if (!movementTableHead) {
+        return;
+    }
+
+    movementTableHead.innerHTML = `
+        <tr>
+            ${labels.map((label) => `<th>${appClient.escapeHtml(label)}</th>`).join('')}
+        </tr>
+    `;
+}
+
+function renderProductMovementSummary(summary = null) {
+    if (!movementSummary) {
+        return;
+    }
+
+    const safeSummary = summary && typeof summary === 'object'
+        ? summary
+        : { totalProducts: 0, withSales: 0, slowMoving: 0, noSales: 0 };
+
+    const cards = [
+        {
+            label: 'Tracked Products',
+            value: safeSummary.totalProducts || 0,
+            meta: 'Products seen from sales or current stock scope.'
+        },
+        {
+            label: 'With Sales',
+            value: safeSummary.withSales || 0,
+            meta: 'Products with recorded sales in the selected period.'
+        },
+        {
+            label: 'Slow Movement',
+            value: safeSummary.slowMoving || 0,
+            meta: 'Products with minimal or slow movement signals.'
+        },
+        {
+            label: 'No Sales',
+            value: safeSummary.noSales || 0,
+            meta: 'Products with zero recorded sales in the selected period.'
+        }
+    ];
+
+    movementSummary.innerHTML = cards.map((row) => `
+        <div class="summary-card">
+            <span>${appClient.escapeHtml(row.label)}</span>
+            <strong>${appClient.escapeHtml(formatQuantity(row.value || 0))}</strong>
+            <small>${appClient.escapeHtml(row.meta)}</small>
+        </div>
+    `).join('');
+}
+
 function renderSlowMoverSummary(summary = null) {
-    if (!slowMoverSummary) {
+    if (!movementSummary) {
         return;
     }
 
@@ -607,7 +897,7 @@ function renderSlowMoverSummary(summary = null) {
         ...(Array.isArray(safeSummary.byBranch) ? safeSummary.byBranch : [])
     ];
 
-    slowMoverSummary.innerHTML = cards.map((row) => `
+    movementSummary.innerHTML = cards.map((row) => `
         <div class="summary-card">
             <span>${appClient.escapeHtml(row.branch || row.label || 'Summary')}</span>
             <strong>${appClient.escapeHtml(formatQuantity(row.totalOnHand || 0))}</strong>
@@ -625,33 +915,40 @@ function updateUnsoldReportState(filters = null, summary = null, rows = []) {
 }
 
 function renderTopSellers(rows) {
+    renderMovementTableHead(['#', 'Item', 'Qty Sold', 'Line Sales', 'On Hand', 'Remaining Value', 'Branches', 'Last Sold', 'Signal']);
+
     if (!rows.length) {
-        topSellerBody.innerHTML = '<tr><td colspan="6" class="empty">No sold items found for the selected period.</td></tr>';
+        movementTableBody.innerHTML = '<tr><td colspan="9" class="empty">No product movement rows found for the selected period.</td></tr>';
         return;
     }
 
-    topSellerBody.innerHTML = rows.slice(0, 15).map((row, index) => `
+    movementTableBody.innerHTML = rows.map((row, index) => `
         <tr>
             <td>${index + 1}</td>
             <td class="item-cell">
                 <strong>${appClient.escapeHtml(row.itemName)}</strong>
-                <small>${appClient.escapeHtml(row.itemCode || 'No item code')}</small>
+                <small>${appClient.escapeHtml(buildUnsoldProductMeta(row))}</small>
             </td>
             <td class="qty">${appClient.escapeHtml(formatQuantity(row.qtySold || 0))}</td>
             <td class="money">${appClient.escapeHtml(formatMoney(row.lineSales || 0))}</td>
+            <td class="qty">${appClient.escapeHtml(formatQuantity(row.onHand || 0))}</td>
+            <td class="money">${appClient.escapeHtml(formatMoney(row.remainingValue || 0))}</td>
             <td>${appClient.escapeHtml(formatBranches(row.branches))}</td>
             <td>${appClient.escapeHtml(formatDate(row.lastSoldDate))}</td>
+            <td><span class="pill ${appClient.escapeHtml(row.signalClass || 'good')}">${appClient.escapeHtml(row.signal || 'Moving product')}</span></td>
         </tr>
     `).join('');
 }
 
 function renderSlowMovers(rows) {
+    renderMovementTableHead(['Item', 'Branch', 'Remaining Qty', 'Qty Sold', 'Unit Price', 'Remaining Value', 'Signal']);
+
     if (!rows.length) {
-        slowMoverBody.innerHTML = '<tr><td colspan="7" class="empty">No unsold product rows found in the selected scope.</td></tr>';
+        movementTableBody.innerHTML = '<tr><td colspan="7" class="empty">No unsold product rows found in the selected scope.</td></tr>';
         return;
     }
 
-    slowMoverBody.innerHTML = rows.map((row) => `
+    movementTableBody.innerHTML = rows.map((row) => `
         <tr>
             <td class="item-cell">
                 <strong>${appClient.escapeHtml(row.itemName)}</strong>
@@ -708,8 +1005,7 @@ function renderNearExpiry(rows) {
 }
 
 function clearTables() {
-    topSellerBody.innerHTML = '<tr><td colspan="6" class="empty">No data available.</td></tr>';
-    slowMoverBody.innerHTML = '<tr><td colspan="7" class="empty">No data available.</td></tr>';
+    renderMovementPanel();
     expiredBody.innerHTML = '<tr><td colspan="5" class="empty">No data available.</td></tr>';
     nearExpiryBody.innerHTML = '<tr><td colspan="5" class="empty">No data available.</td></tr>';
 }

@@ -364,6 +364,25 @@
     font-weight: 700;
     line-height: 1.7;
   }
+  .edit-state {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: var(--sky-soft);
+    border: 1px solid #d9e8fb;
+    color: #31506d;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.6;
+  }
+  .edit-state strong {
+    display: block;
+    margin-bottom: 6px;
+    color: #23415f;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
   .empty {
     padding: 28px 20px;
     text-align: center;
@@ -521,6 +540,7 @@
               <button id="clearManualAdjustmentBtn" type="button" class="danger-btn">Clear Form</button>
             </div>
           </div>
+          <div id="manualEditState" class="edit-state" hidden></div>
         </section>
       </section>
 
@@ -555,6 +575,6 @@
   </div>
 
   <script src="../shared/app-client.js"></script>
-  <script src="customer_credits.js?v=20260401a"></script>
+  <script src="customer_credits.js?v=20260423a"></script>
 </body>
 </html>

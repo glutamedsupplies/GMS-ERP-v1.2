@@ -251,6 +251,9 @@
   .panel {
     padding: 20px;
   }
+  .panel-span-2 {
+    grid-column: 1 / -1;
+  }
   .panel-header {
     display: flex;
     justify-content: space-between;
@@ -278,11 +281,39 @@
     gap: 10px;
     flex-wrap: wrap;
   }
+  .view-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 999px;
+    background: #eef5f1;
+    border: 1px solid #d9e5de;
+  }
+  .view-switch-btn {
+    min-height: 0;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .view-switch-btn.active {
+    background: #ffffff;
+    color: var(--green);
+    box-shadow: 0 10px 24px rgba(16, 38, 31, 0.08);
+  }
   .summary-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 10px;
     margin-bottom: 14px;
+  }
+  .hidden-section {
+    display: none !important;
   }
   .summary-card {
     padding: 14px 16px;
@@ -547,63 +578,26 @@
     </section>
 
     <section class="content-grid">
-      <article class="panel">
+      <article class="panel panel-span-2">
         <div class="panel-header">
           <div>
-            <h2>Mabenta</h2>
-            <p class="section-copy">Top items ranked by sold quantity and line sales for the selected period.</p>
-          </div>
-          <div class="panel-meta"><i class="fa-solid fa-arrow-trend-up"></i> Top Sellers</div>
-        </div>
-        <div class="table-shell">
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Item</th>
-                <th>Qty Sold</th>
-                <th>Line Sales</th>
-                <th>Branches</th>
-                <th>Last Sold</th>
-              </tr>
-            </thead>
-            <tbody id="topSellerBody"></tbody>
-          </table>
-        </div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-header">
-          <div>
-            <h2>Unsold Products</h2>
-            <p class="section-copy">Product stock na may natitira pa sa branch. Kita rito ang remaining quantity, nabenta sa selected period, at estimated remaining value.</p>
+            <h2 id="movementPanelTitle">Mabenta</h2>
+            <p id="movementPanelCopy" class="section-copy">Top items ranked by sold quantity and line sales for the selected period.</p>
           </div>
           <div class="panel-actions">
-            <div class="panel-meta"><i class="fa-solid fa-box-open"></i> On Hand by Branch</div>
-            <button id="copyUnsoldReportBtn" type="button" class="secondary-btn" disabled>Copy Report</button>
+            <div class="view-switch" role="tablist" aria-label="Movement insight view">
+              <button type="button" class="view-switch-btn active" data-movement-view="top_sellers">Mabenta</button>
+              <button type="button" class="view-switch-btn" data-movement-view="unsold_products">Unsold Products</button>
+            </div>
+            <div class="panel-meta" id="movementPanelMeta"><i class="fa-solid fa-arrow-trend-up"></i> Top Sellers</div>
+            <button id="copyUnsoldReportBtn" type="button" class="secondary-btn hidden-section" disabled>Copy Report</button>
           </div>
         </div>
-        <div id="slowMoverSummary" class="summary-grid">
-          <div class="summary-card">
-            <span>Loading</span>
-            <strong>0</strong>
-            <small>Preparing unsold product summary.</small>
-          </div>
-        </div>
+        <div id="movementSummary" class="summary-grid hidden-section"></div>
         <div class="table-shell">
           <table>
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Branch</th>
-                <th>Remaining Qty</th>
-                <th>Qty Sold</th>
-                <th>Unit Price</th>
-                <th>Remaining Value</th>
-                <th>Signal</th>
-              </tr>
-            </thead>
-            <tbody id="slowMoverBody"></tbody>
+            <thead id="movementTableHead"></thead>
+            <tbody id="movementTableBody"></tbody>
           </table>
         </div>
       </article>
