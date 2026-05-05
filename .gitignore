@@ -22,3 +22,7 @@ render_backup.sql
 /logs/
 /.runtime/
 .runtime-data/
+mobile/flutter/
+mobile/flutter_windows_sdk.zip
+mobile/.pub-cache/
+mobile/flutter_app_backup_*/
