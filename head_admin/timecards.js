@@ -45,6 +45,13 @@ const PHP_CURRENCY_FORMATTER = new Intl.NumberFormat('en-PH', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
 });
+const PDF_LIB_URLS = Object.freeze({
+    html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+    jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+});
+const EXPORT_STYLE_ELEMENT_ID = 'timecardExportStyles';
+const EXPORT_SANDBOX_ID = 'timecardExportSandbox';
+const EXPORT_CONTROLS_ID = 'timecardExportControls';
 
 let selectedEmployee = null;
 let serverDateKey = formatDateKey(new Date());
@@ -59,6 +66,14 @@ let payrollSaveInFlight = false;
 let cutoffPaymentSaveInFlight = false;
 let currentCutoffPaymentState = null;
 let timecardViewMode = initialTimecardMode === 'salary' ? 'salary' : 'normal';
+let currentBootstrap = null;
+let exportPdfButton = null;
+let exportImageButton = null;
+let exportStatus = null;
+let exportInFlight = false;
+let html2CanvasLoadPromise = null;
+let jsPdfLoadPromise = null;
+const exportScriptCache = new Map();
 const openPayrollDetailKeys = new Set();
 
 initialize();
@@ -77,6 +92,7 @@ async function initialize() {
         }),
         resolveServerDateKey()
     ]);
+    currentBootstrap = bootstrap;
 
     try {
         appClient.applyBootstrapBrandTheme(bootstrap);
@@ -88,6 +104,7 @@ async function initialize() {
     serverDateKey = resolvedDateKey;
     initSelectors(serverDateKey);
     initializeTimecardViewMode();
+    initializeTimecardExportControls();
     initializePayrollControls();
     await loadEmployees();
     setupAutoRefresh();
@@ -105,6 +122,7 @@ function initSelectors(dateKey) {
         const selectedDate = getSelectedDate();
         updateCutoffRangeLabel(selectedDate);
         setCutoffPaymentFeedback('', '');
+        setExportStatus('', '');
         if (selectedEmployee) {
             renderTimecard(selectedEmployee);
         }
@@ -161,6 +179,8 @@ async function loadEmployees(preferredEmployeeId = '', { preserveTable = false }
             syncPayrollControlsForEmployee(null, { force: true });
             renderPayrollSummary(null, []);
             renderCutoffPaymentState(null);
+            setExportStatus('', '');
+            syncExportControls();
             employeeListDiv.innerHTML = '<div class="empty-row" style="padding:12px;">No attendance accounts found.</div>';
             queueCompactLayoutCheck();
             return;
@@ -302,6 +322,8 @@ async function renderTimecard(employee, { preserveTable = false } = {}) {
     const previousEmployeeId = currentPayrollEmployeeId;
     selectedEmployee = resolvedEmployee;
     const requestToken = ++timecardRequestToken;
+    setExportStatus('', '');
+    syncExportControls();
     syncPayrollControlsForEmployee(resolvedEmployee);
     if (String(previousEmployeeId || '') !== String(resolvedEmployee?.id || '')) {
         currentTimecardRows = [];
@@ -344,6 +366,7 @@ async function renderTimecard(employee, { preserveTable = false } = {}) {
         renderPayrollSummary(resolvedEmployee, normalizedRows);
         renderCutoffPaymentState(cutoffPaymentState);
         renderTimecardRows(resolvedEmployee, normalizedRows);
+        syncExportControls();
     } catch (error) {
         if (requestToken !== timecardRequestToken) {
             return;
@@ -354,6 +377,7 @@ async function renderTimecard(employee, { preserveTable = false } = {}) {
         renderPayrollSummary(resolvedEmployee, []);
         renderCutoffPaymentState(null);
         timecardTableBody.innerHTML = `<tr><td colspan="${getTimecardColumnCount()}" class="empty-row is-error">${appClient.escapeHtml(error.message)}</td></tr>`;
+        syncExportControls();
         queueCompactLayoutCheck();
     }
 }
@@ -488,9 +512,13 @@ function getCutoffBounds(value) {
     return { rangeStart, rangeEnd };
 }
 
-function updateCutoffRangeLabel(value) {
+function buildCutoffRangeLabel(value) {
     const { rangeStart, rangeEnd } = getCutoffBounds(value);
-    weekRangeLabel.textContent = `Cutoff range: ${formatShortDate(rangeStart)} - ${formatShortDate(rangeEnd)}`;
+    return `Cutoff range: ${formatShortDate(rangeStart)} - ${formatShortDate(rangeEnd)}`;
+}
+
+function updateCutoffRangeLabel(value) {
+    weekRangeLabel.textContent = buildCutoffRangeLabel(value);
 }
 
 function formatDateKey(value) {
@@ -756,6 +784,7 @@ function setTimecardViewMode(mode = 'normal') {
     }
 
     timecardViewMode = nextMode;
+    setExportStatus('', '');
     syncTimecardViewMode();
     if (selectedEmployee) {
         renderPayrollSummary(selectedEmployee, currentTimecardRows);
@@ -778,6 +807,7 @@ function syncTimecardViewMode() {
     if (salaryPanel) {
         salaryPanel.hidden = !showSalaryView;
     }
+    syncExportControls();
 }
 
 function renderTimecardTableHeader() {
@@ -845,6 +875,8 @@ function syncPayrollControlsForEmployee(employee, { force = false } = {}) {
         setDailySalaryStatus('', '');
         setCutoffPaymentFeedback('', '');
     }
+
+    syncExportControls();
 }
 
 function formatDailySalaryInputValue(value) {
@@ -1289,26 +1321,10 @@ function isPresentAttendanceDay(row) {
         && normalizedStatus !== 'excuse';
 }
 
-function renderPayrollSummary(employee, rows = []) {
-    if (!isSalaryTimecardView()) {
-        if (presentDaysValue) {
-            presentDaysValue.textContent = '0';
-        }
-        if (pendingDaysValue) {
-            pendingDaysValue.textContent = '0';
-        }
-        if (totalDeductionsValue) {
-            totalDeductionsValue.textContent = formatPayrollMoney(0);
-        }
-        if (netCutoffSalaryValue) {
-            netCutoffSalaryValue.textContent = formatPayrollMoney(0);
-        }
-        return;
-    }
-
+function buildPayrollSummaryState(employee, rows = []) {
     const safeRows = Array.isArray(rows) ? rows : [];
     const dailySalary = roundCurrencyValue(employee?.daily_salary);
-    const summary = safeRows.reduce((totals, row) => {
+    return safeRows.reduce((totals, row) => {
         const payrollState = getRowPayrollState(row, dailySalary);
         if (isPresentAttendanceDay(row)) {
             totals.presentDays += 1;
@@ -1327,6 +1343,26 @@ function renderPayrollSummary(employee, rows = []) {
         totalDeductions: 0,
         netCutoffSalary: 0
     });
+}
+
+function renderPayrollSummary(employee, rows = []) {
+    if (!isSalaryTimecardView()) {
+        if (presentDaysValue) {
+            presentDaysValue.textContent = '0';
+        }
+        if (pendingDaysValue) {
+            pendingDaysValue.textContent = '0';
+        }
+        if (totalDeductionsValue) {
+            totalDeductionsValue.textContent = formatPayrollMoney(0);
+        }
+        if (netCutoffSalaryValue) {
+            netCutoffSalaryValue.textContent = formatPayrollMoney(0);
+        }
+        return;
+    }
+
+    const summary = buildPayrollSummaryState(employee, rows);
 
     if (presentDaysValue) {
         presentDaysValue.textContent = String(summary.presentDays);
@@ -1475,5 +1511,1011 @@ function statusClass(status) {
             return 'status-suspended';
         default:
             return '';
+    }
+}
+
+function initializeTimecardExportControls() {
+    ensureTimecardExportStyles();
+
+    const selectorsBar = document.querySelector('.selectors');
+    if (!selectorsBar) {
+        return;
+    }
+
+    let controls = document.getElementById(EXPORT_CONTROLS_ID);
+    if (!controls) {
+        controls = document.createElement('div');
+        controls.id = EXPORT_CONTROLS_ID;
+        controls.className = 'payroll-controls timecard-export-controls';
+        controls.innerHTML = `
+            <button type="button" class="payroll-save-button" data-export-action="pdf">Save PDF</button>
+            <button type="button" class="payroll-secondary-button" data-export-action="image">Save Picture</button>
+            <span class="payroll-status" data-export-status aria-live="polite"></span>
+        `;
+        selectorsBar.appendChild(controls);
+    }
+
+    exportPdfButton = controls.querySelector('[data-export-action="pdf"]');
+    exportImageButton = controls.querySelector('[data-export-action="image"]');
+    exportStatus = controls.querySelector('[data-export-status]');
+
+    if (exportPdfButton && !exportPdfButton.dataset.bound) {
+        exportPdfButton.dataset.bound = 'true';
+        exportPdfButton.addEventListener('click', () => {
+            void saveCurrentCutoffAsPdf();
+        });
+    }
+
+    if (exportImageButton && !exportImageButton.dataset.bound) {
+        exportImageButton.dataset.bound = 'true';
+        exportImageButton.addEventListener('click', () => {
+            void saveCurrentCutoffAsImage();
+        });
+    }
+
+    syncExportControls();
+}
+
+function ensureTimecardExportStyles() {
+    if (document.getElementById(EXPORT_STYLE_ELEMENT_ID)) {
+        return;
+    }
+
+    const style = document.createElement('style');
+    style.id = EXPORT_STYLE_ELEMENT_ID;
+    style.textContent = getTimecardExportStylesheet();
+    document.head.appendChild(style);
+}
+
+function getTimecardExportStylesheet() {
+    return `
+        .payroll-secondary-button {
+            min-height: 36px;
+            padding: 0 14px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--surface-text-strong, #ffffff);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 160ms ease, opacity 160ms ease, background 160ms ease;
+        }
+
+        .payroll-secondary-button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.16);
+        }
+
+        .payroll-secondary-button:disabled {
+            cursor: wait;
+            opacity: 0.7;
+            transform: none;
+        }
+
+        .payroll-status:empty {
+            display: none;
+        }
+
+        .timecard-export-controls {
+            margin-left: auto;
+            gap: 8px;
+            justify-content: flex-end;
+            min-width: 0;
+        }
+
+        body.is-salary-timecard-view .timecard-export-controls {
+            grid-column: 1 / -1;
+            justify-self: end;
+            margin-left: 0;
+        }
+
+        .timecard-export-controls .payroll-status {
+            min-width: 170px;
+            text-align: right;
+        }
+
+        #${EXPORT_SANDBOX_ID} {
+            position: fixed;
+            left: -20000px;
+            top: 0;
+            z-index: -1;
+            opacity: 0;
+            pointer-events: none;
+            padding: 24px;
+        }
+
+        .timecard-export-document {
+            margin: 0;
+            padding: 16px;
+            background: #f3f6fb;
+            color: #0f172a;
+        }
+
+        .timecard-export-sheet {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(180deg, #f8fbff 0%, #ffffff 56%, #f8fafc 100%);
+            border: 1px solid #dbe5f1;
+            border-radius: 24px;
+            box-shadow: 0 22px 46px rgba(15, 23, 42, 0.12);
+            padding: 24px;
+            color: #0f172a;
+            font-family: "Segoe UI", Aptos, Arial, sans-serif;
+        }
+
+        .timecard-export-sheet::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto;
+            height: 6px;
+            background: linear-gradient(90deg, #2563eb 0%, #38bdf8 52%, #0f766e 100%);
+        }
+
+        .timecard-export-sheet--normal {
+            width: 820px;
+            max-width: 820px;
+        }
+
+        .timecard-export-sheet--salary {
+            width: 1120px;
+            max-width: 1120px;
+        }
+
+        .timecard-export-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 18px;
+        }
+
+        .timecard-export-eyebrow {
+            margin: 0 0 8px;
+            color: #1d4ed8;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .timecard-export-title {
+            margin: 0;
+            color: #0f172a;
+            font-size: 28px;
+            font-weight: 700;
+            line-height: 1.08;
+        }
+
+        .timecard-export-subtitle {
+            margin: 8px 0 0;
+            color: #475569;
+            font-size: 13px;
+            line-height: 1.6;
+            max-width: 720px;
+        }
+
+        .timecard-export-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 36px;
+            padding: 0 14px;
+            border-radius: 999px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1d4ed8;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .timecard-export-meta,
+        .timecard-export-summary {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .timecard-export-meta {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .timecard-export-summary {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .timecard-export-card {
+            min-width: 0;
+            padding: 12px 14px;
+            border-radius: 18px;
+            border: 1px solid #dbe5f1;
+            background: rgba(248, 250, 252, 0.92);
+        }
+
+        .timecard-export-label {
+            display: block;
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .timecard-export-value {
+            display: block;
+            margin-top: 6px;
+            color: #0f172a;
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.2;
+            overflow-wrap: anywhere;
+        }
+
+        .timecard-export-note {
+            display: block;
+            margin-top: 6px;
+            color: #64748b;
+            font-size: 11px;
+            line-height: 1.45;
+        }
+
+        .timecard-export-table-wrap {
+            overflow: hidden;
+            border-radius: 20px;
+            border: 1px solid #dbe5f1;
+            background: #ffffff;
+        }
+
+        .timecard-export-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .timecard-export-table th,
+        .timecard-export-table td {
+            padding: 9px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .timecard-export-table th {
+            background: #eff6ff;
+            color: #334155;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .timecard-export-table tbody tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        .timecard-export-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .timecard-export-table td {
+            color: #0f172a;
+            font-size: 12px;
+            line-height: 1.45;
+            overflow-wrap: anywhere;
+        }
+
+        .timecard-export-main {
+            display: block;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .timecard-export-sub {
+            display: block;
+            margin-top: 3px;
+            color: #64748b;
+            font-size: 10px;
+            line-height: 1.4;
+        }
+
+        .timecard-export-status {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 28px;
+            min-width: 92px;
+            padding: 0 10px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .timecard-export-status.is-positive {
+            background: #dcfce7;
+            border-color: #86efac;
+            color: #166534;
+        }
+
+        .timecard-export-status.is-late {
+            background: #fef3c7;
+            border-color: #fcd34d;
+            color: #92400e;
+        }
+
+        .timecard-export-status.is-absent {
+            background: #fee2e2;
+            border-color: #fca5a5;
+            color: #991b1b;
+        }
+
+        .timecard-export-status.is-progress {
+            background: #dbeafe;
+            border-color: #93c5fd;
+            color: #1d4ed8;
+        }
+
+        .timecard-export-status.is-muted {
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+            color: #475569;
+        }
+
+        .timecard-export-status.is-neutral {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+            color: #334155;
+        }
+
+        .timecard-export-empty {
+            padding: 44px 18px;
+            border-radius: 20px;
+            border: 1px dashed #cbd5e1;
+            background: #f8fafc;
+            color: #475569;
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        @media print {
+            .timecard-export-document {
+                padding: 0;
+                background: #ffffff;
+            }
+
+            .timecard-export-sheet {
+                box-shadow: none;
+                border-color: #cbd5e1;
+            }
+        }
+    `;
+}
+
+function syncExportControls() {
+    const disabled = !selectedEmployee?.id || exportInFlight;
+    if (exportPdfButton) {
+        exportPdfButton.disabled = disabled;
+    }
+    if (exportImageButton) {
+        exportImageButton.disabled = disabled;
+    }
+}
+
+function setExportBusy(isBusy = false) {
+    exportInFlight = Boolean(isBusy);
+    syncExportControls();
+}
+
+function setExportStatus(message = '', tone = '') {
+    if (!exportStatus) {
+        return;
+    }
+
+    exportStatus.textContent = String(message || '');
+    exportStatus.classList.remove('is-success', 'is-error');
+    if (tone === 'success') {
+        exportStatus.classList.add('is-success');
+    } else if (tone === 'error') {
+        exportStatus.classList.add('is-error');
+    }
+}
+
+function loadExternalScript(src) {
+    if (!src) {
+        return Promise.reject(new Error('Script source is required.'));
+    }
+
+    if (exportScriptCache.has(src)) {
+        return exportScriptCache.get(src);
+    }
+
+    const loadPromise = new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[src="${src}"]`);
+        if (existing && existing.dataset.loaded === 'true') {
+            resolve();
+            return;
+        }
+
+        if (existing) {
+            existing.addEventListener('load', () => {
+                existing.dataset.loaded = 'true';
+                resolve();
+            }, { once: true });
+            existing.addEventListener('error', () => {
+                reject(new Error(`Failed to load ${src}`));
+            }, { once: true });
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.dataset.loaded = 'false';
+        script.addEventListener('load', () => {
+            script.dataset.loaded = 'true';
+            resolve();
+        }, { once: true });
+        script.addEventListener('error', () => {
+            reject(new Error(`Failed to load ${src}`));
+        }, { once: true });
+        document.head.appendChild(script);
+    }).catch((error) => {
+        exportScriptCache.delete(src);
+        throw error;
+    });
+
+    exportScriptCache.set(src, loadPromise);
+    return loadPromise;
+}
+
+async function ensureHtml2Canvas() {
+    if (typeof html2canvas !== 'undefined') {
+        return true;
+    }
+
+    if (!html2CanvasLoadPromise) {
+        html2CanvasLoadPromise = loadExternalScript(PDF_LIB_URLS.html2canvas)
+            .catch((error) => {
+                console.error('Failed to load html2canvas:', error);
+            })
+            .finally(() => {
+                if (typeof html2canvas === 'undefined') {
+                    html2CanvasLoadPromise = null;
+                }
+            });
+    }
+
+    await html2CanvasLoadPromise;
+    return typeof html2canvas !== 'undefined';
+}
+
+async function ensureJsPdf() {
+    if (typeof jspdf !== 'undefined') {
+        return true;
+    }
+
+    if (!jsPdfLoadPromise) {
+        jsPdfLoadPromise = loadExternalScript(PDF_LIB_URLS.jspdf)
+            .catch((error) => {
+                console.error('Failed to load jsPDF:', error);
+            })
+            .finally(() => {
+                if (typeof jspdf === 'undefined') {
+                    jsPdfLoadPromise = null;
+                }
+            });
+    }
+
+    await jsPdfLoadPromise;
+    return typeof jspdf !== 'undefined';
+}
+
+async function ensurePdfLibraries() {
+    const [canvasReady, pdfReady] = await Promise.all([
+        ensureHtml2Canvas(),
+        ensureJsPdf()
+    ]);
+    return canvasReady && pdfReady;
+}
+
+function buildCurrentTimecardExportPayload() {
+    if (!selectedEmployee?.id) {
+        return null;
+    }
+
+    const selectedDate = getSelectedDate();
+    const { rangeStart, rangeEnd } = getCutoffBounds(selectedDate);
+    const salaryView = isSalaryTimecardView();
+    return {
+        companyName: String(currentBootstrap?.company?.name || currentBootstrap?.branding?.companyName || 'GMS ERP').trim() || 'GMS ERP',
+        companyCode: String(currentBootstrap?.company?.company_code || '').trim(),
+        employee: selectedEmployee,
+        accountStatusLabel: ACCOUNT_STATUS_LABELS[getEmployeeAccountStatus(selectedEmployee)] || ACCOUNT_STATUS_LABELS.active,
+        salaryView,
+        rows: Array.isArray(currentTimecardRows) ? currentTimecardRows : [],
+        dailySalary: roundCurrencyValue(selectedEmployee?.daily_salary),
+        payrollSummary: buildPayrollSummaryState(selectedEmployee, currentTimecardRows),
+        cutoffPaymentState: salaryView
+            ? (currentCutoffPaymentState || buildDefaultCutoffPaymentState(selectedEmployee, selectedDate))
+            : null,
+        rangeStart,
+        rangeEnd,
+        cutoffLabel: buildCutoffRangeLabel(selectedDate),
+        attendanceTargetHours: Number(
+            currentAttendancePolicy?.dailyTargetHours || DEFAULT_ATTENDANCE_POLICY.dailyTargetHours
+        ),
+        generatedAt: new Date()
+    };
+}
+
+function sanitizeFileToken(value = '', fallback = 'timecard') {
+    const normalized = String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    return normalized || fallback;
+}
+
+function buildTimecardExportFileName(payload, extension = 'pdf') {
+    const employeeToken = sanitizeFileToken(payload?.employee?.name || payload?.employee?.id, 'employee');
+    const startKey = formatDateKey(payload?.rangeStart || new Date());
+    const endKey = formatDateKey(payload?.rangeEnd || new Date());
+    const modeToken = payload?.salaryView ? 'salary-timecard' : 'timecard';
+    return `${modeToken}-${employeeToken}-${startKey}-to-${endKey}.${extension}`;
+}
+
+function escapeExportHtml(value = '') {
+    return appClient.escapeHtml(String(value ?? ''));
+}
+
+function formatExportTimestamp(value = new Date()) {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return '';
+    }
+
+    return parsed.toLocaleString('en-PH', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+    });
+}
+
+function getTimecardExportStatusTone(statusLabel = '') {
+    switch (String(statusLabel || '').trim().toLowerCase()) {
+        case 'on time':
+        case 'present':
+            return 'is-positive';
+        case 'late':
+            return 'is-late';
+        case 'absent':
+            return 'is-absent';
+        case 'in progress':
+            return 'is-progress';
+        case 'inactive':
+        case 'suspended':
+            return 'is-muted';
+        default:
+            return 'is-neutral';
+    }
+}
+
+function buildTimecardExportStatusBadge(statusLabel = '-') {
+    return `<span class="timecard-export-status ${getTimecardExportStatusTone(statusLabel)}">${escapeExportHtml(statusLabel || '-')}</span>`;
+}
+
+function buildTimecardExportSummaryMarkup(payload) {
+    if (!payload?.salaryView) {
+        return '';
+    }
+
+    const summary = payload.payrollSummary || buildPayrollSummaryState(payload.employee, payload.rows);
+    const paymentState = payload.cutoffPaymentState || buildDefaultCutoffPaymentState(payload.employee, payload.rangeEnd);
+    const normalizedPayoutStatus = normalizeCutoffPaymentStatusValue(paymentState?.payoutStatus);
+    const paidAtLabel = formatCutoffPaymentDateTime(paymentState?.paidAt);
+    const updatedByLabel = String(paymentState?.updatedBy || '').trim();
+    const payoutNote = normalizedPayoutStatus === 'paid'
+        ? (
+            updatedByLabel && paidAtLabel
+                ? `Paid ${paidAtLabel} by ${updatedByLabel}`
+                : (paidAtLabel ? `Paid ${paidAtLabel}` : 'Marked as paid.')
+        )
+        : 'Not yet marked as paid.';
+
+    return `
+        <section class="timecard-export-summary">
+            <article class="timecard-export-card">
+                <span class="timecard-export-label">Daily Salary</span>
+                <strong class="timecard-export-value">${escapeExportHtml(formatPayrollMoney(payload.dailySalary))}</strong>
+            </article>
+            <article class="timecard-export-card">
+                <span class="timecard-export-label">Present Days</span>
+                <strong class="timecard-export-value">${escapeExportHtml(String(summary.presentDays || 0))}</strong>
+            </article>
+            <article class="timecard-export-card">
+                <span class="timecard-export-label">Pending Days</span>
+                <strong class="timecard-export-value">${escapeExportHtml(String(summary.pendingDays || 0))}</strong>
+            </article>
+            <article class="timecard-export-card">
+                <span class="timecard-export-label">Total Deductions</span>
+                <strong class="timecard-export-value">${escapeExportHtml(formatPayrollMoney(summary.totalDeductions || 0))}</strong>
+            </article>
+            <article class="timecard-export-card">
+                <span class="timecard-export-label">Net Cutoff Salary</span>
+                <strong class="timecard-export-value">${escapeExportHtml(formatPayrollMoney(summary.netCutoffSalary || 0))}</strong>
+            </article>
+            <article class="timecard-export-card">
+                <span class="timecard-export-label">Payout Status</span>
+                <strong class="timecard-export-value">${escapeExportHtml(normalizedPayoutStatus === 'paid' ? 'Paid' : 'Pending')}</strong>
+                <span class="timecard-export-note">${escapeExportHtml(payoutNote)}</span>
+            </article>
+        </section>
+    `;
+}
+
+function buildTimecardExportRowsMarkup(payload) {
+    const rows = Array.isArray(payload?.rows) ? payload.rows : [];
+    if (!rows.length) {
+        return '';
+    }
+
+    return rows.map((row) => {
+        const statusLabel = getVisibleAttendanceStatusLabel(row?.status, row);
+        if (payload.salaryView) {
+            const payrollState = getRowPayrollState(row, payload.dailySalary);
+            const payNote = payrollState.isPending
+                ? 'Pending timeout'
+                : (payrollState.isPayableDay
+                    ? `${formatPayrollMoney(payrollState.deductionAmount)} deduction`
+                    : 'No payable hours');
+
+            return `
+                <tr>
+                    <td>${escapeExportHtml(row.displayDate || row.dateKey || '-')}</td>
+                    <td>${escapeExportHtml(appClient.formatDisplayTime(row.timeIn, '-'))}</td>
+                    <td>${escapeExportHtml(appClient.formatDisplayTime(row.timeOut, '-'))}</td>
+                    <td>${escapeExportHtml(payrollState.lateMinutesLabel)}</td>
+                    <td>${escapeExportHtml(payrollState.earlyOutMinutesLabel)}</td>
+                    <td>${escapeExportHtml(payrollState.totalDeductionMinutesLabel)}</td>
+                    <td>
+                        <span class="timecard-export-main">${escapeExportHtml(payrollState.payLabel)}</span>
+                        <span class="timecard-export-sub">${escapeExportHtml(payNote)}</span>
+                    </td>
+                    <td>${buildTimecardExportStatusBadge(statusLabel)}</td>
+                </tr>
+            `;
+        }
+
+        const workHoursState = getWorkHoursState(row);
+        return `
+            <tr>
+                <td>${escapeExportHtml(row.displayDate || row.dateKey || '-')}</td>
+                <td>${escapeExportHtml(row.dayLabel || '-')}</td>
+                <td>${escapeExportHtml(appClient.formatDisplayTime(row.timeIn, '-'))}</td>
+                <td>${escapeExportHtml(appClient.formatDisplayTime(row.timeOut, '-'))}</td>
+                <td>
+                    <span class="timecard-export-main">${escapeExportHtml(workHoursState.valueLabel)}</span>
+                    ${workHoursState.shortLabel ? `<span class="timecard-export-sub">${escapeExportHtml(workHoursState.shortLabel)}</span>` : ''}
+                </td>
+                <td>${buildTimecardExportStatusBadge(statusLabel)}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function buildTimecardExportTableMarkup(payload) {
+    const rowsMarkup = buildTimecardExportRowsMarkup(payload);
+    if (!rowsMarkup) {
+        return `
+            <div class="timecard-export-empty">
+                No logs found for this cutoff.
+            </div>
+        `;
+    }
+
+    const headerMarkup = payload.salaryView
+        ? `
+            <tr>
+                <th>Date</th>
+                <th>Time In</th>
+                <th>Time Out</th>
+                <th>Late Minutes</th>
+                <th>Early Out</th>
+                <th>Total Deduction</th>
+                <th>Final Pay</th>
+                <th>Status</th>
+            </tr>
+        `
+        : `
+            <tr>
+                <th>Date</th>
+                <th>Day</th>
+                <th>Time In</th>
+                <th>Time Out</th>
+                <th>Work Hours</th>
+                <th>Status</th>
+            </tr>
+        `;
+
+    return `
+        <div class="timecard-export-table-wrap">
+            <table class="timecard-export-table">
+                <thead>${headerMarkup}</thead>
+                <tbody>${rowsMarkup}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+function buildTimecardExportMarkup(payload) {
+    const companyLine = payload.companyCode
+        ? `${payload.companyName} (${payload.companyCode})`
+        : payload.companyName;
+    const subtitle = payload.salaryView
+        ? 'Semi-monthly cutoff time card with payroll-ready salary summary.'
+        : 'Semi-monthly cutoff attendance time card.';
+
+    return `
+        <section class="timecard-export-sheet ${payload.salaryView ? 'timecard-export-sheet--salary' : 'timecard-export-sheet--normal'}">
+            <div class="timecard-export-header">
+                <div>
+                    <p class="timecard-export-eyebrow">${escapeExportHtml(companyLine)}</p>
+                    <h1 class="timecard-export-title">Employee Time Card Report</h1>
+                    <p class="timecard-export-subtitle">${escapeExportHtml(subtitle)}</p>
+                </div>
+                <div class="timecard-export-badge">${escapeExportHtml(payload.salaryView ? 'Salary View' : 'Time Card View')}</div>
+            </div>
+
+            <section class="timecard-export-meta">
+                <article class="timecard-export-card">
+                    <span class="timecard-export-label">Employee</span>
+                    <strong class="timecard-export-value">${escapeExportHtml(payload.employee?.name || '-')}</strong>
+                </article>
+                <article class="timecard-export-card">
+                    <span class="timecard-export-label">Account ID</span>
+                    <strong class="timecard-export-value">${escapeExportHtml(payload.employee?.id || '-')}</strong>
+                </article>
+                <article class="timecard-export-card">
+                    <span class="timecard-export-label">Account Status</span>
+                    <strong class="timecard-export-value">${escapeExportHtml(payload.accountStatusLabel || '-')}</strong>
+                </article>
+                <article class="timecard-export-card">
+                    <span class="timecard-export-label">Cutoff Range</span>
+                    <strong class="timecard-export-value">${escapeExportHtml(`${formatShortDate(payload.rangeStart)} - ${formatShortDate(payload.rangeEnd)}`)}</strong>
+                </article>
+                <article class="timecard-export-card">
+                    <span class="timecard-export-label">Generated</span>
+                    <strong class="timecard-export-value">${escapeExportHtml(formatExportTimestamp(payload.generatedAt))}</strong>
+                </article>
+                <article class="timecard-export-card">
+                    <span class="timecard-export-label">Daily Target</span>
+                    <strong class="timecard-export-value">${escapeExportHtml(`${payload.attendanceTargetHours}h / day`)}</strong>
+                    <span class="timecard-export-note">${escapeExportHtml(payload.cutoffLabel)}</span>
+                </article>
+            </section>
+
+            ${buildTimecardExportSummaryMarkup(payload)}
+            ${buildTimecardExportTableMarkup(payload)}
+        </section>
+    `;
+}
+
+function ensureTimecardExportSandbox() {
+    let sandbox = document.getElementById(EXPORT_SANDBOX_ID);
+    if (!sandbox) {
+        sandbox = document.createElement('div');
+        sandbox.id = EXPORT_SANDBOX_ID;
+        document.body.appendChild(sandbox);
+    }
+    return sandbox;
+}
+
+function waitForNextPaint() {
+    return new Promise((resolve) => {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(resolve);
+        });
+    });
+}
+
+async function renderTimecardExportCanvas(payload) {
+    if (typeof html2canvas === 'undefined') {
+        throw new Error('Export image library is unavailable.');
+    }
+
+    const sandbox = ensureTimecardExportSandbox();
+    sandbox.innerHTML = buildTimecardExportMarkup(payload);
+
+    try {
+        const sheet = sandbox.querySelector('.timecard-export-sheet');
+        if (!sheet) {
+            throw new Error('Time card export layout is unavailable.');
+        }
+
+        await waitForNextPaint();
+        return await html2canvas(sheet, {
+            backgroundColor: '#f3f6fb',
+            scale: Math.max(2, Math.min(3, window.devicePixelRatio || 1)),
+            useCORS: true,
+            logging: false
+        });
+    } finally {
+        sandbox.innerHTML = '';
+    }
+}
+
+function canvasToBlob(canvas, type = 'image/png') {
+    return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+            if (blob) {
+                resolve(blob);
+                return;
+            }
+            reject(new Error('Failed to prepare the export file.'));
+        }, type);
+    });
+}
+
+function downloadBlob(blob, fileName) {
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => {
+        URL.revokeObjectURL(objectUrl);
+    }, 1000);
+}
+
+function buildTimecardExportDocumentHtml(payload, { autoPrint = false } = {}) {
+    const autoPrintScript = autoPrint
+        ? `
+            <script>
+                window.addEventListener('load', function () {
+                    window.setTimeout(function () {
+                        window.focus();
+                        window.print();
+                    }, 180);
+                });
+            </script>
+        `
+        : '';
+    const orientation = payload.salaryView ? 'landscape' : 'portrait';
+
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${escapeExportHtml(buildTimecardExportFileName(payload, 'pdf'))}</title>
+<style>
+  @page { size: A4 ${orientation}; margin: 10mm; }
+  ${getTimecardExportStylesheet()}
+</style>
+</head>
+<body class="timecard-export-document">
+${buildTimecardExportMarkup(payload)}
+${autoPrintScript}
+</body>
+</html>
+    `;
+}
+
+function openTimecardExportPrintView(payload, { autoPrint = false } = {}) {
+    const popup = window.open('', '_blank', 'width=1280,height=960');
+    if (!popup) {
+        setExportStatus('Allow pop-ups to save the report as PDF.', 'error');
+        return false;
+    }
+
+    popup.document.open();
+    popup.document.write(buildTimecardExportDocumentHtml(payload, { autoPrint }));
+    popup.document.close();
+    return true;
+}
+
+async function saveCurrentCutoffAsPdf() {
+    const payload = buildCurrentTimecardExportPayload();
+    if (!payload) {
+        setExportStatus('Select an account first.', 'error');
+        return;
+    }
+
+    const fallbackToPrint = () => {
+        if (openTimecardExportPrintView(payload, { autoPrint: true })) {
+            setExportStatus('Print dialog opened. Choose Save as PDF.', '');
+        }
+    };
+
+    setExportBusy(true);
+    try {
+        if (typeof html2canvas === 'undefined' || typeof jspdf === 'undefined') {
+            setExportStatus('Loading PDF tools...', '');
+            const librariesReady = await ensurePdfLibraries();
+            if (!librariesReady) {
+                fallbackToPrint();
+                return;
+            }
+        }
+
+        setExportStatus('Preparing PDF...', '');
+        const canvas = await renderTimecardExportCanvas(payload);
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: payload.salaryView ? 'l' : 'p',
+            unit: 'pt',
+            format: 'a4'
+        });
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 20;
+        const usableWidth = pageWidth - margin * 2;
+        const usableHeight = pageHeight - margin * 2;
+        const imgWidth = usableWidth;
+        const imgHeight = canvas.height * (imgWidth / canvas.width);
+        let heightLeft = imgHeight;
+        let position = margin;
+
+        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+        heightLeft -= usableHeight;
+
+        while (heightLeft > 0) {
+            pdf.addPage();
+            position = margin - (imgHeight - heightLeft);
+            pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+            heightLeft -= usableHeight;
+        }
+
+        pdf.save(buildTimecardExportFileName(payload, 'pdf'));
+        setExportStatus('PDF saved.', 'success');
+    } catch (error) {
+        console.error('Failed to generate time card PDF:', error);
+        fallbackToPrint();
+    } finally {
+        setExportBusy(false);
+    }
+}
+
+async function saveCurrentCutoffAsImage() {
+    const payload = buildCurrentTimecardExportPayload();
+    if (!payload) {
+        setExportStatus('Select an account first.', 'error');
+        return;
+    }
+
+    setExportBusy(true);
+    try {
+        if (typeof html2canvas === 'undefined') {
+            setExportStatus('Loading image tools...', '');
+            const canvasReady = await ensureHtml2Canvas();
+            if (!canvasReady) {
+                setExportStatus('Picture export is unavailable right now.', 'error');
+                return;
+            }
+        }
+
+        setExportStatus('Preparing picture...', '');
+        const canvas = await renderTimecardExportCanvas(payload);
+        const blob = await canvasToBlob(canvas, 'image/png');
+        downloadBlob(blob, buildTimecardExportFileName(payload, 'png'));
+        setExportStatus('Picture saved.', 'success');
+    } catch (error) {
+        console.error('Failed to save time card picture:', error);
+        setExportStatus(error.message || 'Failed to save picture.', 'error');
+    } finally {
+        setExportBusy(false);
     }
 }

@@ -105,6 +105,7 @@ writePublicPortalNavigationGuard(null);
 applyQueryPrefill();
 refreshBranding();
 syncPublicPortalLinks();
+void redirectIfSessionExists();
 
 if (togglePassIcon) {
     togglePassIcon.parentElement.addEventListener('click', () => {
@@ -631,7 +632,6 @@ function handleGoogleLogin() {
     }
 
     const companyCode = String(companyCodeInput?.value || '').trim();
-    const firebase = getFirebaseContext();
 
     if (!companyCode) {
         setMessage('Please enter company ID to continue with Google.', '#ffffff');
@@ -639,52 +639,8 @@ function handleGoogleLogin() {
         return;
     }
 
-    if (!firebase) {
-        redirectGoogleLoginToServer();
-        return;
-    }
-
-    loginBtn.disabled = true;
-    setMessage('Opening Google...', '#ffffff');
-    const provider = new firebase.helpers.GoogleAuthProvider();
-
-    firebase.helpers.signInWithPopup(firebase.auth, provider)
-        .then(async (result) => {
-            const idToken = await firebase.helpers.getIdToken(result.user, true);
-            const user = await appClient.loginWithFirebase({ idToken, companyCode });
-            const welcomeContext = await buildWelcomeContext(user, {
-                companyCode,
-                loginId: result.user?.email || user?.id || ''
-            });
-            await playWelcomeTransition(welcomeContext);
-            await redirectByRole(user.role, { bootstrap: welcomeContext.bootstrap });
-        })
-        .catch((error) => {
-            console.error('Google login failed:', error);
-            if (isFirebasePopupCancelled(error)) {
-                setMessage('Google sign-in canceled.', '#ffffff');
-                return;
-            }
-
-            const message = String(error?.message || '');
-            if (error?.code === 'INVALID_CREDENTIALS' && /no account matched/i.test(message)) {
-                setMessage('Your Google account is not linked yet. Please sign in with email and password first.', '#ff7a7a');
-                return;
-            }
-
-            if (shouldRedirectGoogleLoginToServer(error)) {
-                if (shouldDisableFirebase(error)) {
-                    firebaseDisabled = true;
-                }
-                redirectGoogleLoginToServer();
-                return;
-            }
-
-            setMessage(resolveAuthErrorMessage(error), '#ff7a7a');
-        })
-        .finally(() => {
-            loginBtn.disabled = false;
-        });
+    // Full-page OAuth redirect is more reliable than popup handshakes on this login screen.
+    redirectGoogleLoginToServer();
 }
 
 function applyQueryPrefill() {

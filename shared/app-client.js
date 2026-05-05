@@ -2112,17 +2112,18 @@
             method: 'POST',
             body: payload
         }),
-        listClients: (filter = '', limit = 500, offset = 0) => {
+        listClients: (filter = '', limit = 500, offset = 0, clientType = '') => {
             const normalizedFilter = String(filter || '').trim();
             const normalizedLimit = Math.max(1, Number(limit) || 500);
             const normalizedOffset = Math.max(0, Number(offset) || 0);
+            const normalizedClientType = String(clientType || '').trim().toLowerCase();
             const requestFactory = () => request(
-                `/api/clients?filter=${encodeURIComponent(normalizedFilter)}&limit=${encodeURIComponent(normalizedLimit)}&offset=${encodeURIComponent(normalizedOffset)}`
+                `/api/clients?filter=${encodeURIComponent(normalizedFilter)}&clientType=${encodeURIComponent(normalizedClientType)}&limit=${encodeURIComponent(normalizedLimit)}&offset=${encodeURIComponent(normalizedOffset)}`
             );
 
-            if (shouldUseDefaultQueryCache({ filter: normalizedFilter, offset: normalizedOffset })) {
+            if (shouldUseDefaultQueryCache({ filter: normalizedFilter, offset: normalizedOffset, clientType: normalizedClientType })) {
                 return requestWithSessionCache(
-                    `clients:filter=${normalizedFilter}:limit=${normalizedLimit}:offset=${normalizedOffset}`,
+                    `clients:filter=${normalizedFilter}:clientType=${normalizedClientType}:limit=${normalizedLimit}:offset=${normalizedOffset}`,
                     30000,
                     requestFactory
                 );

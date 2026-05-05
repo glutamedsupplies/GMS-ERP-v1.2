@@ -101,9 +101,6 @@ const DEFAULT_RECEIPT_TEMPLATE = Object.freeze({
     style: 'classic'
 });
 
-const SALES_REPORT_PAGE_SIZE = 500;
-let salesReportOffset = 0;
-
 const state = {
     references: null,
     syncingPeriod: false,
@@ -473,8 +470,7 @@ async function loadSalesReport() {
             adminName: isSalesReportFilterVisible('showAdminFilter', true) ? adminFilter.value : '',
             salesRepresentative: isSalesReportFilterVisible('showSalesRepresentativeFilter', true) ? salesRepFilter.value.trim() : '',
             search: searchFilter.value.trim(),
-            limit: SALES_REPORT_PAGE_SIZE,
-            offset: salesReportOffset
+            limit: 0
         });
 
         renderSummary(payload.summary || {});
@@ -929,16 +925,11 @@ function renderSalesTable(rows) {
     const groupedRows = groupSalesRows(rows);
     salesTableBody.innerHTML = groupedRows.map((group) => renderSalesReceiptCard(group)).join('');
 
-    if (rows.length >= SALES_REPORT_PAGE_SIZE) {
-        setReportStatus(`Showing first ${SALES_REPORT_PAGE_SIZE} rows. Refine filters for faster load or load fewer rows.`, false);
-    }
-
     scheduleSalesTableScrollHelperSync();
     return groupedRows.length;
 }
 
 function resetFilters() {
-    salesReportOffset = 0;
     applyPeriodPreset('this_month', { load: false });
     branchFilter.value = '';
     cashBranchFilter.value = '';
@@ -1034,7 +1025,6 @@ async function deleteSavedOrder(orderNumber) {
 function applyPeriodPreset(period, { load = true } = {}) {
     const preset = getPeriodRange(period);
 
-    salesReportOffset = 0;
     state.syncingPeriod = true;
     periodFilter.value = preset.period;
     dateFromFilter.value = preset.dateFrom;

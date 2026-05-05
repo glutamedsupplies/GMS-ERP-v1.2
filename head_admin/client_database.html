@@ -256,6 +256,32 @@
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .toolbar-select {
+    min-width: 190px;
+    min-height: 50px;
+    padding: 12px 14px;
+    border: 1px solid rgba(var(--primary-rgb), 0.16);
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.96);
+    color: var(--text);
+    outline: none;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.56),
+      0 12px 24px rgba(var(--primary-rgb), 0.06);
+    transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+  }
+
+  .toolbar-select:focus {
+    border-color: rgba(var(--primary-rgb), 0.34);
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow:
+      0 0 0 4px rgba(var(--primary-rgb), 0.12),
+      0 16px 32px rgba(var(--primary-rgb), 0.08);
   }
 
   button {
@@ -624,6 +650,18 @@
     transform: translateY(-1px);
   }
 
+  .client-type-tag.is-distributor {
+    background: rgba(217, 119, 6, 0.14);
+    color: #b45309;
+    border-color: rgba(217, 119, 6, 0.24);
+  }
+
+  .client-type-tag.is-regular {
+    background: rgba(var(--primary-rgb), 0.12);
+    color: var(--accent-strong);
+    border-color: rgba(var(--primary-rgb), 0.18);
+  }
+
   .actions-cell {
     width: 180px;
   }
@@ -758,7 +796,8 @@
     text-transform: uppercase;
   }
 
-  .field input {
+  .field input,
+  .field select {
     width: 100%;
     min-height: 50px;
     padding: 13px 14px;
@@ -771,7 +810,8 @@
     transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
   }
 
-  .field input:focus {
+  .field input:focus,
+  .field select:focus {
     border-color: rgba(var(--primary-rgb), 0.38);
     background: rgba(255, 255, 255, 0.98);
     box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.12);
@@ -853,6 +893,7 @@
 
     .actions,
     .actions button,
+    .actions select,
     .client-insight-actions,
     .client-insight-actions button,
     .modal-actions button {
@@ -894,7 +935,11 @@
       </div>
       <div class="card">
         <span class="label">Search Filter</span>
-        <div id="filterLabel" class="value" style="font-size: 18px; line-height: 1.4;">All Records</div>
+        <div id="filterLabel" class="value" style="font-size: 18px; line-height: 1.4;">All Client Types</div>
+      </div>
+      <div class="card">
+        <span class="label">Distributor Records</span>
+        <div id="distributorCount" class="value">0</div>
       </div>
     </div>
 
@@ -904,6 +949,11 @@
         <input id="searchInput" type="text" placeholder="Search by client name or contact number">
       </div>
       <div class="actions">
+        <select id="clientTypeFilter" class="toolbar-select" aria-label="Filter client type">
+          <option value="">All Client Types</option>
+          <option value="distributor">Distributor Only</option>
+          <option value="regular">Regular Only</option>
+        </select>
         <button id="refreshBtn" type="button" class="secondary-btn"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
         <button id="openModalBtn" type="button" class="primary-btn"><i class="fa-solid fa-plus"></i> Add Client</button>
       </div>
@@ -919,7 +969,7 @@
       </div>
 
       <div class="rules">
-        Rule: same client name is allowed multiple times if the contact number is different. Philippine mobile variants like <strong>+63</strong>, <strong>09</strong>, and <strong>9</strong> are treated as the same number. Click an existing row to review order history, then use the Edit button when you need to update the record.
+        Rule: same client name is allowed multiple times if the contact number is different. Philippine mobile variants like <strong>+63</strong>, <strong>09</strong>, and <strong>9</strong> are treated as the same number. You can also tag a saved client as <strong>Distributor</strong> para may hiwalay na bilang at mabilis silang ma-filter sa list.
       </div>
 
       <div id="statusText" class="status">Loading client records...</div>
@@ -948,13 +998,14 @@
             <tr>
               <th>Client Name</th>
               <th>Contact Number</th>
+              <th>Client Type</th>
               <th>Source</th>
               <th>Created</th>
               <th class="actions-cell">Actions</th>
             </tr>
           </thead>
           <tbody id="clientTableBody">
-            <tr><td colspan="5" class="empty">Loading records...</td></tr>
+            <tr><td colspan="6" class="empty">Loading records...</td></tr>
           </tbody>
         </table>
       </div>
@@ -984,6 +1035,14 @@
         <input id="contactNumberInput" type="text" inputmode="numeric" placeholder="e.g. +639171234567, 09171234567, or 9171234567">
       </div>
 
+      <div class="field">
+        <label for="clientTypeInput">Client Type</label>
+        <select id="clientTypeInput">
+          <option value="regular">Regular</option>
+          <option value="distributor">Distributor</option>
+        </select>
+      </div>
+
       <div id="clientModalStatus" class="modal-status" hidden></div>
 
       <div class="modal-actions">
@@ -994,6 +1053,6 @@
   </div>
 
   <script src="../shared/app-client.js"></script>
-  <script src="client_database.js"></script>
+  <script src="client_database.js?v=20260502"></script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 const appClient = window.appClient;
 
 const searchInput = document.getElementById('searchInput');
+const clientTypeFilter = document.getElementById('clientTypeFilter');
 const refreshBtn = document.getElementById('refreshBtn');
 const openModalBtn = document.getElementById('openModalBtn');
 const closeModalBtn = document.getElementById('closeModalBtn');
@@ -12,11 +13,13 @@ const clientModalDescription = document.getElementById('clientModalDescription')
 const clientModalStatus = document.getElementById('clientModalStatus');
 const clientNameInput = document.getElementById('clientNameInput');
 const contactNumberInput = document.getElementById('contactNumberInput');
+const clientTypeInput = document.getElementById('clientTypeInput');
 const clientTableBody = document.getElementById('clientTableBody');
 const statusText = document.getElementById('statusText');
 const visibleCount = document.getElementById('visibleCount');
 const uniqueCount = document.getElementById('uniqueCount');
 const filterLabel = document.getElementById('filterLabel');
+const distributorCount = document.getElementById('distributorCount');
 const pageSubtitle = document.getElementById('pageSubtitle');
 const clientInsightTitle = document.getElementById('clientInsightTitle');
 const clientInsightCopy = document.getElementById('clientInsightCopy');
@@ -29,6 +32,7 @@ const CLIENT_BATCH_SIZE = 500;
 const state = {
     clients: [],
     filter: '',
+    clientTypeFilter: '',
     editingClientId: null,
     loadRequestToken: 0,
     lastFocusedElement: null,
@@ -58,6 +62,10 @@ async function initialize() {
     });
 
     refreshBtn.addEventListener('click', () => {
+        void loadClients(state.filter);
+    });
+    clientTypeFilter?.addEventListener('change', (event) => {
+        state.clientTypeFilter = normalizeClientTypeValue(event.target.value);
         void loadClients(state.filter);
     });
     openModalBtn.addEventListener('click', openModal);
@@ -115,19 +123,19 @@ async function applyCompanySubtitle() {
     pageSubtitle.textContent = 'All client data for your company.';
 }
 
-async function loadClients(filter = '') {
+async function loadClients(filter = '', clientType = state.clientTypeFilter) {
     const requestToken = ++state.loadRequestToken;
     refreshBtn.disabled = true;
     setStatus('Loading client records...', false);
 
     try {
-        const payload = await loadAllClientPages(filter, requestToken);
+        const payload = await loadAllClientPages(filter, requestToken, clientType);
         if (requestToken !== state.loadRequestToken) {
             return;
         }
         state.clients = Array.isArray(payload.items) ? payload.items : [];
         renderClients(state.clients);
-        updateSummary(filter, state.clients);
+        updateSummary(filter, state.clients, clientType);
         syncSelectedClientAfterLoad();
         setStatus(`Loaded ${state.clients.length} client record(s).`, false);
     } catch (error) {
@@ -137,7 +145,7 @@ async function loadClients(filter = '') {
         console.error('Failed to load clients:', error);
         state.clients = [];
         renderClients([]);
-        updateSummary(filter, []);
+        updateSummary(filter, [], clientType);
         clearSelectedClientInsight({ rerenderRows: false });
         setStatus(error.message || 'Unable to load client records.', true);
     } finally {
@@ -147,8 +155,9 @@ async function loadClients(filter = '') {
     }
 }
 
-async function loadAllClientPages(filter = '', requestToken) {
+async function loadAllClientPages(filter = '', requestToken, clientType = '') {
     const normalizedFilter = String(filter || '').trim();
+    const normalizedClientType = normalizeClientTypeValue(clientType);
     const allItems = [];
     let offset = 0;
 
@@ -158,7 +167,7 @@ async function loadAllClientPages(filter = '', requestToken) {
         }
 
         // Load the client directory in pages so the screen is not capped at the default API batch size.
-        const payload = await appClient.listClients(normalizedFilter, CLIENT_BATCH_SIZE, offset);
+        const payload = await appClient.listClients(normalizedFilter, CLIENT_BATCH_SIZE, offset, normalizedClientType);
         const items = Array.isArray(payload?.items) ? payload.items : [];
 
         allItems.push(...items);
@@ -175,7 +184,7 @@ async function loadAllClientPages(filter = '', requestToken) {
 
 function renderClients(rows) {
     if (!rows.length) {
-        clientTableBody.innerHTML = '<tr><td colspan="5" class="empty">No client records found.</td></tr>';
+        clientTableBody.innerHTML = '<tr><td colspan="6" class="empty">No client records found.</td></tr>';
         return;
     }
 
@@ -187,6 +196,7 @@ function renderClients(rows) {
         >
             <td><strong>${appClient.escapeHtml(client.name)}</strong></td>
             <td>${appClient.escapeHtml(formatContactNumber(client.contact_number))}</td>
+            <td><span class="source-tag client-type-tag ${appClient.escapeHtml(`is-${getClientTypeClassName(client.client_type)}`)}">${appClient.escapeHtml(formatClientTypeLabel(client.client_type))}</span></td>
             <td><span class="source-tag">${appClient.escapeHtml(formatSource(client.source))}</span></td>
             <td>${appClient.escapeHtml(formatCreatedAt(client.created_at))}</td>
             <td class="actions-cell">
@@ -199,16 +209,20 @@ function renderClients(rows) {
     `).join('');
 }
 
-function updateSummary(filter, rows) {
+function updateSummary(filter, rows, clientType = '') {
     const uniqueNumbers = new Set(
         rows
             .map((client) => normalizePhContactNumber(client.normalized_contact_number || client.contact_number))
             .filter(Boolean)
     );
+    const distributorRows = rows.filter((client) => normalizeClientTypeValue(client.client_type) === 'distributor');
 
     visibleCount.textContent = String(rows.length);
     uniqueCount.textContent = String(uniqueNumbers.size);
-    filterLabel.textContent = filter ? `Filter: ${filter}` : 'All Records';
+    if (distributorCount) {
+        distributorCount.textContent = String(distributorRows.length);
+    }
+    filterLabel.textContent = buildClientScopeLabel(filter, clientType);
 }
 
 function getSelectedClient() {
@@ -376,6 +390,7 @@ function renderClientInsight() {
 function buildSelectedClientInsightCopy(client, summary = {}) {
     const metaParts = [
         formatContactNumber(client?.contact_number || ''),
+        formatClientTypeLabel(client?.client_type),
         formatSource(client?.source),
         formatCreatedAt(client?.created_at)
     ];
@@ -479,6 +494,9 @@ function openModal(client = null) {
     state.editingClientId = client?.id ?? null;
     clientNameInput.value = client?.name || '';
     contactNumberInput.value = formatContactNumber(client?.contact_number || '');
+    if (clientTypeInput) {
+        clientTypeInput.value = normalizeClientTypeValue(client?.client_type) || 'regular';
+    }
     clientModalTitle.textContent = state.editingClientId ? 'Update Client' : 'Add Client';
     clientModalDescription.textContent = state.editingClientId
         ? 'I-update ang napiling client record. Kapag binago ang number sa existing number ng ibang client, magpapakita ito ng malinaw na validation error.'
@@ -512,6 +530,7 @@ function closeModal() {
 async function saveClient() {
     const name = clientNameInput.value.trim();
     const contactNumber = contactNumberInput.value.trim();
+    const clientType = normalizeClientTypeValue(clientTypeInput?.value || 'regular') || 'regular';
     const isEditing = state.editingClientId !== null && state.editingClientId !== undefined;
 
     if (!name || !contactNumber) {
@@ -527,8 +546,8 @@ async function saveClient() {
 
     try {
         const result = isEditing
-            ? await appClient.updateClient(state.editingClientId, { name, contactNumber })
-            : await appClient.addClient({ name, contactNumber });
+            ? await appClient.updateClient(state.editingClientId, { name, contactNumber, clientType })
+            : await appClient.addClient({ name, contactNumber, clientType });
         closeModal();
         await loadClients(state.filter);
         const action = result?.action === 'updated' || isEditing ? 'updated' : 'added';
@@ -645,6 +664,36 @@ function handleHistoryListClick(event) {
 
 function formatSource(source) {
     return String(source || '').toLowerCase() === 'seed' ? 'CSV Import' : 'Manual Add';
+}
+
+function normalizeClientTypeValue(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'distributor') {
+        return 'distributor';
+    }
+    if (normalized === 'regular') {
+        return 'regular';
+    }
+    return '';
+}
+
+function formatClientTypeLabel(value) {
+    return normalizeClientTypeValue(value) === 'distributor' ? 'Distributor' : 'Regular';
+}
+
+function getClientTypeClassName(value) {
+    return normalizeClientTypeValue(value) === 'distributor' ? 'distributor' : 'regular';
+}
+
+function buildClientScopeLabel(filter = '', clientType = '') {
+    const normalizedFilter = String(filter || '').trim();
+    const normalizedClientType = normalizeClientTypeValue(clientType);
+    const typeLabel = normalizedClientType === 'distributor'
+        ? 'Distributor Only'
+        : (normalizedClientType === 'regular' ? 'Regular Only' : 'All Client Types');
+    return normalizedFilter
+        ? `${typeLabel} | Filter: ${normalizedFilter}`
+        : typeLabel;
 }
 
 function normalizePhContactNumber(value) {

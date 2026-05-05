@@ -137,37 +137,59 @@ $paths = Get-RuntimePaths -RepoRoot $repoRoot
 $config = Get-RuntimeConfig -ConfigPath $paths.ConfigPath
 $cloudflared = Get-CloudflaredCommand -ConfiguredPath $config.cloudflaredPath
 $localUrl = "http://127.0.0.1:$($config.port)/api/server-info"
+$serverProcess = $null
+$localServerReady = $false
+$staleStateReason = $null
 
 if (Test-Path $paths.PidFile) {
     $resolvedExisting = Resolve-ManagedServerProcess -PidFile $paths.PidFile
     if ($resolvedExisting.IsManaged) {
-        throw "A managed local server is already running with PID $($resolvedExisting.State.Pid). Run stop-local-server.cmd first."
+        if (Wait-ForLocalServer -Url $localUrl -TimeoutSeconds 15) {
+            $serverProcess = $resolvedExisting.Process
+            $localServerReady = $true
+            Write-Host "Reusing managed local server PID $($resolvedExisting.State.Pid)." -ForegroundColor DarkYellow
+        } else {
+            Write-Warning "Managed local server PID $($resolvedExisting.State.Pid) is not responding. Restarting it."
+            if (-not (Stop-ManagedServerTree -ResolvedProcess $resolvedExisting -TimeoutSeconds 15)) {
+                throw "Managed local server PID $($resolvedExisting.State.Pid) is running but not responding. Run .\stop-local-server.cmd first."
+            }
+
+            Remove-ManagedServerState -PidFile $paths.PidFile
+            Write-Host "Stopped unresponsive managed local server PID $($resolvedExisting.State.Pid)." -ForegroundColor DarkYellow
+        }
+    } elseif ($resolvedExisting.State) {
+        $staleStateReason = $resolvedExisting.Reason
     }
 
-    Remove-ManagedServerState -PidFile $paths.PidFile
-    if ($resolvedExisting.State) {
-        Write-Host "Removed stale managed local server PID file ($($resolvedExisting.Reason))." -ForegroundColor DarkYellow
+    if (-not $serverProcess) {
+        Remove-ManagedServerState -PidFile $paths.PidFile
+    }
+
+    if (-not $serverProcess -and $staleStateReason) {
+        Write-Host "Removed stale managed local server PID file ($staleStateReason)." -ForegroundColor DarkYellow
     }
 }
 
-Write-Host "Starting local server in the background..." -ForegroundColor Cyan
-$serverProcess = Start-Process -FilePath 'powershell.exe' `
-    -ArgumentList @(
-        '-NoProfile',
-        '-ExecutionPolicy', 'Bypass',
-        '-File', $paths.StartScript,
-        '-ManagedChild'
-    ) `
-    -WorkingDirectory $repoRoot `
-    -WindowStyle Hidden `
-    -RedirectStandardOutput $paths.StdOutLog `
-    -RedirectStandardError $paths.StdErrLog `
-    -PassThru
+if (-not $serverProcess) {
+    Write-Host "Starting local server in the background..." -ForegroundColor Cyan
+    $serverProcess = Start-Process -FilePath 'powershell.exe' `
+        -ArgumentList @(
+            '-NoProfile',
+            '-ExecutionPolicy', 'Bypass',
+            '-File', $paths.StartScript,
+            '-ManagedChild'
+        ) `
+        -WorkingDirectory $repoRoot `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput $paths.StdOutLog `
+        -RedirectStandardError $paths.StdErrLog `
+        -PassThru
 
-Write-ManagedServerState -PidFile $paths.PidFile -Process $serverProcess
+    Write-ManagedServerState -PidFile $paths.PidFile -Process $serverProcess
+}
 
 try {
-    if (-not (Wait-ForLocalServer -Url $localUrl -TimeoutSeconds 45)) {
+    if (-not $localServerReady -and -not (Wait-ForLocalServer -Url $localUrl -TimeoutSeconds 45)) {
         $errorTail = ''
         if (Test-Path $paths.StdErrLog) {
             $errorTail = (Get-Content $paths.StdErrLog -Tail 40 -ErrorAction SilentlyContinue) -join [Environment]::NewLine
@@ -188,7 +210,7 @@ try {
         if (Stop-ManagedServerTree -ResolvedProcess $resolvedServer -TimeoutSeconds 15) {
             Remove-ManagedServerState -PidFile $paths.PidFile
         } else {
-            Write-Warning "Failed to stop managed local server PID $($resolvedServer.State.Pid). Run stop-local-server.cmd."
+            Write-Warning "Failed to stop managed local server PID $($resolvedServer.State.Pid). Run .\stop-local-server.cmd."
         }
     }
 

@@ -4,6 +4,8 @@ const NEAR_EXPIRY_DAYS = 7;
 const LOW_SALES_THRESHOLD = 2;
 const MOVEMENT_VIEW_TOP = 'top_sellers';
 const MOVEMENT_VIEW_UNSOLD = 'unsold_products';
+const INVENTORY_PAGE_SIZE = 2500;
+const CLIENT_LOOKUP_PAGE_SIZE = 2500;
 
 const rangePresetInput = document.getElementById('rangePreset');
 const dateFromInput = document.getElementById('dateFrom');
@@ -40,9 +42,12 @@ const nearExpiryBody = document.getElementById('nearExpiryBody');
 const state = {
     bootstrap: null,
     branchOptions: [],
+    inventoryBranchOptions: [],
     renderToken: 0,
     serverDateKey: '',
     activeMovementView: MOVEMENT_VIEW_TOP,
+    clientTypeLookup: null,
+    clientTypeLookupPromise: null,
     lastMovementData: {
         topSellers: [],
         productMovementRows: [],
@@ -73,6 +78,7 @@ async function initialize() {
         state.bootstrap = bootstrap || {};
         state.serverDateKey = normalizeDateKey(serverInfo?.dateKey) || toDateKey(new Date());
         state.branchOptions = resolveBranchOptions(bootstrap, references, branchRows);
+        state.inventoryBranchOptions = resolveInventoryBranchOptions(bootstrap, references, branchRows);
         appClient.applyBootstrapBrandTheme(bootstrap);
 
         populateBranchFilter();
@@ -170,6 +176,39 @@ function resolveBranchOptions(bootstrap, references, branchRows) {
         });
 }
 
+function resolveInventoryBranchOptions(bootstrap, references, branchRows) {
+    const tenantBranches = Array.isArray(branchRows)
+        ? branchRows
+            .filter((branch) => Boolean(branch?.is_active))
+            .map((branch) => branch.branch_name)
+        : [];
+    const referenceBranches = Array.isArray(references?.branches)
+        ? references.branches
+        : [];
+    const workspaceBranches = Array.isArray(bootstrap?.workspaceConfig?.orderForm?.branches)
+        ? bootstrap.workspaceConfig.orderForm.branches
+        : [];
+
+    const source = tenantBranches.length
+        ? tenantBranches
+        : (referenceBranches.length ? referenceBranches : workspaceBranches);
+    const seen = new Set();
+
+    return source
+        .map((entry) => String(entry || '').trim())
+        .filter((entry) => {
+            if (!entry) {
+                return false;
+            }
+            const token = entry.toLowerCase();
+            if (seen.has(token)) {
+                return false;
+            }
+            seen.add(token);
+            return true;
+        });
+}
+
 function populateBranchFilter() {
     if (!branchFilter) {
         return;
@@ -238,13 +277,18 @@ async function renderInsights() {
     setStatus('Loading movement and expiry insights...', false);
 
     try {
-        const [salesPayload, inventoryRows] = await Promise.all([
+        const [salesPayload, inventoryRows, clientTypeLookup] = await Promise.all([
             appClient.listSales({
                 dateFrom: filters.dateFrom,
                 dateTo: filters.dateTo,
-                branch: filters.branch
+                branch: filters.branch,
+                limit: 0
             }),
-            fetchInventoryRows(filters.branch)
+            fetchInventoryRows(filters.branch),
+            getClientTypeLookup().catch((error) => {
+                console.warn('Unable to load client type lookup for movement insight:', error);
+                return null;
+            })
         ]);
 
         if (renderToken !== state.renderToken) {
@@ -253,7 +297,7 @@ async function renderInsights() {
 
         const salesRows = filterSalesRows(Array.isArray(salesPayload?.items) ? salesPayload.items : [], filters.search);
         const scopedInventory = filterInventoryRows(inventoryRows, filters.search);
-        const salesAnalytics = buildSalesAnalytics(salesRows);
+        const salesAnalytics = buildSalesAnalytics(salesRows, clientTypeLookup);
         const slowMovers = buildSlowMovers(scopedInventory, salesAnalytics.byBranchProduct);
         const slowMoverTotals = summarizeSlowMovers(slowMovers);
         const productMovementRows = buildProductMovementRows(scopedInventory, salesAnalytics.byProduct);
@@ -326,13 +370,25 @@ function readFilters() {
 
 async function fetchInventoryRows(selectedBranch) {
     const branchName = String(selectedBranch || '').trim();
-    if (branchName) {
-        return normalizeInventoryRows(await appClient.listInventory({ branch: branchName }), branchName);
+    const inventoryBranches = Array.isArray(state.inventoryBranchOptions) && state.inventoryBranchOptions.length
+        ? state.inventoryBranchOptions
+        : state.branchOptions;
+
+    if (
+        branchName
+        && inventoryBranches.length
+        && !inventoryBranches.some((entry) => normalizeToken(entry) === normalizeToken(branchName))
+    ) {
+        return [];
     }
 
-    const branches = state.branchOptions.length ? state.branchOptions : [''];
+    if (branchName) {
+        return normalizeInventoryRows(await listAllInventoryRows({ branch: branchName }), branchName);
+    }
+
+    const branches = inventoryBranches.length ? inventoryBranches : [''];
     const results = await Promise.allSettled(
-        branches.map((branch) => appClient.listInventory({ branch }))
+        branches.map((branch) => listAllInventoryRows({ branch }))
     );
     const fulfilledRows = [];
     const failures = [];
@@ -350,6 +406,197 @@ async function fetchInventoryRows(selectedBranch) {
     }
 
     return dedupeInventoryRows(fulfilledRows);
+}
+
+async function listAllInventoryRows({ branch = '' } = {}) {
+    const rows = [];
+    let offset = 0;
+
+    while (true) {
+        const page = await appClient.listInventory({
+            branch,
+            limit: INVENTORY_PAGE_SIZE,
+            offset
+        });
+        const pageRows = Array.isArray(page) ? page : [];
+        rows.push(...pageRows);
+
+        if (pageRows.length < INVENTORY_PAGE_SIZE) {
+            break;
+        }
+
+        offset += pageRows.length;
+    }
+
+    return rows;
+}
+
+async function getClientTypeLookup() {
+    if (state.clientTypeLookup) {
+        return state.clientTypeLookup;
+    }
+
+    if (!state.clientTypeLookupPromise) {
+        state.clientTypeLookupPromise = buildClientTypeLookup()
+            .then((lookup) => {
+                state.clientTypeLookup = lookup;
+                return lookup;
+            })
+            .finally(() => {
+                state.clientTypeLookupPromise = null;
+            });
+    }
+
+    return state.clientTypeLookupPromise;
+}
+
+async function buildClientTypeLookup() {
+    const clients = [];
+    let offset = 0;
+
+    while (true) {
+        const payload = await appClient.listClients('', CLIENT_LOOKUP_PAGE_SIZE, offset, '');
+        const pageRows = Array.isArray(payload?.items) ? payload.items : [];
+        clients.push(...pageRows);
+
+        if (pageRows.length < CLIENT_LOOKUP_PAGE_SIZE) {
+            break;
+        }
+
+        offset += pageRows.length;
+    }
+
+    return createClientTypeLookup(clients);
+}
+
+function createClientTypeLookup(rows = []) {
+    const contactTypeByNumber = new Map();
+    const nameAddressTypeByKey = new Map();
+    const nameTypeByKey = new Map();
+
+    rows.forEach((row) => {
+        const clientType = normalizeClientTypeValue(row?.client_type || row?.clientType || '');
+        const contactKey = normalizePhContactNumber(row?.contact_number || row?.contactNumber || '');
+        const nameKey = normalizeLookupText(row?.name);
+        const nameAddressKey = buildClientNameAddressKey(row?.name, row?.address);
+
+        if (contactKey && clientType) {
+            contactTypeByNumber.set(contactKey, clientType);
+        }
+        if (nameAddressKey && clientType) {
+            assignClientTypeLookupValue(nameAddressTypeByKey, nameAddressKey, clientType);
+        }
+        if (nameKey && clientType) {
+            assignClientTypeLookupValue(nameTypeByKey, nameKey, clientType);
+        }
+    });
+
+    return {
+        contactTypeByNumber,
+        nameAddressTypeByKey,
+        nameTypeByKey
+    };
+}
+
+function assignClientTypeLookupValue(map, key, clientType) {
+    if (!(map instanceof Map) || !key || !clientType) {
+        return;
+    }
+
+    const currentValue = map.get(key);
+    if (!currentValue) {
+        map.set(key, clientType);
+        return;
+    }
+
+    if (currentValue !== clientType) {
+        map.set(key, 'mixed');
+    }
+}
+
+function normalizeClientTypeValue(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'distributor') {
+        return 'distributor';
+    }
+    if (normalized === 'regular') {
+        return 'regular';
+    }
+    return '';
+}
+
+function normalizePhContactNumber(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (!digits) {
+        return '';
+    }
+
+    if (/^639\d{9}$/.test(digits)) {
+        return digits;
+    }
+
+    if (/^09\d{9}$/.test(digits)) {
+        return `63${digits.slice(1)}`;
+    }
+
+    if (/^9\d{9}$/.test(digits)) {
+        return `63${digits}`;
+    }
+
+    if (/^00639\d{9}$/.test(digits)) {
+        return digits.slice(2);
+    }
+
+    return digits;
+}
+
+function normalizeLookupText(value) {
+    return String(value || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+}
+
+function buildClientNameAddressKey(name, address) {
+    const normalizedName = normalizeLookupText(name);
+    const normalizedAddress = normalizeLookupText(address);
+    if (!normalizedName || !normalizedAddress) {
+        return '';
+    }
+    return `${normalizedName}::${normalizedAddress}`;
+}
+
+function resolveSaleClientType(row = {}, clientTypeLookup = null) {
+    if (!clientTypeLookup) {
+        return '';
+    }
+
+    const contactKey = normalizePhContactNumber(row.client_contact || row.clientContact || '');
+    if (contactKey) {
+        const contactType = clientTypeLookup.contactTypeByNumber?.get(contactKey);
+        if (contactType) {
+            return contactType === 'mixed' ? '' : contactType;
+        }
+    }
+
+    const nameAddressKey = buildClientNameAddressKey(
+        row.client_name || row.clientName || '',
+        row.client_address || row.clientAddress || ''
+    );
+    if (nameAddressKey) {
+        const nameAddressType = clientTypeLookup.nameAddressTypeByKey?.get(nameAddressKey);
+        if (nameAddressType) {
+            return nameAddressType === 'mixed' ? '' : nameAddressType;
+        }
+    }
+
+    const nameKey = normalizeLookupText(row.client_name || row.clientName || '');
+    if (!nameKey) {
+        return '';
+    }
+
+    const nameType = clientTypeLookup.nameTypeByKey?.get(nameKey);
+    return nameType === 'mixed' ? '' : (nameType || '');
 }
 
 function normalizeInventoryRows(rows, fallbackBranch = '') {
@@ -392,8 +639,13 @@ function filterSalesRows(rows, search) {
         const haystack = [
             row.item_sold,
             row.item_code,
+            row.item_set,
+            row.entry_unit,
             row.branch,
             row.cash_branch,
+            row.client_name,
+            row.order_number,
+            row.receipt_number,
             row.sales_representative,
             row.admin_name
         ].map((value) => normalizeToken(value)).join(' ');
@@ -419,17 +671,21 @@ function filterInventoryRows(rows, search) {
     });
 }
 
-function buildSalesAnalytics(rows) {
+function buildSalesAnalytics(rows, clientTypeLookup = null) {
     const byProduct = new Map();
     const byBranchProduct = new Map();
     let totalSoldQty = 0;
 
+    // Movement insight should follow recorded sales rows even when
+    // inventory deduction was intentionally skipped for the order.
     rows.forEach((row) => {
         const productKey = buildProductKey(row.item_code, row.item_sold);
         const branchKey = `${normalizeToken(row.branch)}::${productKey}`;
         const quantity = Math.max(0, Number(row.quantity || 0));
         const lineSales = Math.max(0, Number(row.line_subtotal || 0));
         const saleDate = normalizeDateKey(row.sale_date || '');
+        const clientType = resolveSaleClientType(row, clientTypeLookup);
+        const distributorQty = clientType === 'distributor' ? quantity : 0;
 
         totalSoldQty += quantity;
 
@@ -437,11 +693,13 @@ function buildSalesAnalytics(rows) {
             itemName: String(row.item_sold || 'Unspecified item').trim() || 'Unspecified item',
             itemCode: String(row.item_code || '').trim(),
             qtySold: 0,
+            distributorQtySold: 0,
             lineSales: 0,
             branches: new Set(),
             lastSoldDate: ''
         };
         productMeta.qtySold += quantity;
+        productMeta.distributorQtySold += distributorQty;
         productMeta.lineSales += lineSales;
         if (row.branch) {
             productMeta.branches.add(String(row.branch).trim());
@@ -453,10 +711,12 @@ function buildSalesAnalytics(rows) {
 
         const branchMeta = byBranchProduct.get(branchKey) || {
             qtySold: 0,
+            distributorQtySold: 0,
             lineSales: 0,
             lastSoldDate: ''
         };
         branchMeta.qtySold += quantity;
+        branchMeta.distributorQtySold += distributorQty;
         branchMeta.lineSales += lineSales;
         if (saleDate && saleDate > branchMeta.lastSoldDate) {
             branchMeta.lastSoldDate = saleDate;
@@ -487,8 +747,9 @@ function buildSlowMovers(rows, byBranchProduct) {
         .filter((row) => Number(row.quantity || 0) > 0 && isUnsoldProductRow(row))
         .map((row) => {
             const branchKey = `${normalizeToken(row.branch)}::${buildProductKey(row.item_code, row.item_name)}`;
-            const salesMeta = byBranchProduct.get(branchKey) || { qtySold: 0 };
+            const salesMeta = byBranchProduct.get(branchKey) || { qtySold: 0, distributorQtySold: 0 };
             const soldQty = Number(salesMeta.qtySold || 0);
+            const distributorQtySold = Number(salesMeta.distributorQtySold || 0);
             const onHand = Number(row.quantity || 0);
             const unitPrice = Math.max(0, Number(row.catalog_price || 0));
             const remainingValue = onHand * unitPrice;
@@ -513,6 +774,7 @@ function buildSlowMovers(rows, byBranchProduct) {
                 branch: row.branch || '-',
                 onHand,
                 soldQty,
+                distributorQtySold,
                 unitPrice,
                 remainingValue,
                 signal,
@@ -576,6 +838,7 @@ function buildProductMovementRows(rows, byProduct) {
             itemCode: productMeta.itemCode || '',
             inventoryUnit: '',
             qtySold: Number(productMeta.qtySold || 0),
+            distributorQtySold: Number(productMeta.distributorQtySold || 0),
             lineSales: Number(productMeta.lineSales || 0),
             onHand: 0,
             remainingValue: 0,
@@ -596,6 +859,7 @@ function buildProductMovementRows(rows, byProduct) {
                 itemCode: row.item_code || '',
                 inventoryUnit: row.inventory_unit || '',
                 qtySold: 0,
+                distributorQtySold: 0,
                 lineSales: 0,
                 onHand: 0,
                 remainingValue: 0,
@@ -643,6 +907,7 @@ function buildProductMovementRows(rows, byProduct) {
                 itemCode: row.itemCode || '',
                 inventoryUnit: row.inventoryUnit || '',
                 qtySold,
+                distributorQtySold: Number(row.distributorQtySold || 0),
                 lineSales: Number(row.lineSales || 0),
                 onHand,
                 remainingValue: Number(row.remainingValue || 0),
@@ -778,7 +1043,7 @@ function renderMovementPanel() {
 
     renderMovementPanelChrome({
         title: 'Mabenta',
-        copy: 'Complete product movement list ranked by sales, with slow-moving and no-sales products included.',
+        copy: 'Complete product movement list ranked by recorded sales rows, even when inventory deduction was not toggled for the order.',
         metaIconClass: 'fa-solid fa-arrow-trend-up',
         metaLabel: 'Complete Movement',
         showSummary: true,
@@ -855,7 +1120,7 @@ function renderProductMovementSummary(summary = null) {
         {
             label: 'With Sales',
             value: safeSummary.withSales || 0,
-            meta: 'Products with recorded sales in the selected period.'
+            meta: 'Products with recorded sales rows in the selected period.'
         },
         {
             label: 'Slow Movement',
@@ -1013,7 +1278,7 @@ function clearTables() {
 async function copyUnsoldReport() {
     const text = String(state.lastUnsoldReportText || '').trim();
     if (!text) {
-        setStatus('Nothing to copy yet for the unsold products report.', true);
+        setStatus('Nothing to copy yet for the movement insight text report.', true);
         return;
     }
 
@@ -1023,7 +1288,7 @@ async function copyUnsoldReport() {
         } else {
             copyTextFallback(text);
         }
-        setStatus('Unsold products report copied to clipboard.', false);
+        setStatus('Movement insight text report copied to clipboard.', false);
     } catch (error) {
         console.error('Unable to copy unsold products report:', error);
         setStatus('Copy failed. Please try again.', true);
@@ -1094,60 +1359,46 @@ function buildUnsoldProductMeta(row = {}) {
 
 function buildUnsoldReportText(filters = null, summary = null, rows = []) {
     const safeFilters = filters && typeof filters === 'object' ? filters : null;
-    const safeSummary = summary && typeof summary === 'object'
-        ? summary
-        : { totalItems: 0, totalOnHand: 0, totalValue: 0, byBranch: [] };
     const safeRows = Array.isArray(rows) ? rows : [];
+    const scopeParts = [];
+    const dateFrom = formatDate(safeFilters?.dateFrom || '');
+    const dateTo = formatDate(safeFilters?.dateTo || '');
+    const branchLabel = String(safeFilters?.branch || '').trim() || 'All Branches';
+
+    if (dateFrom !== '-' || dateTo !== '-') {
+        scopeParts.push(`${dateFrom} to ${dateTo}`);
+    }
+    scopeParts.push(branchLabel);
+    if (safeFilters?.search) {
+        scopeParts.push(`Filter: ${safeFilters.search}`);
+    }
 
     const lines = [
-        'UNSOLD AND SLOW-MOVING INVENTORY REPORT',
-        `Period Reviewed: ${formatDate(safeFilters?.dateFrom || '')} to ${formatDate(safeFilters?.dateTo || '')}`,
-        `Branch Scope: ${String(safeFilters?.branch || '').trim() || 'All Branches'}`
+        scopeParts.join(' | '),
+        'Product Name | Branch | Remaining Qty | Qty Sold | Distributor Qty | Remaining Value | Unit Price'
     ];
 
-    if (safeFilters?.search) {
-        lines.push(`Search Filter: ${safeFilters.search}`);
-    }
-
-    lines.push('');
-    lines.push('SUMMARY');
-    lines.push(`- Product rows with remaining stock: ${formatQuantity(safeSummary.totalItems || 0)}`);
-    lines.push(`- Total remaining quantity: ${formatQuantity(safeSummary.totalOnHand || 0)}`);
-    lines.push(`- Estimated remaining value: ${formatMoney(safeSummary.totalValue || 0)}`);
-    lines.push('');
-
-    const branchRows = Array.isArray(safeSummary.byBranch) ? safeSummary.byBranch : [];
-    if (branchRows.length) {
-        lines.push('BRANCH BREAKDOWN');
-        branchRows.forEach((row, index) => {
-            lines.push(`${index + 1}. ${row.branch}`);
-            lines.push(`   Rows with remaining stock: ${formatQuantity(row.itemCount || 0)}`);
-            lines.push(`   Remaining quantity: ${formatQuantity(row.totalOnHand || 0)}`);
-            lines.push(`   Estimated remaining value: ${formatMoney(row.totalValue || 0)}`);
-        });
-        lines.push('');
-    }
-
-    lines.push('DETAILED LISTING');
     if (!safeRows.length) {
-        lines.push('No product rows with remaining stock were found in the selected scope.');
+        lines.push('No product rows with remaining stock found.');
         return lines.join('\n');
     }
 
-    safeRows.slice(0, 40).forEach((row, index) => {
+    safeRows.slice(0, 80).forEach((row) => {
         const unitLabel = row.inventoryUnit ? ` ${row.inventoryUnit}` : '';
-        lines.push(`${String(index + 1).padStart(2, '0')}. ${row.itemName}${row.itemCode ? ` (${row.itemCode})` : ''}`);
-        lines.push(`    Branch: ${row.branch}`);
-        lines.push(`    On-hand quantity: ${formatQuantity(row.onHand || 0)}${unitLabel}`);
-        lines.push(`    Quantity sold during period: ${formatQuantity(row.soldQty || 0)}`);
-        lines.push(`    Unit price: ${formatOptionalMoney(row.unitPrice, 'Not set')}`);
-        lines.push(`    Estimated remaining value: ${formatMoney(row.remainingValue || 0)}`);
-        lines.push(`    Movement status: ${row.signal}`);
-        lines.push('');
+        const productLabel = `${row.itemName}${row.itemCode ? ` (${row.itemCode})` : ''}`;
+        lines.push([
+            productLabel,
+            row.branch || '-',
+            `${formatQuantity(row.onHand || 0)}${unitLabel}`,
+            formatQuantity(row.soldQty || 0),
+            formatQuantity(row.distributorQtySold || 0),
+            formatMoney(row.remainingValue || 0),
+            formatOptionalMoney(row.unitPrice, 'Not set')
+        ].join(' | '));
     });
 
-    if (safeRows.length > 40) {
-        lines.push(`Additional rows not shown: ${formatQuantity(safeRows.length - 40)}`);
+    if (safeRows.length > 80) {
+        lines.push(`+ ${formatQuantity(safeRows.length - 80)} more row(s)`);
     }
 
     return lines.join('\n');
