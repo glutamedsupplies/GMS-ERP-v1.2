@@ -1656,6 +1656,7 @@
                 '/head_admin/today_present.html',
                 '/head_admin/time_in_time_out.html',
                 '/head_admin/reports.html',
+                '/head_admin/daily_compiled_report.html',
                 '/head_admin/settings.html'
             ];
         }
@@ -2668,6 +2669,22 @@
             method: 'DELETE'
         }),
         listSuperCompanies: () => request('/api/super/companies'),
+        listSuperAttendanceEmployees: ({ companyId = '', filter = '' } = {}) => request(
+            `/api/super/attendance/employees?companyId=${encodeURIComponent(companyId)}&filter=${encodeURIComponent(filter)}`
+        ),
+        getSuperUserCutoffTimeCard: (companyId, userId, { dateKey = '' } = {}) => request(
+            `/api/super/attendance/user/${encodeURIComponent(userId)}/cutoff-card?companyId=${encodeURIComponent(companyId)}&dateKey=${encodeURIComponent(dateKey)}`
+        ),
+        updateSuperTimeCardEntry: (companyId, userId, payload = {}) => request(
+            `/api/super/attendance/user/${encodeURIComponent(userId)}/time-card-entry`,
+            {
+                method: 'PATCH',
+                body: {
+                    ...payload,
+                    companyId
+                }
+            }
+        ),
         listSuperCustomerRequests: ({ companyId = '', filter = '', status = '', limit = 200 } = {}) => request(
             `/api/super/customer-requests?companyId=${encodeURIComponent(companyId)}&filter=${encodeURIComponent(filter)}&status=${encodeURIComponent(status)}&limit=${encodeURIComponent(limit)}`
         ),

@@ -16,6 +16,7 @@ const ORDER_FORM_DRAFT_STORAGE_PREFIX = 'gms:order-form-draft';
 const ORDER_FORM_DRAFT_NEW_SCOPE = 'new';
 const ORDER_FORM_DRAFT_VERSION = 1;
 const ORDER_FORM_DRAFT_SAVE_MS = 180;
+const ORDER_FORM_AUTO_ORDER_PLACEHOLDER = 'Auto on save';
 const MAX_SUGGESTIONS = 9;
 const TOTAL_PULSE_MS = 220;
 const NEAR_EXPIRY_DAYS = 7;
@@ -492,7 +493,9 @@ async function initialize() {
 
     if (requestedOrderNumber) {
         await loadOrderForEditing(requestedOrderNumber);
-        restoredDraft = await restoreOrderFormDraft({ orderNumber: requestedOrderNumber });
+        if (state.editingOrderNumber) {
+            restoredDraft = await restoreOrderFormDraftForLoadedOrder(requestedOrderNumber);
+        }
     } else {
         restoredDraft = await restoreOrderFormDraft({ scope: ORDER_FORM_DRAFT_NEW_SCOPE });
     }
@@ -1627,10 +1630,35 @@ function getRequestedOrderNumber() {
     return String(params.get('orderNumber') || '').trim();
 }
 
+function isAutoOrderPlaceholder(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase() === ORDER_FORM_AUTO_ORDER_PLACEHOLDER.toLowerCase();
+}
+
+function normalizeOrderIdentity(value = '') {
+    const normalized = String(value || '').replace(/\s+/g, ' ').trim();
+    return isAutoOrderPlaceholder(normalized) ? '' : normalized;
+}
+
+function getUniqueOrderIdentities(values = []) {
+    const seen = new Set();
+    const identities = [];
+    values.forEach((value) => {
+        const normalized = normalizeOrderIdentity(value);
+        const key = normalized.toLowerCase();
+        if (!normalized || seen.has(key)) {
+            return;
+        }
+        seen.add(key);
+        identities.push(normalized);
+    });
+    return identities;
+}
+
 function syncOrderQuery(orderNumber = '') {
     const currentUrl = new URL(window.location.href);
-    if (orderNumber) {
-        currentUrl.searchParams.set('orderNumber', orderNumber);
+    const normalizedOrderNumber = normalizeOrderIdentity(orderNumber);
+    if (normalizedOrderNumber) {
+        currentUrl.searchParams.set('orderNumber', normalizedOrderNumber);
     } else {
         currentUrl.searchParams.delete('orderNumber');
     }
@@ -1667,17 +1695,17 @@ function getOrderFormDraftScope({ orderNumber = '', scope = '' } = {}) {
         return explicitScope;
     }
 
-    const explicitOrderNumber = String(orderNumber || '').trim();
+    const explicitOrderNumber = normalizeOrderIdentity(orderNumber);
     if (explicitOrderNumber) {
         return explicitOrderNumber;
     }
 
-    return String(
+    return normalizeOrderIdentity(
         state.editingOrderNumber
         || state.editIntentOrderNumber
         || getRequestedOrderNumber()
         || ORDER_FORM_DRAFT_NEW_SCOPE
-    ).trim();
+    ) || ORDER_FORM_DRAFT_NEW_SCOPE;
 }
 
 function getOrderFormDraftStorageKey({ orderNumber = '', scope = '' } = {}) {
@@ -1723,6 +1751,9 @@ function buildOrderFormDraftSnapshot() {
     return {
         version: ORDER_FORM_DRAFT_VERSION,
         scope: getOrderFormDraftScope(),
+        orderNumber: normalizeOrderIdentity(state.editingOrderNumber),
+        receiptNumber: normalizeOrderIdentity(state.editingReceiptNumber),
+        requestedOrderNumber: normalizeOrderIdentity(getRequestedOrderNumber()),
         saleDate: String(saleDateInput?.value || '').trim(),
         deliveryFee: String(deliveryFeeInput?.value || '').trim(),
         deliveryFeeToCollect: Boolean(deliveryFeeToggle?.checked),
@@ -1862,12 +1893,49 @@ function readOrderFormDraft({ orderNumber = '', scope = '' } = {}) {
         delete comparable.savedAt;
         state.draftState.lastStorageKey = storageKey;
         state.draftState.lastSerialized = JSON.stringify(comparable);
+        console.debug('[order-form:draft] read saved draft', {
+            storageKey,
+            draftScope: draft.scope || '',
+            draftOrderNumber: draft.orderNumber || '',
+            draftReceiptNumber: draft.receiptNumber || '',
+            requestedOrderLookup: orderNumber || scope || ''
+        });
         return draft;
     } catch (error) {
         console.warn('Unable to read saved order draft:', error);
         storage.removeItem(storageKey);
         return null;
     }
+}
+
+function isOrderFormDraftIdentityMatch(draft = {}, { orderNumber = '', scope = '', expectedOrderLookups = [] } = {}) {
+    if (String(scope || '').trim() === ORDER_FORM_DRAFT_NEW_SCOPE) {
+        return true;
+    }
+
+    const expected = getUniqueOrderIdentities([
+        orderNumber,
+        ...expectedOrderLookups,
+        state.editingOrderNumber,
+        state.editingReceiptNumber,
+        state.editIntentOrderNumber
+    ]);
+    if (!expected.length) {
+        return true;
+    }
+
+    const draftIdentities = getUniqueOrderIdentities([
+        draft.orderNumber,
+        draft.receiptNumber,
+        draft.requestedOrderNumber,
+        draft.scope
+    ]);
+    if (!draftIdentities.length) {
+        return false;
+    }
+
+    const expectedSet = new Set(expected.map((value) => value.toLowerCase()));
+    return draftIdentities.some((value) => expectedSet.has(value.toLowerCase()));
 }
 
 function restoreSearchControlSnapshot(control, snapshot = {}) {
@@ -1891,9 +1959,24 @@ function restoreSearchControlSnapshot(control, snapshot = {}) {
     }
 }
 
-async function restoreOrderFormDraft({ orderNumber = '', scope = '' } = {}) {
+async function restoreOrderFormDraft({ orderNumber = '', scope = '', expectedOrderLookups = [] } = {}) {
     const draft = readOrderFormDraft({ orderNumber, scope });
     if (!draft) {
+        return false;
+    }
+
+    if (!isOrderFormDraftIdentityMatch(draft, { orderNumber, scope, expectedOrderLookups })) {
+        console.debug('[order-form:draft] skipped draft because order identity did not match loaded order', {
+            requestedOrderLookup: orderNumber || scope || '',
+            expectedOrderLookups,
+            loadedOrderNumber: state.editingOrderNumber || '',
+            loadedReceiptNumber: state.editingReceiptNumber || '',
+            draftScope: draft.scope || '',
+            draftOrderNumber: draft.orderNumber || '',
+            draftReceiptNumber: draft.receiptNumber || '',
+            draftRequestedOrderNumber: draft.requestedOrderNumber || ''
+        });
+        clearOrderFormDraft({ orderNumber, scope });
         return false;
     }
 
@@ -2001,6 +2084,26 @@ async function restoreOrderFormDraft({ orderNumber = '', scope = '' } = {}) {
     });
 
     return true;
+}
+
+async function restoreOrderFormDraftForLoadedOrder(requestedOrderNumber = '') {
+    const expectedOrderLookups = getUniqueOrderIdentities([
+        state.editingOrderNumber,
+        state.editingReceiptNumber,
+        requestedOrderNumber
+    ]);
+
+    for (const orderLookup of expectedOrderLookups) {
+        const restored = await restoreOrderFormDraft({
+            orderNumber: orderLookup,
+            expectedOrderLookups
+        });
+        if (restored) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 function buildInventoryCache(rows) {
@@ -2441,7 +2544,7 @@ async function updateOrderNumberPreview() {
         orderNumberInput.value = await appClient.previewOrderNumber(saleDateInput.value);
     } catch (error) {
         console.error('Failed to preview order number:', error);
-        orderNumberInput.value = 'Auto on save';
+        orderNumberInput.value = ORDER_FORM_AUTO_ORDER_PLACEHOLDER;
     }
 }
 
@@ -2456,17 +2559,23 @@ async function loadOrderForEditing(orderNumber, { statusMessage = '' } = {}) {
     submitOrderBtn.disabled = true;
     setStatus(`Loading ${lookupOrderNumber}...`, false);
 
-    await withDraftPersistenceSuspended(async () => {
+    return await withDraftPersistenceSuspended(async () => {
         try {
+            console.debug('[order-form:edit-flow] sending order load request', {
+                requestedOrderLookup: lookupOrderNumber,
+                requestPath: `/api/orders/${encodeURIComponent(lookupOrderNumber)}`
+            });
             const order = await appClient.getOrder(lookupOrderNumber);
             const invoiceBranch = order.branch || state.references.branches[0] || '';
             const cashBranch = order.cashBranch || invoiceBranch;
+            const loadedOrderNumber = normalizeOrderIdentity(order.orderNumber) || normalizeOrderIdentity(order.receiptNumber) || lookupOrderNumber;
+            const loadedReceiptNumber = normalizeOrderIdentity(order.receiptNumber) || loadedOrderNumber;
 
             await ensureBranchStockLoaded(invoiceBranch);
             await ensureBranchStockLoaded(cashBranch);
 
             saleDateInput.value = order.saleDate || getLocalDateInputValue();
-            orderNumberInput.value = order.orderNumber || lookupOrderNumber;
+            orderNumberInput.value = loadedOrderNumber;
             noteInput.value = order.note || '';
             amountPaidInput.value = Number(order.amountPaid || 0) > 0 ? formatNumberInputValue(Number(order.amountPaid)) : '';
             deliveryFeeInput.value = Number(order.deliveryFee || 0) > 0 ? String(Number(order.deliveryFee)) : '';
@@ -2516,15 +2625,24 @@ async function loadOrderForEditing(orderNumber, { statusMessage = '' } = {}) {
             syncPaymentMethodAvailability();
             state.lastReceipt = buildReceiptSnapshotFromOrder(order);
             setEditState({
-                orderNumber: order.orderNumber || lookupOrderNumber,
-                receiptNumber: order.receiptNumber || order.orderNumber || lookupOrderNumber
+                orderNumber: loadedOrderNumber,
+                receiptNumber: loadedReceiptNumber
             });
-            state.editIntentOrderNumber = order.orderNumber || lookupOrderNumber;
+            state.editIntentOrderNumber = loadedOrderNumber;
             renderRows();
             renderTotals();
             resetItemsTableViewport();
             schedulePendingClientCheck({ immediate: true });
-            setStatus(statusMessage || `Loaded ${order.orderNumber || lookupOrderNumber} for editing.`, false);
+            console.debug('[order-form:edit-flow] final order rendered in form', {
+                requestedOrderLookup: lookupOrderNumber,
+                loadedOrderNumber,
+                loadedReceiptNumber,
+                renderedOrderNumber: orderNumberInput.value,
+                editingOrderNumber: state.editingOrderNumber || '',
+                editingReceiptNumber: state.editingReceiptNumber || ''
+            });
+            setStatus(statusMessage || `Loaded ${loadedOrderNumber} for editing.`, false);
+            return order;
         } catch (error) {
             console.error('Failed to load saved order:', error);
             clearEditState();
@@ -2533,6 +2651,7 @@ async function loadOrderForEditing(orderNumber, { statusMessage = '' } = {}) {
                 `${error.message || 'Unable to load saved order.'} Reload ${lookupOrderNumber} before saving so this edit does not create a new sale.`,
                 true
             );
+            return null;
         } finally {
             submitOrderBtn.disabled = false;
         }
@@ -6062,7 +6181,7 @@ async function submitOrder() {
     const shouldIncludeClientContact = isElementVisible(fieldClientContact);
     const shouldIncludeClientAddress = isElementVisible(fieldClientAddress);
     const payload = {
-        orderNumber: orderNumberInput.value.trim(),
+        orderNumber: normalizeOrderIdentity(orderNumberInput.value.trim()),
         saleDate: saleDateInput.value,
         branch: state.controls.branch.getValue(),
         cashBranch: cashBranchValue,
@@ -6096,6 +6215,14 @@ async function submitOrder() {
     setStatus(isEditing ? 'Updating order...' : 'Creating order...', false);
 
     try {
+        console.debug('[order-form:submit] sending order save request', {
+            mode: isEditing ? 'update' : 'create',
+            requestOrderLookup: isEditing ? state.editingOrderNumber : '',
+            payloadOrderNumber: payload.orderNumber || '',
+            payloadReceiptNumber: payload.receiptNumber || '',
+            clientName: payload.clientName || '',
+            itemCount: payload.items.length
+        });
         const result = isEditing
             ? await appClient.updateOrder(state.editingOrderNumber, payload)
             : await appClient.createOrder(payload);

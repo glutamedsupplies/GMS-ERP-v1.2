@@ -130,7 +130,19 @@ if (!process.versions?.electron) {
             function registerIpcHandlers() {
                 ipcMain.handle('sales:references', () => salesStore.getReferenceData());
                 ipcMain.handle('orders:preview', (_event, saleDate) => salesStore.previewNextOrderNumber(saleDate || ''));
-                ipcMain.handle('orders:get', (_event, orderNumber) => salesStore.getSaleOrder(orderNumber || ''));
+                ipcMain.handle('orders:get', (_event, orderNumber) => {
+                    const requestedOrderLookup = orderNumber || '';
+                    console.debug('[orders:debug] IPC order load request', { requestedOrderLookup });
+                    const order = salesStore.getSaleOrder(requestedOrderLookup);
+                    console.debug('[orders:debug] IPC order load response', {
+                        requestedOrderLookup,
+                        loadedOrderNumber: order?.orderNumber || '',
+                        loadedReceiptNumber: order?.receiptNumber || '',
+                        clientName: order?.clientName || '',
+                        itemCount: Array.isArray(order?.items) ? order.items.length : 0
+                    });
+                    return order;
+                });
                 ipcMain.handle('orders:check-pending-client', (_event, filters) => salesStore.checkPendingPaymentsByClient(filters || {}));
                 ipcMain.handle('inventory-variants:list', (_event, filters) => inventoryVariantStore.listInventoryVariants(filters || {}));
                 ipcMain.handle('inventory-variants:products', () => inventoryVariantStore.listInventoryProductNames());

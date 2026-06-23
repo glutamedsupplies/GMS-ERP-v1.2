@@ -13,7 +13,14 @@ const store = require('../lib/sqlite');
 const GMS_OPTIONS = {
     company: {
         company_code: 'gms'
-    }
+    },
+    dateKey: '2026-05-08'
+};
+const GMS_PRE_GRACE_OPTIONS = {
+    company: {
+        company_code: 'gms'
+    },
+    dateKey: '2026-05-07'
 };
 const SCHEDULED_TIME_IN = '09:00';
 const SCHEDULED_TIME_OUT = '18:00';
@@ -23,6 +30,7 @@ function assertPayrollCase({
     timeIn,
     timeOut,
     dailyRate,
+    options = GMS_OPTIONS,
     expected
 }) {
     const snapshot = store.calculateAttendancePayrollSnapshot({
@@ -31,13 +39,18 @@ function assertPayrollCase({
         scheduledTimeIn: SCHEDULED_TIME_IN,
         scheduledTimeOut: SCHEDULED_TIME_OUT,
         dailyRate,
-        options: GMS_OPTIONS
+        options
     });
 
     assert.strictEqual(snapshot.totalSpanMinutes, expected.totalSpanMinutes, `${label}: total span minutes`);
     assert.strictEqual(snapshot.lunchBreakMinutes, expected.lunchBreakMinutes, `${label}: lunch break minutes`);
     assert.strictEqual(snapshot.workedMinutes, expected.workedMinutes, `${label}: worked minutes`);
     assert.strictEqual(snapshot.shortMinutes, expected.shortMinutes, `${label}: short minutes`);
+    assert.strictEqual(
+        store.calculateLateMinutes(timeIn, SCHEDULED_TIME_IN, options),
+        expected.lateMinutes,
+        `${label}: late minutes`
+    );
     assert.strictEqual(snapshot.lateDeductionMinutes, expected.lateDeductionMinutes, `${label}: late deduction minutes`);
     assert.strictEqual(snapshot.earlyOutDeductionMinutes, expected.earlyOutDeductionMinutes, `${label}: early out deduction minutes`);
     assert.strictEqual(snapshot.totalDeductionMinutes, expected.totalDeductionMinutes, `${label}: total deduction minutes`);
@@ -45,7 +58,7 @@ function assertPayrollCase({
     assert.strictEqual(snapshot.deductionAmount, expected.deductionAmount, `${label}: deduction amount`);
     assert.strictEqual(snapshot.finalPay, expected.finalPay, `${label}: final pay`);
 
-    const workedHours = store.calculateWorkedHours(timeIn, timeOut, SCHEDULED_TIME_IN, SCHEDULED_TIME_OUT, GMS_OPTIONS);
+    const workedHours = store.calculateWorkedHours(timeIn, timeOut, SCHEDULED_TIME_IN, SCHEDULED_TIME_OUT, options);
     assert.strictEqual(workedHours, expected.workedHours, `${label}: worked hours string`);
 }
 
@@ -60,6 +73,29 @@ function run() {
             lunchBreakMinutes: 60,
             workedMinutes: 480,
             shortMinutes: 0,
+            lateMinutes: 0,
+            lateDeductionMinutes: 0,
+            earlyOutDeductionMinutes: 0,
+            totalDeductionMinutes: 0,
+            hourlyRate: 78.13,
+            deductionAmount: 0,
+            finalPay: 625,
+            workedHours: '8.00'
+        }
+    });
+
+    assertPayrollCase({
+        label: '9:08 AM to 6:08 PM before grace start',
+        timeIn: '09:08',
+        timeOut: '18:08',
+        dailyRate: 625,
+        options: GMS_PRE_GRACE_OPTIONS,
+        expected: {
+            totalSpanMinutes: 540,
+            lunchBreakMinutes: 60,
+            workedMinutes: 480,
+            shortMinutes: 0,
+            lateMinutes: 8,
             lateDeductionMinutes: 8,
             earlyOutDeductionMinutes: 0,
             totalDeductionMinutes: 8,
@@ -80,12 +116,13 @@ function run() {
             lunchBreakMinutes: 60,
             workedMinutes: 472,
             shortMinutes: 8,
-            lateDeductionMinutes: 8,
+            lateMinutes: 0,
+            lateDeductionMinutes: 0,
             earlyOutDeductionMinutes: 0,
-            totalDeductionMinutes: 8,
+            totalDeductionMinutes: 0,
             hourlyRate: 78.13,
-            deductionAmount: 10.42,
-            finalPay: 614.58,
+            deductionAmount: 0,
+            finalPay: 625,
             workedHours: '7.87'
         }
     });
@@ -100,6 +137,7 @@ function run() {
             lunchBreakMinutes: 60,
             workedMinutes: 472,
             shortMinutes: 8,
+            lateMinutes: 0,
             lateDeductionMinutes: 0,
             earlyOutDeductionMinutes: 8,
             totalDeductionMinutes: 8,
@@ -120,12 +158,13 @@ function run() {
             lunchBreakMinutes: 60,
             workedMinutes: 464,
             shortMinutes: 16,
-            lateDeductionMinutes: 8,
+            lateMinutes: 0,
+            lateDeductionMinutes: 0,
             earlyOutDeductionMinutes: 8,
-            totalDeductionMinutes: 16,
+            totalDeductionMinutes: 8,
             hourlyRate: 78.13,
-            deductionAmount: 20.83,
-            finalPay: 604.17,
+            deductionAmount: 10.42,
+            finalPay: 614.58,
             workedHours: '7.73'
         }
     });
@@ -140,13 +179,35 @@ function run() {
             lunchBreakMinutes: 60,
             workedMinutes: 469,
             shortMinutes: 11,
-            lateDeductionMinutes: 75,
+            lateMinutes: 60,
+            lateDeductionMinutes: 60,
             earlyOutDeductionMinutes: 0,
-            totalDeductionMinutes: 75,
+            totalDeductionMinutes: 60,
             hourlyRate: 78.13,
-            deductionAmount: 97.66,
-            finalPay: 527.34,
+            deductionAmount: 78.12,
+            finalPay: 546.88,
             workedHours: '7.82'
+        }
+    });
+
+    assertPayrollCase({
+        label: '1:15 PM to 6:00 PM',
+        timeIn: '13:15',
+        timeOut: '18:00',
+        dailyRate: 625,
+        expected: {
+            totalSpanMinutes: 285,
+            lunchBreakMinutes: 0,
+            workedMinutes: 285,
+            shortMinutes: 195,
+            lateMinutes: 240,
+            lateDeductionMinutes: 180,
+            earlyOutDeductionMinutes: 0,
+            totalDeductionMinutes: 180,
+            hourlyRate: 78.13,
+            deductionAmount: 234.37,
+            finalPay: 390.63,
+            workedHours: '4.75'
         }
     });
 

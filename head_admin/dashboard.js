@@ -92,6 +92,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         today: 'today_present.html',
         time_in_out: 'time_in_time_out.html',
         reports: 'reports.html',
+        daily_compiled_report: 'daily_compiled_report.html',
         settings: 'settings.html',
         users: 'users.html',
         branches: 'branches.html',
@@ -118,6 +119,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         today: ['attendance'],
         time_in_out: ['attendance'],
         reports: ['reports'],
+        daily_compiled_report: [],
         settings: [],
         users: [],
         branches: [],
@@ -174,6 +176,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 'users',
                 'branches',
                 'company_bulletin',
+                'daily_compiled_report',
                 'company_profile',
                 'invoice_template',
                 'settings'
@@ -199,6 +202,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         today: 'Check who is present today with fewer clicks and a more readable layout.',
         time_in_out: 'Manage attendance station actions and live time controls.',
         reports: 'Generate attendance reports with better access to filters and output panels.',
+        daily_compiled_report: 'Build a polished manual daily report and copy it as a ready-to-share image.',
         settings: 'Adjust workspace settings and account preferences.',
         users: 'Control user access, feature permissions, and account setup.',
         branches: 'Manage branch structure, availability, and tenant branch data.',
@@ -504,6 +508,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             'today',
             'time_in_out',
             'reports',
+            'daily_compiled_report',
             'settings'
         ];
     }

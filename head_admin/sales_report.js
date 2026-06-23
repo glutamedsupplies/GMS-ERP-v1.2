@@ -621,13 +621,34 @@ function normalizeSalesText(value) {
     return String(value ?? '').trim();
 }
 
+function isAutoOrderPlaceholder(value) {
+    return normalizeSalesText(value).replace(/\s+/g, ' ').toLowerCase() === 'auto on save';
+}
+
+function normalizeActionableOrderLookup(value) {
+    const normalized = normalizeSalesText(value);
+    return isAutoOrderPlaceholder(normalized) ? '' : normalized;
+}
+
+function getSalesRowOrderNumber(row = {}) {
+    return normalizeActionableOrderLookup(row.order_number || row.orderNumber || '');
+}
+
+function getSalesRowReceiptNumber(row = {}) {
+    return normalizeActionableOrderLookup(row.receipt_number || row.receiptNumber || '');
+}
+
+function getSalesRowActionLookup(row = {}) {
+    return getSalesRowReceiptNumber(row) || getSalesRowOrderNumber(row);
+}
+
 function parseSalesNumber(value) {
     const parsed = Number(value || 0);
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function getSalesCardGroupKey(row = {}, index = 0) {
-    const orderLookup = normalizeSalesText(row.order_number || row.receipt_number || '');
+    const orderLookup = getSalesRowActionLookup(row);
     if (orderLookup) {
         return `order:${orderLookup.toLowerCase()}`;
     }
@@ -651,7 +672,7 @@ function getSalesCardHeaderScore(row = {}) {
     if (Number(row.line_index || 0) === 1) {
         score += 1000;
     }
-    if (normalizeSalesText(row.order_number || row.receipt_number || '')) {
+    if (getSalesRowActionLookup(row)) {
         score += 200;
     }
     if (parseSalesNumber(row.order_total || 0) > 0) {
@@ -749,7 +770,7 @@ function groupSalesRows(rows = []) {
         const note = normalizeSalesText(
             groupRows.map((row) => normalizeSalesText(row.note || '')).find(Boolean) || ''
         );
-        const orderLookup = normalizeSalesText(header?.order_number || header?.receipt_number || '');
+        const orderLookup = getSalesRowActionLookup(header || groupRows[0] || {});
 
         return {
             header: header || groupRows[0] || {},
@@ -773,22 +794,26 @@ function groupSalesRows(rows = []) {
             return rightDate.localeCompare(leftDate);
         }
 
-        const rightReceipt = normalizeSalesText(right.header?.receipt_number || right.header?.order_number || '');
-        const leftReceipt = normalizeSalesText(left.header?.receipt_number || left.header?.order_number || '');
+        const rightReceipt = getSalesRowReceiptNumber(right.header) || getSalesRowOrderNumber(right.header);
+        const leftReceipt = getSalesRowReceiptNumber(left.header) || getSalesRowOrderNumber(left.header);
         return rightReceipt.localeCompare(leftReceipt);
     });
 }
 
 function renderSalesReceiptCard(group = {}) {
     const header = group.header || {};
-    const orderLookup = normalizeSalesText(group.orderLookup || header.order_number || header.receipt_number || '');
+    const rowOrderNumber = getSalesRowOrderNumber(header);
+    const rowReceiptNumber = getSalesRowReceiptNumber(header);
+    const orderLookup = normalizeSalesText(group.orderLookup || rowReceiptNumber || rowOrderNumber || '');
     const safeOrderLookup = appClient.escapeHtml(orderLookup);
+    const safeRowOrderNumber = appClient.escapeHtml(rowOrderNumber);
+    const safeReceiptNumber = appClient.escapeHtml(rowReceiptNumber);
     const customerName = normalizeSalesText(header.client_name || '') || 'Unknown customer';
     const invoiceBranch = normalizeSalesText(header.branch || '') || '-';
     const cashBranch = normalizeSalesText(header.cash_branch || header.branch || '') || '-';
     const courier = normalizeSalesText(header.courier || '') || 'No courier';
-    const receiptNumber = normalizeSalesText(header.receipt_number || header.order_number || '') || '-';
-    const orderNumber = normalizeSalesText(header.order_number || header.receipt_number || '') || '-';
+    const receiptNumber = rowReceiptNumber || rowOrderNumber || '-';
+    const orderNumber = rowOrderNumber || rowReceiptNumber || '-';
     const adminName = normalizeSalesText(header.admin_name || '') || '-';
     const salesRep = normalizeSalesText(header.sales_representative || '') || '-';
     const clientAddress = normalizeSalesText(header.client_address || '') || 'No address saved';
@@ -887,6 +912,8 @@ function renderSalesReceiptCard(group = {}) {
                         class="table-action-btn receipt-btn"
                         data-order-action="receipt"
                         data-order-number="${safeOrderLookup}"
+                        data-row-order-number="${safeRowOrderNumber}"
+                        data-receipt-number="${safeReceiptNumber}"
                         ${canViewReceiptRow(header) ? '' : 'disabled'}
                     >
                         Receipt
@@ -896,6 +923,8 @@ function renderSalesReceiptCard(group = {}) {
                         class="table-action-btn"
                         data-order-action="edit"
                         data-order-number="${safeOrderLookup}"
+                        data-row-order-number="${safeRowOrderNumber}"
+                        data-receipt-number="${safeReceiptNumber}"
                         ${canEditRow(header) ? '' : 'disabled'}
                     >
                         Edit
@@ -905,6 +934,8 @@ function renderSalesReceiptCard(group = {}) {
                         class="table-action-btn delete-btn"
                         data-order-action="delete"
                         data-order-number="${safeOrderLookup}"
+                        data-row-order-number="${safeRowOrderNumber}"
+                        data-receipt-number="${safeReceiptNumber}"
                         ${canDeleteRow(header) ? '' : 'disabled'}
                     >
                         Delete
@@ -948,6 +979,12 @@ async function handleSalesTableClick(event) {
 
     const action = String(button.dataset.orderAction || '').trim();
     const orderNumber = String(button.dataset.orderNumber || '').trim();
+    console.debug('[sales-report:order-action]', {
+        action,
+        selectedOrderLookup: orderNumber,
+        rowOrderNumber: String(button.dataset.rowOrderNumber || '').trim(),
+        receiptNumber: String(button.dataset.receiptNumber || '').trim()
+    });
     if (!orderNumber) {
         return;
     }
@@ -978,7 +1015,7 @@ async function handleSalesTableClick(event) {
 }
 
 function canEditRow(row) {
-    return Boolean((row.order_number || row.receipt_number) && String(row.source || '').toLowerCase() === 'manual');
+    return Boolean(getSalesRowActionLookup(row) && String(row.source || '').toLowerCase() === 'manual');
 }
 
 function canDeleteRow(row) {
@@ -986,7 +1023,7 @@ function canDeleteRow(row) {
 }
 
 function canViewReceiptRow(row) {
-    return Boolean(row.order_number || row.receipt_number);
+    return Boolean(getSalesRowActionLookup(row));
 }
 
 async function showSavedReceipt(orderNumber) {

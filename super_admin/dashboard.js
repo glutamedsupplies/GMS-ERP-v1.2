@@ -2,6 +2,7 @@ const appClient = window.appClient;
 
 const statusEl = document.getElementById('status');
 const customerChatBtn = document.getElementById('customerChatBtn');
+const timeCardEditorBtn = document.getElementById('timeCardEditorBtn');
 const refreshBtn = document.getElementById('refreshBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const metricCompanies = document.getElementById('metricCompanies');
@@ -199,6 +200,11 @@ async function initialize() {
     if (customerChatBtn) {
         customerChatBtn.addEventListener('click', () => {
             window.location.replace('/super_admin/customer_requests.html');
+        });
+    }
+    if (timeCardEditorBtn) {
+        timeCardEditorBtn.addEventListener('click', () => {
+            window.location.replace('/super_admin/time_card_editor.html');
         });
     }
     if (openCustomerChatDeskBtn) {
