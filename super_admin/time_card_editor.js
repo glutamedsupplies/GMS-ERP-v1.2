@@ -19,6 +19,8 @@ const summaryHours = document.getElementById('summaryHours');
 const LAST_COMPANY_KEY = 'superTimeCardEditorCompanyId';
 const LAST_EMPLOYEE_KEY = 'superTimeCardEditorEmployeeId';
 const ZERO_HOUR_STATUSES = new Set(['absent', 'day off', 'inactive', 'suspended']);
+const SCHEDULED_TIME_IN = '09:00';
+const LATE_GRACE_MINUTES = 15;
 
 const state = {
     session: null,
@@ -82,9 +84,22 @@ function bindEvents() {
 
     timecardTableBody.addEventListener('input', (event) => {
         const row = event.target?.closest?.('tr[data-date-key]');
+        if (row && event.target?.matches?.('[data-role="time-in"], [data-role="time-out"], [data-role="worked-hours"]')) {
+            applyAutoRemarks(row);
+        }
         const rowStatus = row?.querySelector?.('[data-role="row-status"]');
         if (rowStatus) {
             rowStatus.textContent = 'Unsaved';
+        }
+    });
+
+    timecardTableBody.addEventListener('change', (event) => {
+        const row = event.target?.closest?.('tr[data-date-key]');
+        if (row && event.target?.matches?.('[data-role="remarks"]')) {
+            const rowStatus = row.querySelector('[data-role="row-status"]');
+            if (rowStatus) {
+                rowStatus.textContent = 'Unsaved';
+            }
         }
     });
 }
@@ -214,8 +229,17 @@ async function saveRow(button) {
         dateKey,
         timeIn: String(timeInInput?.value || '').trim(),
         timeOut: String(timeOutInput?.value || '').trim(),
-        remarks: String(remarksInput?.value || '').trim()
+        remarks: resolveRowRemarksForSave(rowElement, {
+            dateKey,
+            scheduledTimeIn: rowElement.dataset.scheduledTimeIn || '',
+            timeIn: String(timeInInput?.value || '').trim(),
+            timeOut: String(timeOutInput?.value || '').trim(),
+            workedHours: String(workedHoursInput?.value || '').trim()
+        })
     };
+    if (remarksInput) {
+        remarksInput.value = payload.remarks;
+    }
     const workedHours = String(workedHoursInput?.value || '').trim();
     if (workedHours) {
         payload.workedHours = workedHours;
@@ -299,10 +323,18 @@ function renderRows() {
         const dateKey = String(row.dateKey || row.date || '').trim();
         const currentStatus = String(row.status || '').trim() || '-';
         const currentRemarks = String(row.displayRemarks || row.remarksRaw || '').trim();
-        const remarksValue = String(row.remarksRaw || row.status || '').trim();
         const workedHours = String(row.workedHours || '').trim();
+        const remarksControl = buildRemarksControl({
+            dateKey,
+            timeIn: row.timeIn || '',
+            timeOut: row.timeOut || '',
+            workedHours,
+            scheduledTimeIn: row.scheduledTimeIn || '',
+            fallbackStatus: row.status || '',
+            fallbackRemarks: row.remarksRaw || ''
+        });
         return `
-            <tr data-date-key="${escapeHtml(dateKey)}">
+            <tr data-date-key="${escapeHtml(dateKey)}" data-scheduled-time-in="${escapeHtml(row.scheduledTimeIn || '')}">
                 <td>
                     <div class="date-cell">
                         <strong>${escapeHtml(row.displayDate || formatDisplayDate(dateKey))}</strong>
@@ -314,8 +346,8 @@ function renderRows() {
                 <td>
                     <input class="hours-input" data-role="worked-hours" type="number" min="0" max="24" step="0.01" placeholder="${escapeHtml(workedHours || 'auto')}">
                 </td>
-                <td>
-                    <input class="remarks-input" data-role="remarks" list="statusOptions" value="${escapeHtml(remarksValue)}" maxlength="240">
+                <td data-role="remarks-cell">
+                    ${remarksControl}
                 </td>
                 <td>
                     <div class="status-preview">
@@ -423,6 +455,154 @@ function sortRows(rows = []) {
     return rows.slice().sort((left, right) => (
         String(left.dateKey || left.date || '').localeCompare(String(right.dateKey || right.date || ''))
     ));
+}
+
+function applyAutoRemarks(rowElement) {
+    if (!rowElement) {
+        return;
+    }
+
+    const remarksCell = rowElement.querySelector('[data-role="remarks-cell"]');
+    if (!remarksCell) {
+        return;
+    }
+
+    const currentRemarks = rowElement.querySelector('[data-role="remarks"]')?.value || '';
+    remarksCell.innerHTML = buildRemarksControl({
+        dateKey: rowElement.dataset.dateKey || '',
+        scheduledTimeIn: rowElement.dataset.scheduledTimeIn || '',
+        timeIn: rowElement.querySelector('[data-role="time-in"]')?.value || '',
+        timeOut: rowElement.querySelector('[data-role="time-out"]')?.value || '',
+        workedHours: rowElement.querySelector('[data-role="worked-hours"]')?.value || '',
+        fallbackRemarks: currentRemarks
+    });
+}
+
+function buildRemarksControl(options = {}) {
+    const remarks = deriveAutoRemarks(options);
+    if (canChooseAbsentRemarks(options)) {
+        return `
+            <select class="remarks-input" data-role="remarks">
+                <option value="Absent"${remarks === 'Absent' ? ' selected' : ''}>Absent</option>
+                <option value="Excuse"${remarks === 'Excuse' ? ' selected' : ''}>Excuse</option>
+            </select>
+        `;
+    }
+
+    return `<input class="remarks-input" data-role="remarks" value="${escapeHtml(remarks)}" maxlength="240" readonly tabindex="-1">`;
+}
+
+function resolveRowRemarksForSave(rowElement, options = {}) {
+    const selectedRemarks = String(rowElement?.querySelector?.('[data-role="remarks"]')?.value || '').trim();
+    if (canChooseAbsentRemarks(options) && ['Absent', 'Excuse'].includes(selectedRemarks)) {
+        return selectedRemarks;
+    }
+
+    return deriveAutoRemarks(options);
+}
+
+function canChooseAbsentRemarks({
+    dateKey = '',
+    timeIn = '',
+    timeOut = '',
+    workedHours = '',
+    fallbackStatus = '',
+    fallbackRemarks = ''
+} = {}) {
+    const normalizedTimeIn = String(timeIn || '').trim();
+    const normalizedTimeOut = String(timeOut || '').trim();
+    const normalizedHours = Number(workedHours || 0);
+    if (normalizedTimeIn || normalizedTimeOut || (Number.isFinite(normalizedHours) && normalizedHours > 0)) {
+        return false;
+    }
+    if (isSunday(dateKey)) {
+        return false;
+    }
+
+    return !normalizePreservedZeroHourStatus(fallbackRemarks || fallbackStatus);
+}
+
+function deriveAutoRemarks({
+    dateKey = '',
+    timeIn = '',
+    timeOut = '',
+    workedHours = '',
+    scheduledTimeIn = '',
+    fallbackStatus = '',
+    fallbackRemarks = ''
+} = {}) {
+    const normalizedTimeIn = String(timeIn || '').trim();
+    const normalizedTimeOut = String(timeOut || '').trim();
+    const normalizedHours = Number(workedHours || 0);
+
+    if (normalizedTimeIn) {
+        return isLateTimeIn(normalizedTimeIn, scheduledTimeIn) ? 'Late' : 'On Time';
+    }
+
+    if (normalizedTimeOut || (Number.isFinite(normalizedHours) && normalizedHours > 0)) {
+        return 'On Time';
+    }
+
+    if (isSunday(dateKey)) {
+        return 'Day Off';
+    }
+
+    const preserved = normalizePreservedZeroHourStatus(fallbackRemarks || fallbackStatus);
+    if (String(fallbackRemarks || fallbackStatus || '').trim().toLowerCase() === 'excuse') {
+        return 'Excuse';
+    }
+    return preserved || 'Absent';
+}
+
+function isLateTimeIn(timeValue, scheduledTimeIn = '') {
+    const timeInMinutes = parseTimeToMinutes(timeValue);
+    const scheduledMinutes = parseTimeToMinutes(scheduledTimeIn) ?? parseTimeToMinutes(SCHEDULED_TIME_IN);
+    if (timeInMinutes === null || scheduledMinutes === null) {
+        return false;
+    }
+
+    return timeInMinutes > scheduledMinutes + LATE_GRACE_MINUTES;
+}
+
+function parseTimeToMinutes(value) {
+    const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) {
+        return null;
+    }
+
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (!Number.isInteger(hours) || !Number.isInteger(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+        return null;
+    }
+
+    return (hours * 60) + minutes;
+}
+
+function isSunday(dateKey) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateKey || ''))) {
+        return false;
+    }
+
+    const date = new Date(`${dateKey}T00:00:00`);
+    return !Number.isNaN(date.getTime()) && date.getDay() === 0;
+}
+
+function normalizePreservedZeroHourStatus(value = '') {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'day off') {
+        return 'Day Off';
+    }
+    if (normalized === 'holiday') {
+        return 'Holiday';
+    }
+    if (normalized === 'inactive') {
+        return 'Inactive';
+    }
+    if (normalized === 'suspended') {
+        return 'Suspended';
+    }
+    return '';
 }
 
 function buildCompanyLabel(company) {

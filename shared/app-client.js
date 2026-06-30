@@ -2993,11 +2993,11 @@
             method: 'PUT',
             body: payload
         }),
-        listEmployees: (filter = '') => {
+        listEmployees: (filter = '', { bypassCache = false } = {}) => {
             const normalizedFilter = String(filter || '').trim();
             const requestFactory = () => request(`/api/employees?filter=${encodeURIComponent(normalizedFilter)}`);
             if (!normalizedFilter) {
-                return requestWithSessionCache('employees:filter=', SESSION_CACHE_MAX_AGE_MS, requestFactory);
+                return requestWithSessionCache('employees:filter=', SESSION_CACHE_MAX_AGE_MS, requestFactory, { bypassCache });
             }
             return requestFactory();
         },

@@ -168,6 +168,7 @@ async function resolveServerDateKey() {
 }
 
 async function loadEmployees(preferredEmployeeId = '', { preserveTable = false } = {}) {
+    employeeListDiv.innerHTML = '<div class="empty-row" style="padding:12px;">Loading attendance accounts...</div>';
     try {
         const employees = await listAttendanceUsers();
         attendanceEmployees = employees;
@@ -295,7 +296,10 @@ async function refreshSelectedTimecard() {
 }
 
 async function listAttendanceUsers() {
-    const users = await appClient.listEmployees();
+    const users = await appClient.listEmployees('', { bypassCache: true });
+    if (!Array.isArray(users)) {
+        throw new Error('Attendance accounts response was invalid. Please refresh the page.');
+    }
     return users.sort((left, right) => {
         const leftRank = getEmployeeAccountStatus(left) === 'active' ? 0 : 1;
         const rightRank = getEmployeeAccountStatus(right) === 'active' ? 0 : 1;
