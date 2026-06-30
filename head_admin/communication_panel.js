@@ -225,9 +225,6 @@ function bindEvents() {
 
 function startAutoRefresh() {
     stopAutoRefresh();
-    state.refreshTimer = window.setInterval(() => {
-        refreshWorkflow();
-    }, AUTO_REFRESH_MS);
 }
 
 function stopAutoRefresh() {

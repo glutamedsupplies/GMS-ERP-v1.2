@@ -75,6 +75,7 @@ let html2CanvasLoadPromise = null;
 let jsPdfLoadPromise = null;
 const exportScriptCache = new Map();
 const openPayrollDetailKeys = new Set();
+const timecardCache = new Map();
 
 initialize();
 window.addEventListener('resize', queueCompactLayoutCheck);
@@ -252,14 +253,7 @@ async function loadEmployees(preferredEmployeeId = '', { preserveTable = false }
 }
 
 function setupAutoRefresh() {
-    window.addEventListener('focus', handleForegroundRefresh);
-    document.addEventListener('visibilitychange', handleForegroundRefresh);
-    window.setInterval(() => {
-        if (document.hidden) {
-            return;
-        }
-        void refreshSelectedTimecard();
-    }, TIMECARD_REFRESH_INTERVAL_MS);
+    // Data now reloads from explicit user actions or after save/update flows.
 }
 
 async function handleForegroundRefresh() {
@@ -332,9 +326,6 @@ async function renderTimecard(employee, { preserveTable = false } = {}) {
         renderCutoffPaymentState(null);
     }
     employeeNameTitle.innerText = `${resolvedEmployee.name}'s Semi-Monthly Time Card`;
-    if (!preserveTable) {
-        timecardTableBody.innerHTML = `<tr><td colspan="${getTimecardColumnCount()}" class="empty-row">Loading time card...</td></tr>`;
-    }
 
     try {
         const selectedDate = getSelectedDate();
@@ -344,6 +335,25 @@ async function renderTimecard(employee, { preserveTable = false } = {}) {
         updateCutoffRangeLabel(selectedDate);
 
         const selectedDateKey = formatDateKey(selectedDate);
+        const cachedTimecard = readTimecardCache(resolvedEmployee.id, selectedDateKey);
+        if (cachedTimecard && (!isSalaryTimecardView() || cachedTimecard.hasCutoffPaymentState)) {
+            if (requestToken !== timecardRequestToken) {
+                return;
+            }
+            const normalizedRows = applySuspensionOverrides(cachedTimecard.rows, resolvedEmployee);
+            currentTimecardRows = normalizedRows;
+            currentCutoffPaymentState = cachedTimecard.cutoffPaymentState;
+            renderPayrollSummary(resolvedEmployee, normalizedRows);
+            renderCutoffPaymentState(cachedTimecard.cutoffPaymentState);
+            renderTimecardRows(resolvedEmployee, normalizedRows);
+            syncExportControls();
+            return;
+        }
+
+        if (!preserveTable) {
+            timecardTableBody.innerHTML = `<tr><td colspan="${getTimecardColumnCount()}" class="empty-row">Loading time card...</td></tr>`;
+        }
+
         const [rows, cutoffPaymentState] = await Promise.all([
             appClient.getUserCutoffTimeCard(resolvedEmployee.id, {
                 dateKey: selectedDateKey
@@ -360,6 +370,11 @@ async function renderTimecard(employee, { preserveTable = false } = {}) {
         if (requestToken !== timecardRequestToken) {
             return;
         }
+        writeTimecardCache(resolvedEmployee.id, selectedDateKey, {
+            rows,
+            cutoffPaymentState,
+            hasCutoffPaymentState: isSalaryTimecardView()
+        });
         const normalizedRows = applySuspensionOverrides(rows, resolvedEmployee);
         currentTimecardRows = normalizedRows;
         currentCutoffPaymentState = cutoffPaymentState;
@@ -380,6 +395,44 @@ async function renderTimecard(employee, { preserveTable = false } = {}) {
         syncExportControls();
         queueCompactLayoutCheck();
     }
+}
+
+function buildTimecardCacheKey(employeeId = '', dateKey = '') {
+    return [
+        String(employeeId || '').trim(),
+        String(dateKey || '').trim()
+    ].join(':');
+}
+
+function readTimecardCache(employeeId = '', dateKey = '') {
+    const cacheKey = buildTimecardCacheKey(employeeId, dateKey);
+    return timecardCache.get(cacheKey) || null;
+}
+
+function writeTimecardCache(employeeId = '', dateKey = '', payload = {}) {
+    const cacheKey = buildTimecardCacheKey(employeeId, dateKey);
+    if (!cacheKey || cacheKey === ':') {
+        return;
+    }
+
+    timecardCache.set(cacheKey, {
+        rows: Array.isArray(payload.rows) ? payload.rows : [],
+        cutoffPaymentState: payload.cutoffPaymentState || null,
+        hasCutoffPaymentState: Boolean(payload.hasCutoffPaymentState)
+    });
+}
+
+function invalidateTimecardCacheForEmployee(employeeId = '') {
+    const prefix = `${String(employeeId || '').trim()}:`;
+    if (!prefix || prefix === ':') {
+        return;
+    }
+
+    Array.from(timecardCache.keys()).forEach((cacheKey) => {
+        if (cacheKey.startsWith(prefix)) {
+            timecardCache.delete(cacheKey);
+        }
+    });
 }
 
 function renderTimecardRows(employee, rows = []) {
@@ -787,6 +840,10 @@ function setTimecardViewMode(mode = 'normal') {
     setExportStatus('', '');
     syncTimecardViewMode();
     if (selectedEmployee) {
+        if (isSalaryTimecardView()) {
+            void renderTimecard(selectedEmployee, { preserveTable: true });
+            return;
+        }
         renderPayrollSummary(selectedEmployee, currentTimecardRows);
         renderTimecardRows(selectedEmployee, currentTimecardRows);
     }
@@ -1435,6 +1492,7 @@ async function saveDailySalary() {
         const updatedUser = await appClient.updateUser(selectedEmployee.id, {
             dailySalary: nextDailySalary
         });
+        invalidateTimecardCacheForEmployee(selectedEmployee.id);
         attendanceEmployees = attendanceEmployees.map((employee) => (
             String(employee?.id || '') === String(updatedUser?.id || '')
                 ? { ...employee, ...updatedUser }
@@ -1474,6 +1532,7 @@ async function toggleCutoffPaymentState() {
             dateKey: selectedDateKey,
             status: nextStatus
         });
+        invalidateTimecardCacheForEmployee(selectedEmployee.id);
         currentCutoffPaymentState = updatedState;
         renderCutoffPaymentState(updatedState);
         setCutoffPaymentFeedback(

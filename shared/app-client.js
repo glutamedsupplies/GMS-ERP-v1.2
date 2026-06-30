@@ -20,9 +20,13 @@
     const REQUEST_CACHE_STORAGE_PREFIX = 'appRequestCacheV1';
     const AUTO_NAVIGATION_GUARD_KEY = 'appAutoNavigationGuardV1';
     const CURRENT_SESSION_CACHE_KEY = 'current-session';
+    const SESSION_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+    const MANUAL_REFRESH_WINDOW_MS = 2500;
     const inFlightRequestCache = new Map();
+    let manualRefreshRequestedAt = 0;
 
     ensureResponsiveDocumentSetup();
+    installManualRefreshDetector();
 
     function ensureResponsiveDocumentSetup() {
         const metadata = getPathMetadata();
@@ -872,6 +876,39 @@
         return Object.prototype.hasOwnProperty.call(payload, 'data') ? payload.data : payload;
     }
 
+    function installManualRefreshDetector() {
+        if (typeof document === 'undefined' || document.__appManualRefreshDetectorInstalled) {
+            return;
+        }
+
+        document.__appManualRefreshDetectorInstalled = true;
+        document.addEventListener('click', (event) => {
+            const target = event.target?.closest?.('button, a, [role="button"]');
+            if (!target) {
+                return;
+            }
+
+            const signal = [
+                target.id,
+                target.name,
+                target.dataset?.action,
+                target.dataset?.refresh,
+                target.getAttribute('aria-label'),
+                target.getAttribute('title'),
+                target.textContent
+            ].join(' ').toLowerCase();
+
+            if (/\b(refresh|reload|sync|rotate-right)\b/.test(signal)) {
+                manualRefreshRequestedAt = Date.now();
+            }
+        }, true);
+    }
+
+    function isManualRefreshActive() {
+        return manualRefreshRequestedAt > 0
+            && (Date.now() - manualRefreshRequestedAt) <= MANUAL_REFRESH_WINDOW_MS;
+    }
+
     function buildScopedRequestCacheKey(cacheKey = '') {
         const session = getSession();
         return [
@@ -919,7 +956,7 @@
 
     async function requestWithSessionCache(cacheKey, maxAgeMs, factory, { bypassCache = false } = {}) {
         const scopedKey = buildScopedRequestCacheKey(cacheKey);
-        if (!bypassCache) {
+        if (!bypassCache && !isManualRefreshActive()) {
             const cachedValue = readRequestCache(cacheKey, maxAgeMs);
             if (cachedValue !== null) {
                 return cachedValue;
@@ -981,16 +1018,44 @@
         cacheKeyPrefixes.forEach((cacheKeyPrefix) => invalidateRequestCacheByPrefix(cacheKeyPrefix));
     }
 
+    function invalidateAllRequestCaches() {
+        try {
+            const keysToRemove = [];
+            for (let index = 0; index < sessionStorage.length; index += 1) {
+                const key = sessionStorage.key(index);
+                if (key && key.startsWith(`${REQUEST_CACHE_STORAGE_PREFIX}:`)) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach((key) => sessionStorage.removeItem(key));
+        } catch (_error) {
+            // Ignore storage enumeration issues.
+        }
+        inFlightRequestCache.clear();
+    }
+
     function setSessionUser(user) {
         if (!user || !user.id) {
             clearStoredSession();
             return;
         }
 
+        const previousSession = getSession();
+        const nextCompanyId = user.company_id || '';
+        const nextRole = user.role || 'employee';
+        const nextUserId = user.id || '';
+        if (
+            previousSession.userId !== nextUserId
+            || previousSession.companyId !== nextCompanyId
+            || previousSession.role !== nextRole
+        ) {
+            invalidateAllRequestCaches();
+        }
+
         localStorage.setItem('userId', user.id);
         localStorage.setItem('userName', user.name || '');
-        localStorage.setItem('role', user.role || 'employee');
-        localStorage.setItem('companyId', user.company_id || '');
+        localStorage.setItem('role', nextRole);
+        localStorage.setItem('companyId', nextCompanyId);
         localStorage.setItem('companyCode', user.company_code || '');
     }
 
@@ -1696,7 +1761,7 @@
     }
 
     function getBootstrapWithSessionCache() {
-        return requestWithSessionCache('bootstrap', 30000, () => request('/api/bootstrap')).then((payload) => {
+        return requestWithSessionCache('bootstrap', SESSION_CACHE_MAX_AGE_MS, () => request('/api/bootstrap')).then((payload) => {
             syncSupportSessionBanner(payload?.support_session || payload?.user?.support_session || payload?.user?.supportSession || null);
             syncEmployeeAnnouncementBanner(payload?.companyBulletin || payload?.company_bulletin || null);
             return payload;
@@ -1886,7 +1951,7 @@
 
     async function getCurrentSession({ bypassCache = false } = {}) {
         if (!bypassCache) {
-            const cachedUser = readRequestCache(CURRENT_SESSION_CACHE_KEY, 15000);
+            const cachedUser = readRequestCache(CURRENT_SESSION_CACHE_KEY, SESSION_CACHE_MAX_AGE_MS);
             if (cachedUser && cachedUser.id) {
                 setSessionUser(cachedUser);
                 syncSupportSessionBanner(cachedUser.support_session || cachedUser.supportSession || null);
@@ -1896,7 +1961,7 @@
 
         let user = null;
         try {
-            user = await requestWithSessionCache(CURRENT_SESSION_CACHE_KEY, 15000, () => request('/api/session', {
+            user = await requestWithSessionCache(CURRENT_SESSION_CACHE_KEY, SESSION_CACHE_MAX_AGE_MS, () => request('/api/session', {
                 skipAuthRedirect: true
             }), {
                 bypassCache
@@ -1920,7 +1985,7 @@
     }
 
     async function ensureSession({ role = '', allowEmployeeFeature = '', allowEmployeeFeatures = [] } = {}) {
-        const user = await getCurrentSession({ bypassCache: true });
+        const user = await getCurrentSession();
         if (!user) {
             redirectToLogin();
             return null;
@@ -1970,6 +2035,8 @@
         escapeHtml,
         formatDisplayTime,
         getSession,
+        invalidateAllRequestCaches,
+        invalidateReferenceCaches,
         getCurrentSession,
         ensureSession,
         attachEmployeeBackButton,
@@ -1986,7 +2053,7 @@
         applyBootstrapBrandTheme,
         readCachedBrandTheme,
         setSessionUser,
-        getServerInfo: () => requestWithSessionCache('server-info', 30000, () => request('/api/server-info', {
+        getServerInfo: () => requestWithSessionCache('server-info', SESSION_CACHE_MAX_AGE_MS, () => request('/api/server-info', {
             skipAuthRedirect: true
         })),
         getClientConfig: () => request('/api/client-config'),
@@ -2125,7 +2192,7 @@
             if (shouldUseDefaultQueryCache({ filter: normalizedFilter, offset: normalizedOffset, clientType: normalizedClientType })) {
                 return requestWithSessionCache(
                     `clients:filter=${normalizedFilter}:clientType=${normalizedClientType}:limit=${normalizedLimit}:offset=${normalizedOffset}`,
-                    30000,
+                    SESSION_CACHE_MAX_AGE_MS,
                     requestFactory
                 );
             }
@@ -2164,7 +2231,7 @@
             method: 'POST',
             body: payload
         }),
-        getSalesReferences: () => requestWithSessionCache('sales-references', 30000, () => request('/api/sales/references')),
+        getSalesReferences: () => requestWithSessionCache('sales-references', SESSION_CACHE_MAX_AGE_MS, () => request('/api/sales/references')),
         listProducts: (filter = '') => request(`/api/products?filter=${encodeURIComponent(filter)}`),
         listInventoryVariants: ({ productName = '', setName = '', search = '', limit = 500, offset = 0, bypassCache = false } = {}) => {
             const normalizedProductName = String(productName || '').trim();
@@ -2193,7 +2260,7 @@
             })) {
                 return requestWithSessionCache(
                     `inventory-variants:product=${normalizedProductName}:set=${normalizedSetName}:search=${normalizedSearch}:limit=${normalizedLimit}:offset=${normalizedOffset}`,
-                    30000,
+                    SESSION_CACHE_MAX_AGE_MS,
                     requestFactory,
                     { bypassCache }
                 );
@@ -2240,20 +2307,60 @@
             () => window.electronAPI?.inventoryVariants?.resolve({ productName, setName }),
             () => request(`/api/inventory-variants/resolve?productName=${encodeURIComponent(productName)}&setName=${encodeURIComponent(setName)}`)
         ),
-        listInventory: ({ branch = '', filter = '', limit = 500, offset = 0 } = {}) => request(`/api/inventory?branch=${encodeURIComponent(branch)}&filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`),
+        listInventory: ({ branch = '', filter = '', limit = 500, offset = 0 } = {}) => {
+            const normalizedBranch = String(branch || '').trim();
+            const normalizedFilter = String(filter || '').trim();
+            const normalizedLimit = Math.max(1, Number(limit) || 500);
+            const normalizedOffset = Math.max(0, Number(offset) || 0);
+            const requestFactory = () => request(`/api/inventory?branch=${encodeURIComponent(normalizedBranch)}&filter=${encodeURIComponent(normalizedFilter)}&limit=${encodeURIComponent(normalizedLimit)}&offset=${encodeURIComponent(normalizedOffset)}`);
+
+            if (shouldUseDefaultQueryCache({ branch: normalizedBranch, filter: normalizedFilter, offset: normalizedOffset })) {
+                return requestWithSessionCache(
+                    `inventory:branch=${normalizedBranch}:filter=${normalizedFilter}:limit=${normalizedLimit}:offset=${normalizedOffset}`,
+                    SESSION_CACHE_MAX_AGE_MS,
+                    requestFactory
+                );
+            }
+
+            return requestFactory();
+        },
         updateInventoryItem: (inventoryId, payload) => request(`/api/inventory-items/${encodeURIComponent(inventoryId)}`, {
             method: 'PATCH',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['inventory']);
+            return result;
         }),
         updateInventoryQuantity: (helper, payload) => request(`/api/inventory/${encodeURIComponent(helper)}`, {
             method: 'PATCH',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['inventory']);
+            return result;
         }),
         deleteInventoryItem: (inventoryId, { branch = '' } = {}) => request(
             `/api/inventory/${encodeURIComponent(inventoryId)}?branch=${encodeURIComponent(branch)}`,
             { method: 'DELETE' }
-        ),
-        listCompositeItems: (filter = '', limit = 500, offset = 0) => request(`/api/composite-items?filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`),
+        ).then((result) => {
+            invalidateReferenceCaches(['inventory']);
+            return result;
+        }),
+        listCompositeItems: (filter = '', limit = 500, offset = 0) => {
+            const normalizedFilter = String(filter || '').trim();
+            const normalizedLimit = Math.max(1, Number(limit) || 500);
+            const normalizedOffset = Math.max(0, Number(offset) || 0);
+            const requestFactory = () => request(`/api/composite-items?filter=${encodeURIComponent(normalizedFilter)}&limit=${encodeURIComponent(normalizedLimit)}&offset=${encodeURIComponent(normalizedOffset)}`);
+
+            if (shouldUseDefaultQueryCache({ filter: normalizedFilter, offset: normalizedOffset })) {
+                return requestWithSessionCache(
+                    `composite-items:filter=${normalizedFilter}:limit=${normalizedLimit}:offset=${normalizedOffset}`,
+                    SESSION_CACHE_MAX_AGE_MS,
+                    requestFactory
+                );
+            }
+
+            return requestFactory();
+        },
         upsertCompositeItem: (payload) => request('/api/composite-items', {
             method: 'POST',
             body: payload
@@ -2284,13 +2391,27 @@
         addSale: (payload) => request('/api/sales', {
             method: 'POST',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['inventory', 'sales', 'customer-credits', 'orders', 'orders:next-number']);
+            return result;
         }),
-        listCommunicationWorkflow: ({ branch = '', search = '' } = {}) => request(
-            `/api/communication-workflow?branch=${encodeURIComponent(branch)}&search=${encodeURIComponent(search)}`
-        ),
+        listCommunicationWorkflow: ({ branch = '', search = '' } = {}) => {
+            const normalizedBranch = String(branch || '').trim();
+            const normalizedSearch = String(search || '').trim();
+            const requestFactory = () => request(
+                `/api/communication-workflow?branch=${encodeURIComponent(normalizedBranch)}&search=${encodeURIComponent(normalizedSearch)}`
+            );
+            if (shouldUseDefaultQueryCache({ branch: normalizedBranch, search: normalizedSearch })) {
+                return requestWithSessionCache(`communication-workflow:branch=${normalizedBranch}:search=${normalizedSearch}`, SESSION_CACHE_MAX_AGE_MS, requestFactory);
+            }
+            return requestFactory();
+        },
         createCommunicationWorkflowEntry: (payload) => request('/api/communication-workflow', {
             method: 'POST',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['communication-workflow']);
+            return result;
         }),
         getCommunicationWorkflowThread: (entryId, { limit = 200 } = {}) => request(
             `/api/communication-workflow/${encodeURIComponent(entryId)}/thread?limit=${encodeURIComponent(limit)}`
@@ -2298,66 +2419,122 @@
         sendCommunicationWorkflowMessage: (entryId, payload) => request(`/api/communication-workflow/${encodeURIComponent(entryId)}/messages`, {
             method: 'POST',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['communication-workflow']);
+            return result;
         }),
         updateCommunicationWorkflowEntry: (entryId, payload) => request(`/api/communication-workflow/${encodeURIComponent(entryId)}`, {
             method: 'PATCH',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['communication-workflow']);
+            return result;
         }),
-        listLbcTracking: ({ branch = '', search = '', deliveryStatus = '', quickFilter = 'all', dateFrom = '' } = {}) => request(
-            `/api/lbc-tracking?branch=${encodeURIComponent(branch)}&search=${encodeURIComponent(search)}&deliveryStatus=${encodeURIComponent(deliveryStatus)}&quickFilter=${encodeURIComponent(quickFilter)}&dateFrom=${encodeURIComponent(dateFrom)}`
-        ),
-        listLbcCollections: ({ branch = '', search = '', status = 'all', dateFrom = '' } = {}) => request(
-            `/api/lbc-tracking/collections?branch=${encodeURIComponent(branch)}&search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}&dateFrom=${encodeURIComponent(dateFrom)}`
-        ),
+        listLbcTracking: ({ branch = '', search = '', deliveryStatus = '', quickFilter = 'all', dateFrom = '' } = {}) => {
+            const query = `branch=${encodeURIComponent(branch)}&search=${encodeURIComponent(search)}&deliveryStatus=${encodeURIComponent(deliveryStatus)}&quickFilter=${encodeURIComponent(quickFilter)}&dateFrom=${encodeURIComponent(dateFrom)}`;
+            const requestFactory = () => request(`/api/lbc-tracking?${query}`);
+            if (shouldUseDefaultQueryCache({ branch, search, deliveryStatus, quickFilter: quickFilter === 'all' ? '' : quickFilter, dateFrom })) {
+                return requestWithSessionCache(`lbc-tracking:${query}`, SESSION_CACHE_MAX_AGE_MS, requestFactory);
+            }
+            return requestFactory();
+        },
+        listLbcCollections: ({ branch = '', search = '', status = 'all', dateFrom = '' } = {}) => {
+            const query = `branch=${encodeURIComponent(branch)}&search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}&dateFrom=${encodeURIComponent(dateFrom)}`;
+            const requestFactory = () => request(`/api/lbc-tracking/collections?${query}`);
+            if (shouldUseDefaultQueryCache({ branch, search, status: status === 'all' ? '' : status, dateFrom })) {
+                return requestWithSessionCache(`lbc-tracking:collections:${query}`, SESSION_CACHE_MAX_AGE_MS, requestFactory);
+            }
+            return requestFactory();
+        },
         updateLbcTracking: (orderKey, payload) => request(`/api/lbc-tracking/${encodeURIComponent(orderKey)}`, {
             method: 'PUT',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['lbc-tracking']);
+            return result;
         }),
         confirmLbcCollection: (orderKey, payload = {}) => request(`/api/lbc-tracking/collections/${encodeURIComponent(orderKey)}/confirm`, {
             method: 'POST',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['lbc-tracking']);
+            return result;
         }),
         bulkAssignLbcTracking: (payload = {}) => request('/api/lbc-tracking/bulk-assign', {
             method: 'POST',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['lbc-tracking']);
+            return result;
         }),
         refreshLbcTrackingStatuses: (payload = {}) => request('/api/lbc-tracking/refresh', {
             method: 'POST',
             body: payload
         }),
-        listExpenses: ({ dateFrom = '', dateTo = '', branch = '', search = '' } = {}) => request(
-            `/api/expenses?dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}&branch=${encodeURIComponent(branch)}&search=${encodeURIComponent(search)}`
-        ),
+        listExpenses: ({ dateFrom = '', dateTo = '', branch = '', search = '' } = {}) => {
+            const query = `dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}&branch=${encodeURIComponent(branch)}&search=${encodeURIComponent(search)}`;
+            const requestFactory = () => request(`/api/expenses?${query}`);
+            if (shouldUseDefaultQueryCache({ dateFrom, dateTo, branch, search })) {
+                return requestWithSessionCache(`expenses:${query}`, SESSION_CACHE_MAX_AGE_MS, requestFactory);
+            }
+            return requestFactory();
+        },
         addExpense: (payload) => request('/api/expenses', {
             method: 'POST',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['expenses']);
+            return result;
         }),
         updateExpense: (entryId, payload) => request(`/api/expenses/${encodeURIComponent(entryId)}`, {
             method: 'PUT',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['expenses']);
+            return result;
         }),
         deleteExpense: (entryId) => request(`/api/expenses/${encodeURIComponent(entryId)}`, {
             method: 'DELETE'
+        }).then((result) => {
+            invalidateReferenceCaches(['expenses']);
+            return result;
         }),
         clearExpenses: () => Promise.reject(new Error('Bulk delete for expenses is disabled. Delete individual rows from the records table instead.')),
-        listCashIncome: ({ dateFrom = '', dateTo = '', branch = '', search = '' } = {}) => request(
-            `/api/cash-income?dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}&branch=${encodeURIComponent(branch)}&search=${encodeURIComponent(search)}`
-        ),
+        listCashIncome: ({ dateFrom = '', dateTo = '', branch = '', search = '' } = {}) => {
+            const query = `dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}&branch=${encodeURIComponent(branch)}&search=${encodeURIComponent(search)}`;
+            const requestFactory = () => request(`/api/cash-income?${query}`);
+            if (shouldUseDefaultQueryCache({ dateFrom, dateTo, branch, search })) {
+                return requestWithSessionCache(`cash-income:${query}`, SESSION_CACHE_MAX_AGE_MS, requestFactory);
+            }
+            return requestFactory();
+        },
         addCashIncome: (payload) => request('/api/cash-income', {
             method: 'POST',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['cash-income']);
+            return result;
         }),
         updateCashIncome: (entryId, payload) => request(`/api/cash-income/${encodeURIComponent(entryId)}`, {
             method: 'PUT',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['cash-income']);
+            return result;
         }),
         deleteCashIncome: (entryId) => request(`/api/cash-income/${encodeURIComponent(entryId)}`, {
             method: 'DELETE'
+        }).then((result) => {
+            invalidateReferenceCaches(['cash-income']);
+            return result;
         }),
         clearCashIncome: () => Promise.reject(new Error('Bulk delete for manual cash income is disabled. Delete individual rows from the records table instead.')),
         createOrder: (payload) => request('/api/sales', {
             method: 'POST',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['inventory', 'sales', 'customer-credits', 'orders', 'orders:next-number']);
+            return result;
         }),
         getOrder: (orderNumber) => callElectronOrHttp(
             () => window.electronAPI?.orders?.get(orderNumber),
@@ -2366,9 +2543,15 @@
         updateOrder: (orderNumber, payload) => request(`/api/orders/${encodeURIComponent(orderNumber)}`, {
             method: 'PUT',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['inventory', 'sales', 'customer-credits', 'orders', 'orders:next-number', 'lbc-tracking']);
+            return result;
         }),
         deleteOrder: (orderNumber) => request(`/api/orders/${encodeURIComponent(orderNumber)}`, {
             method: 'DELETE'
+        }).then((result) => {
+            invalidateReferenceCaches(['inventory', 'sales', 'customer-credits', 'orders', 'orders:next-number', 'lbc-tracking']);
+            return result;
         }),
         previewOrderNumber: (saleDate = '') => callElectronOrHttp(
             () => window.electronAPI?.orders?.preview(saleDate),
@@ -2636,17 +2819,40 @@
             invalidateReferenceCaches(['branches', 'bootstrap', 'sales-references']);
             return result;
         }),
-        listUsers: ({ role = '', filter = '', limit = 500, offset = 0 } = {}) => request(`/api/users?role=${encodeURIComponent(role)}&filter=${encodeURIComponent(filter)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`),
+        listUsers: ({ role = '', filter = '', limit = 500, offset = 0 } = {}) => {
+            const normalizedRole = String(role || '').trim();
+            const normalizedFilter = String(filter || '').trim();
+            const normalizedLimit = Math.max(1, Number(limit) || 500);
+            const normalizedOffset = Math.max(0, Number(offset) || 0);
+            const requestFactory = () => request(`/api/users?role=${encodeURIComponent(normalizedRole)}&filter=${encodeURIComponent(normalizedFilter)}&limit=${encodeURIComponent(normalizedLimit)}&offset=${encodeURIComponent(normalizedOffset)}`);
+            if (shouldUseDefaultQueryCache({ filter: normalizedFilter, offset: normalizedOffset })) {
+                return requestWithSessionCache(
+                    `users:role=${normalizedRole}:filter=${normalizedFilter}:limit=${normalizedLimit}:offset=${normalizedOffset}`,
+                    SESSION_CACHE_MAX_AGE_MS,
+                    requestFactory
+                );
+            }
+            return requestFactory();
+        },
         createUser: (payload) => request('/api/users', {
             method: 'POST',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['users', 'employees']);
+            return result;
         }),
         updateUser: (userId, payload) => request(`/api/users/${encodeURIComponent(userId)}`, {
             method: 'PUT',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['users', 'employees']);
+            return result;
         }),
         deleteUser: (userId) => request(`/api/users/${encodeURIComponent(userId)}`, {
             method: 'DELETE'
+        }).then((result) => {
+            invalidateReferenceCaches(['users', 'employees']);
+            return result;
         }),
         getSuperBootstrap: () => request('/api/super/bootstrap'),
         getSuperCustomerServiceConfig: () => request('/api/super/customer-service-config'),
@@ -2787,25 +2993,47 @@
             method: 'PUT',
             body: payload
         }),
-        listEmployees: (filter = '') => request(`/api/employees?filter=${encodeURIComponent(filter)}`),
+        listEmployees: (filter = '') => {
+            const normalizedFilter = String(filter || '').trim();
+            const requestFactory = () => request(`/api/employees?filter=${encodeURIComponent(normalizedFilter)}`);
+            if (!normalizedFilter) {
+                return requestWithSessionCache('employees:filter=', SESSION_CACHE_MAX_AGE_MS, requestFactory);
+            }
+            return requestFactory();
+        },
         addEmployee: (payload) => request('/api/employees', {
             method: 'POST',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['employees', 'users']);
+            return result;
         }),
         updateEmployee: (employeeId, payload) => request(`/api/employees/${encodeURIComponent(employeeId)}`, {
             method: 'PUT',
             body: payload
+        }).then((result) => {
+            invalidateReferenceCaches(['employees', 'users']);
+            return result;
         }),
         updateEmployeeTime: (employeeId, field, value) => request(`/api/employees/${encodeURIComponent(employeeId)}/schedule`, {
             method: 'PATCH',
             body: { field, value }
+        }).then((result) => {
+            invalidateReferenceCaches(['employees', 'users', 'attendance']);
+            return result;
         }),
         updateEmployeeSchedule: (employeeId, weeklySchedule) => request(`/api/employees/${encodeURIComponent(employeeId)}/schedule`, {
             method: 'PATCH',
             body: { weeklySchedule }
+        }).then((result) => {
+            invalidateReferenceCaches(['employees', 'users', 'attendance']);
+            return result;
         }),
         deleteEmployee: (employeeId) => request(`/api/employees/${encodeURIComponent(employeeId)}`, {
             method: 'DELETE'
+        }).then((result) => {
+            invalidateReferenceCaches(['employees', 'users']);
+            return result;
         }),
         getAttendanceByUser: (userId) => request(`/api/attendance/user/${encodeURIComponent(userId)}`),
         getUserTimeCard: (userId, { year, month }) => request(`/api/attendance/user/${encodeURIComponent(userId)}/time-card?year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}`),
@@ -2823,14 +3051,23 @@
         updateDailyAttendanceStatus: (userId, status, dateKey = '') => request(`/api/attendance/status/${encodeURIComponent(userId)}`, {
             method: 'PATCH',
             body: { status, dateKey }
+        }).then((result) => {
+            invalidateReferenceCaches(['attendance']);
+            return result;
         }),
         recordTimeIn: (userId) => request('/api/attendance/time-in', {
             method: 'POST',
             body: { userId }
+        }).then((result) => {
+            invalidateReferenceCaches(['attendance']);
+            return result;
         }),
         recordTimeOut: (userId) => request('/api/attendance/time-out', {
             method: 'POST',
             body: { userId }
+        }).then((result) => {
+            invalidateReferenceCaches(['attendance']);
+            return result;
         })
     };
 })();

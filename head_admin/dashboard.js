@@ -14,7 +14,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const navItems = Array.from(panelNav?.querySelectorAll('li[data-panel]') || []);
     const navItemByPanel = new Map(navItems.map((item) => [item.dataset.panel, item]));
     const frameShell = document.getElementById('frameShell');
-    const panelFrame = document.getElementById('panelFrame');
+    const initialPanelFrame = document.getElementById('panelFrame');
     const frameLoadingLabel = document.getElementById('frameLoadingLabel');
     const dashboardLogoMark = document.getElementById('dashboardLogoMark');
     const dashboardLogoIcon = document.getElementById('dashboardLogoIcon');
@@ -37,6 +37,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     let dashboardReady = false;
     const panelLabels = new Map();
     const panelIcons = new Map();
+    const panelFrames = new Map();
+    let reusableInitialFrame = initialPanelFrame || null;
 
     function markDashboardReady() {
         if (dashboardReady) {
@@ -68,10 +70,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    panelFrame?.addEventListener('load', () => {
-        setFrameLoading(false);
-        markDashboardReady();
-    });
+    prepareInitialPanelFrame();
 
     const panelMap = {
         employees: 'employees.html',
@@ -278,7 +277,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     function loadPanel(panel, options = {}) {
         const fileName = panelMap[panel];
-        if (!fileName || !panelFrame) {
+        if (!fileName || !frameShell) {
             return;
         }
 
@@ -289,8 +288,78 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         currentPanelSrc = targetSrc;
         setActivePanel(panel);
-        setFrameLoading(true, panel);
-        panelFrame.src = targetSrc;
+        showPanelFrame(targetSrc, panel);
+    }
+
+    function prepareInitialPanelFrame() {
+        if (!reusableInitialFrame) {
+            return;
+        }
+
+        const frame = reusableInitialFrame;
+        frame.classList.add('dashboard-panel-frame');
+        frame.hidden = true;
+        frame.addEventListener('load', () => {
+            frame.dataset.loaded = 'true';
+            if (frame.dataset.panelSrc === currentPanelSrc) {
+                setFrameLoading(false);
+                markDashboardReady();
+            }
+        });
+    }
+
+    function showPanelFrame(targetSrc, panel) {
+        let frame = panelFrames.get(targetSrc);
+        const isCachedPanel = Boolean(frame?.dataset.loaded === 'true');
+
+        if (!frame) {
+            frame = takeReusableFrame() || createPanelFrame(panel);
+            frame.dataset.panelSrc = targetSrc;
+            frame.dataset.panel = panel;
+            panelFrames.set(targetSrc, frame);
+            setFrameLoading(true, panel);
+            frame.src = targetSrc;
+        } else if (!isCachedPanel) {
+            setFrameLoading(true, panel);
+        } else {
+            setFrameLoading(false, panel);
+            markDashboardReady();
+        }
+
+        activatePanelFrame(frame);
+    }
+
+    function takeReusableFrame() {
+        if (!reusableInitialFrame) {
+            return null;
+        }
+
+        const frame = reusableInitialFrame;
+        reusableInitialFrame = null;
+        return frame;
+    }
+
+    function createPanelFrame(panel) {
+        const frame = document.createElement('iframe');
+        frame.className = 'dashboard-panel-frame';
+        frame.title = `${panelLabels.get(panel) || panel || 'Head Admin'} Panel`;
+        frame.hidden = true;
+        frame.addEventListener('load', () => {
+            frame.dataset.loaded = 'true';
+            if (frame.dataset.panelSrc === currentPanelSrc) {
+                setFrameLoading(false);
+                markDashboardReady();
+            }
+        });
+        frameShell.appendChild(frame);
+        return frame;
+    }
+
+    function activatePanelFrame(activeFrame) {
+        panelFrames.forEach((frame) => {
+            frame.hidden = frame !== activeFrame;
+        });
+        activeFrame.hidden = false;
     }
 
     function setActivePanel(panel) {

@@ -40,10 +40,6 @@ async function initialize() {
     await refreshTodayAttendance();
 
     window.setInterval(updateClock, 1000);
-    window.setInterval(async () => {
-        updateDateLabel();
-        await refreshTodayAttendance();
-    }, 5000);
 
     async function refreshTodayAttendance() {
         try {
