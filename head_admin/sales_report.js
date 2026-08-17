@@ -1,4 +1,5 @@
 const appClient = window.appClient;
+const SALES_REPORT_FEATURE_KEY = 'sales_report';
 
 const periodFilter = document.getElementById('periodFilter');
 const dateFromFilter = document.getElementById('dateFromFilter');
@@ -18,6 +19,14 @@ const fieldAdminFilter = document.getElementById('fieldAdminFilter');
 const fieldSalesRepFilter = document.getElementById('fieldSalesRepFilter');
 const applyFiltersBtn = document.getElementById('applyFiltersBtn');
 const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+const assignEmployeeBtn = document.getElementById('assignEmployeeBtn');
+const assignEmployeeModal = document.getElementById('assignEmployeeModal');
+const assignEmployeeList = document.getElementById('assignEmployeeList');
+const closeAssignEmployeeModalBtn = document.getElementById('closeAssignEmployeeModalBtn');
+const cancelAssignEmployeeBtn = document.getElementById('cancelAssignEmployeeBtn');
+const saveAssignEmployeeBtn = document.getElementById('saveAssignEmployeeBtn');
+const assignEmployeeStatus = document.getElementById('assignEmployeeStatus');
+const assignEmployeeCount = document.getElementById('assignEmployeeCount');
 const reportStatus = document.getElementById('reportStatus');
 const activeDateLabel = document.getElementById('activeDateLabel');
 
@@ -107,6 +116,8 @@ const state = {
     lastReceipt: null,
     receiptSignatureSrc: RECEIPT_SIGNATURE_SRC,
     workspaceConfig: {},
+    assignableEmployees: [],
+    session: null,
     receiptTemplate: { ...DEFAULT_RECEIPT_TEMPLATE }
 };
 let salesTableScrollSyncLocked = false;
@@ -116,11 +127,17 @@ let salesTableScrollHelperSyncFrame = 0;
 initialize();
 
 async function initialize() {
-    const session = await appClient.ensureSession({ role: 'head_admin' });
+    const session = await appClient.ensureSession({
+        role: 'head_admin',
+        allowEmployeeFeature: SALES_REPORT_FEATURE_KEY
+    });
     if (!session) {
         return;
     }
 
+    state.session = session;
+    appClient.attachEmployeeBackButton(session);
+    applyAssignEmployeeAccess();
     await loadReceiptConfig();
     applyWorkspaceConfigToView();
     bindEvents();
@@ -284,10 +301,46 @@ function applyWorkspaceConfigToView() {
     setElementVisibility(fieldSalesRepFilter, isSalesReportFilterVisible('showSalesRepresentativeFilter', true));
 }
 
+function getSessionRole() {
+    return String(state.session?.role || '').trim().toLowerCase().replace(/-/g, '_');
+}
+
+function canManageSalesReportAssignments() {
+    return ['head_admin', 'company_admin', 'super_admin'].includes(getSessionRole());
+}
+
+function applyAssignEmployeeAccess() {
+    const canManageAssignments = canManageSalesReportAssignments();
+    if (assignEmployeeBtn) {
+        assignEmployeeBtn.hidden = !canManageAssignments;
+        assignEmployeeBtn.disabled = !canManageAssignments;
+        assignEmployeeBtn.setAttribute('aria-hidden', String(!canManageAssignments));
+    }
+    if (!canManageAssignments) {
+        state.assignableEmployees = [];
+        closeAssignEmployeeModal();
+    }
+}
+
 function bindEvents() {
     periodFilter.addEventListener('change', () => applyPeriodPreset(periodFilter.value || 'this_month'));
     applyFiltersBtn.addEventListener('click', loadSalesReport);
     resetFiltersBtn.addEventListener('click', resetFilters);
+    assignEmployeeBtn?.addEventListener('click', openAssignEmployeeModal);
+    closeAssignEmployeeModalBtn?.addEventListener('click', closeAssignEmployeeModal);
+    cancelAssignEmployeeBtn?.addEventListener('click', closeAssignEmployeeModal);
+    saveAssignEmployeeBtn?.addEventListener('click', saveAssignedEmployees);
+    assignEmployeeList?.addEventListener('change', syncAssignEmployeeSelectionSummary);
+    assignEmployeeModal?.addEventListener('click', (event) => {
+        if (event.target === assignEmployeeModal) {
+            closeAssignEmployeeModal();
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && assignEmployeeModal && !assignEmployeeModal.hidden) {
+            closeAssignEmployeeModal();
+        }
+    });
     salesTableBody.addEventListener('click', handleSalesTableClick);
     receiptModal?.addEventListener('click', (event) => {
         if (event.target === receiptModal) {
@@ -428,6 +481,11 @@ async function loadReferenceData() {
         populateSelect(paymentFilter, paymentOptions, true, 'All Payment Options');
         populateSelect(adminFilter, adminOptions, true, 'All Admins');
         populateDatalist(salesRepFilterList, salesRepOptions);
+
+        if (canManageSalesReportAssignments()) {
+            await loadEmployeesForAssign();
+        }
+
         setReportStatus('Reference data loaded.', false);
     } catch (error) {
         console.error('Failed to load report references:', error);
@@ -457,6 +515,198 @@ function populateDatalist(datalist, values) {
     datalist.innerHTML = values.map((value) => `<option value="${appClient.escapeHtml(value)}"></option>`).join('');
 }
 
+function getUserFeatureAccess(user) {
+    return appClient.normalizeUserFeatureAccess(user?.feature_access || {});
+}
+
+function hasSalesReportAccess(user) {
+    return Boolean(getUserFeatureAccess(user)[SALES_REPORT_FEATURE_KEY]);
+}
+
+function isActiveSalesReportAssignee(user) {
+    const role = String(user?.role || '').trim().toLowerCase();
+    if (role !== 'employee' && role !== 'staff') {
+        return false;
+    }
+
+    const accountStatus = String(user?.account_status || user?.accountStatus || '').trim().toLowerCase();
+    return user?.is_active === true && accountStatus === 'active';
+}
+
+function getEmployeeInitials(employee) {
+    const source = String(employee?.name || employee?.display_name || employee?.id || 'EA').trim();
+    const parts = source.split(/\s+/).filter(Boolean);
+    if (!parts.length) {
+        return 'EA';
+    }
+    return parts.slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join('') || 'EA';
+}
+
+function setAssignEmployeeStatus(message = '', isError = false) {
+    if (!assignEmployeeStatus) {
+        return;
+    }
+    assignEmployeeStatus.textContent = message;
+    assignEmployeeStatus.classList.toggle('is-error', Boolean(isError));
+}
+
+function syncAssignEmployeeSelectionSummary() {
+    if (!assignEmployeeList) {
+        return;
+    }
+    const selectedCount = assignEmployeeList.querySelectorAll('input[type="checkbox"]:checked').length;
+    if (assignEmployeeCount) {
+        assignEmployeeCount.textContent = `${selectedCount} selected`;
+    }
+    if (saveAssignEmployeeBtn) {
+        saveAssignEmployeeBtn.disabled = !state.assignableEmployees.length;
+    }
+}
+
+function renderAssignEmployeeList(employees = []) {
+    if (!assignEmployeeList) {
+        return;
+    }
+    assignEmployeeList.innerHTML = '';
+    if (!employees.length) {
+        assignEmployeeList.innerHTML = '<div class="assign-sales-modal__empty">No active employees or staff available for Sales Report assignment.</div>';
+        syncAssignEmployeeSelectionSummary();
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    employees.forEach((emp) => {
+        const employeeId = String(emp.id || '').trim();
+        const displayName = String(emp.name || emp.display_name || employeeId || 'Employee').trim();
+        const role = String(emp.role || 'employee').trim();
+        const branch = String(emp.branch_name || emp.branchName || emp.branch_id || '').trim();
+        const assigned = hasSalesReportAccess(emp);
+        const item = document.createElement('label');
+        item.className = 'assign-employee-item';
+        item.innerHTML = `
+            <input type="checkbox" value="${appClient.escapeHtml(employeeId)}" ${assigned ? 'checked' : ''} aria-label="Assign Sales Report to ${appClient.escapeHtml(displayName)}">
+            <span class="assign-employee-avatar" aria-hidden="true">${appClient.escapeHtml(getEmployeeInitials(emp))}</span>
+            <span class="assign-employee-copy">
+                <span class="assign-employee-name">${appClient.escapeHtml(displayName)}</span>
+                <span class="assign-employee-meta">${appClient.escapeHtml([role, branch].filter(Boolean).join(' • ') || employeeId)}</span>
+            </span>
+            <span class="assign-employee-access-pill">${assigned ? 'Assigned' : 'Available'}</span>
+        `;
+        fragment.appendChild(item);
+    });
+    assignEmployeeList.appendChild(fragment);
+    syncAssignEmployeeSelectionSummary();
+}
+
+async function loadEmployeesForAssign() {
+    if (!assignEmployeeList || !canManageSalesReportAssignments()) {
+        state.assignableEmployees = [];
+        return [];
+    }
+
+    assignEmployeeList.innerHTML = '<div class="assign-sales-modal__empty">Loading employees and staff...</div>';
+    setAssignEmployeeStatus('');
+    try {
+        const [employees, staff] = await Promise.all([
+            appClient.listUsers({ role: 'employee', filter: '', limit: 2500 }),
+            appClient.listUsers({ role: 'staff', filter: '', limit: 2500 })
+        ]);
+        const activeTeamMembers = [...(employees || []), ...(staff || [])]
+            .filter(isActiveSalesReportAssignee)
+            .sort((left, right) => {
+                const leftName = String(left?.name || left?.display_name || left?.id || '');
+                const rightName = String(right?.name || right?.display_name || right?.id || '');
+                return leftName.localeCompare(rightName);
+            });
+        state.assignableEmployees = activeTeamMembers;
+        renderAssignEmployeeList(activeTeamMembers);
+        return activeTeamMembers;
+    } catch (error) {
+        console.error('Failed to load employees:', error);
+        state.assignableEmployees = [];
+        assignEmployeeList.innerHTML = '<div class="assign-sales-modal__empty">Unable to load employees and staff.</div>';
+        setAssignEmployeeStatus(error.message || 'Unable to load employees and staff.', true);
+        syncAssignEmployeeSelectionSummary();
+        return [];
+    }
+}
+
+function openAssignEmployeeModal() {
+    if (!canManageSalesReportAssignments()) {
+        closeAssignEmployeeModal();
+        return;
+    }
+
+    if (assignEmployeeModal) {
+        assignEmployeeModal.hidden = false;
+        assignEmployeeModal.setAttribute('aria-hidden', 'false');
+    }
+    setAssignEmployeeStatus('');
+    void loadEmployeesForAssign().then(() => {
+        const firstCheckbox = assignEmployeeList?.querySelector('input[type="checkbox"]');
+        if (firstCheckbox instanceof HTMLElement) {
+            firstCheckbox.focus();
+        } else {
+            saveAssignEmployeeBtn?.focus();
+        }
+    });
+}
+
+function closeAssignEmployeeModal() {
+    if (assignEmployeeModal) {
+        assignEmployeeModal.hidden = true;
+        assignEmployeeModal.setAttribute('aria-hidden', 'true');
+    }
+    setAssignEmployeeStatus('');
+}
+
+async function saveAssignedEmployees() {
+    if (!canManageSalesReportAssignments() || !assignEmployeeList || !state.assignableEmployees.length) return;
+
+    const selectedIds = new Set(
+        Array.from(assignEmployeeList.querySelectorAll('input[type="checkbox"]:checked'))
+            .map((checkbox) => String(checkbox.value || '').trim())
+            .filter(Boolean)
+    );
+
+    setAssignEmployeeStatus('Saving Sales Report access...');
+    saveAssignEmployeeBtn.disabled = true;
+
+    try {
+        const updates = state.assignableEmployees
+            .map((employee) => {
+                const employeeId = String(employee.id || '').trim();
+                if (!employeeId) {
+                    return null;
+                }
+                const currentAccess = getUserFeatureAccess(employee);
+                const nextAssigned = selectedIds.has(employeeId);
+                if (Boolean(currentAccess[SALES_REPORT_FEATURE_KEY]) === nextAssigned) {
+                    return null;
+                }
+                return appClient.updateUser(employeeId, {
+                    feature_access: {
+                        ...currentAccess,
+                        [SALES_REPORT_FEATURE_KEY]: nextAssigned
+                    }
+                });
+            })
+            .filter(Boolean);
+
+        if (updates.length) {
+            await Promise.all(updates);
+        }
+        await loadEmployeesForAssign();
+        closeAssignEmployeeModal();
+        setReportStatus(`Sales Report assigned to ${selectedIds.size} team member(s).`, false);
+    } catch (error) {
+        console.error('Failed to save assigned employees:', error);
+        setAssignEmployeeStatus(error.message || 'Failed to save Sales Report assignment.', true);
+    } finally {
+        saveAssignEmployeeBtn.disabled = false;
+        syncAssignEmployeeSelectionSummary();
+    }
+}
 async function loadSalesReport() {
     setReportStatus('Loading report...', false);
 
@@ -995,6 +1245,10 @@ async function handleSalesTableClick(event) {
     }
 
     if (action === 'delete') {
+        if (!canManageSalesReportAssignments()) {
+            setReportStatus('Delete is admin-only for Sales Report.', true);
+            return;
+        }
         await deleteSavedOrder(orderNumber);
         return;
     }
@@ -1003,6 +1257,10 @@ async function handleSalesTableClick(event) {
         return;
     }
 
+    if (!canManageSalesReportAssignments()) {
+        setReportStatus('Edit is admin-only for Sales Report.', true);
+        return;
+    }
     if (window.parent && window.parent !== window) {
         window.parent.postMessage({
             type: 'open-order-form',
@@ -1015,7 +1273,8 @@ async function handleSalesTableClick(event) {
 }
 
 function canEditRow(row) {
-    return Boolean(getSalesRowActionLookup(row) && String(row.source || '').toLowerCase() === 'manual');
+    return canManageSalesReportAssignments()
+        && Boolean(getSalesRowActionLookup(row) && String(row.source || '').toLowerCase() === 'manual');
 }
 
 function canDeleteRow(row) {

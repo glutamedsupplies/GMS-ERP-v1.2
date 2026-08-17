@@ -21,7 +21,140 @@ CREATE TABLE IF NOT EXISTS attendance (
   time_in TEXT,
   time_out TEXT,
   worked_hours TEXT,
-  remarks TEXT
+  remarks TEXT,
+  task_id TEXT NOT NULL DEFAULT '',
+  task_name TEXT NOT NULL DEFAULT '',
+  task_count INTEGER NOT NULL DEFAULT 0,
+  task_results_json TEXT NOT NULL DEFAULT '[]',
+  timeout_issues TEXT NOT NULL DEFAULT '',
+  timeout_remarks TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS task_definitions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  task_name TEXT NOT NULL UNIQUE,
+  input_type TEXT NOT NULL DEFAULT 'numeric',
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS kpi_evaluation_settings (
+  id TEXT PRIMARY KEY,
+  frequency TEXT NOT NULL DEFAULT 'daily',
+  custom_schedule_type TEXT NOT NULL DEFAULT 'interval',
+  custom_interval_days INTEGER NOT NULL DEFAULT 15,
+  custom_start_date TEXT NOT NULL DEFAULT '',
+  custom_end_date TEXT NOT NULL DEFAULT '',
+  mode TEXT NOT NULL DEFAULT 'required_all',
+  comment_required_for_all_required_evaluations INTEGER NOT NULL DEFAULT 0,
+  comment_required_for_issue_encounter_low_rating INTEGER NOT NULL DEFAULT 0,
+  comment_required_for_all_issue_encounters INTEGER NOT NULL DEFAULT 0,
+  allow_employee_view INTEGER NOT NULL DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS kpi_evaluation_records (
+  id TEXT PRIMARY KEY,
+  submission_id TEXT NOT NULL,
+  evaluator_employee_id TEXT NOT NULL,
+  evaluator_name TEXT NOT NULL DEFAULT '',
+  rated_employee_id TEXT NOT NULL,
+  rated_employee_name TEXT NOT NULL DEFAULT '',
+  rated_employee_role TEXT NOT NULL DEFAULT '',
+  rating INTEGER NOT NULL,
+  rating_label TEXT NOT NULL,
+  comment TEXT NOT NULL DEFAULT '',
+  evaluation_type TEXT NOT NULL,
+  evaluation_frequency TEXT NOT NULL DEFAULT '',
+  evaluation_period_start TEXT NOT NULL,
+  evaluation_period_end TEXT NOT NULL,
+  submitted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  visible_to_admin_only INTEGER NOT NULL DEFAULT 1,
+  status TEXT NOT NULL DEFAULT 'submitted',
+  reviewed_by_admin_id TEXT NOT NULL DEFAULT '',
+  reviewed_at TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS kpi_evaluation_submissions (
+  id TEXT PRIMARY KEY,
+  evaluator_employee_id TEXT NOT NULL,
+  evaluation_type TEXT NOT NULL,
+  evaluation_period_start TEXT NOT NULL,
+  evaluation_period_end TEXT NOT NULL,
+  required_period_key TEXT UNIQUE,
+  submitted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS kpi_evaluation_audit_logs (
+  id TEXT PRIMARY KEY,
+  record_id TEXT NOT NULL,
+  actor_user_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  previous_status TEXT NOT NULL DEFAULT '',
+  next_status TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS incident_reports (
+  id TEXT PRIMARY KEY,
+  incident_date TEXT NOT NULL,
+  department TEXT NOT NULL DEFAULT '',
+  reason_incident TEXT NOT NULL DEFAULT '',
+  action_taken TEXT NOT NULL DEFAULT '',
+  prepared_by TEXT NOT NULL DEFAULT '',
+  checked_by TEXT NOT NULL DEFAULT '',
+  date_checked TEXT NOT NULL DEFAULT '',
+  resolved INTEGER NOT NULL DEFAULT 0,
+  assigned_employee_id TEXT NOT NULL DEFAULT '',
+  assigned_employee_name TEXT NOT NULL DEFAULT '',
+  created_by_user_id TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  resolved_at TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS attendance_corrections (
+  id TEXT PRIMARY KEY,
+  company_id TEXT NOT NULL,
+  attendance_id INTEGER,
+  correction_id TEXT NOT NULL,
+  user_id TEXT NOT NULL DEFAULT '',
+  requested_date TEXT NOT NULL DEFAULT '',
+  requested_type TEXT NOT NULL,
+  requested_scanned_at TEXT NOT NULL,
+  reason TEXT NOT NULL DEFAULT '',
+  source TEXT NOT NULL DEFAULT 'device',
+  requested_by TEXT NOT NULL DEFAULT '',
+  requested_by_device_id TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending',
+  reviewed_by_user_id TEXT NOT NULL DEFAULT '',
+  reviewed_at TEXT NOT NULL DEFAULT '',
+  rejection_reason TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(company_id, correction_id)
+);
+
+CREATE TABLE IF NOT EXISTS attendance_audit_logs (
+  id TEXT PRIMARY KEY,
+  company_id TEXT NOT NULL,
+  attendance_id INTEGER,
+  correction_id TEXT NOT NULL DEFAULT '',
+  action TEXT NOT NULL,
+  old_value_json TEXT NOT NULL DEFAULT '{}',
+  new_value_json TEXT NOT NULL DEFAULT '{}',
+  reason TEXT NOT NULL DEFAULT '',
+  actor_type TEXT NOT NULL DEFAULT '',
+  actor_id TEXT NOT NULL DEFAULT '',
+  device_id TEXT NOT NULL DEFAULT '',
+  ip_address TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS clients (
@@ -181,6 +314,21 @@ CREATE TABLE IF NOT EXISTS invoice_templates (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS payroll_cutoff_statuses (
+  user_id TEXT NOT NULL,
+  cutoff_start_date TEXT NOT NULL,
+  cutoff_end_date TEXT NOT NULL,
+  payout_status TEXT NOT NULL DEFAULT 'pending',
+  paid_at TEXT NOT NULL DEFAULT '',
+  payslip_photo_data_url TEXT NOT NULL DEFAULT '',
+  payslip_photo_name TEXT NOT NULL DEFAULT '',
+  payslip_photo_uploaded_at TEXT NOT NULL DEFAULT '',
+  payslip_photo_uploaded_by TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_by TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (user_id, cutoff_start_date, cutoff_end_date)
+);
+
 CREATE INDEX IF NOT EXISTS idx_clients_name
 ON clients (name);
 
@@ -228,3 +376,51 @@ ON cash_income_entries (branch);
 
 CREATE INDEX IF NOT EXISTS idx_attendance_user_date
 ON attendance (id, date);
+
+CREATE INDEX IF NOT EXISTS idx_attendance_date_user
+ON attendance (date, id);
+
+CREATE INDEX IF NOT EXISTS idx_attendance_updated_at
+ON attendance (updated_at, date, id);
+
+CREATE INDEX IF NOT EXISTS idx_attendance_corrections_attendance
+ON attendance_corrections (company_id, attendance_id);
+
+CREATE INDEX IF NOT EXISTS idx_attendance_corrections_status_updated
+ON attendance_corrections (company_id, status, updated_at);
+
+CREATE INDEX IF NOT EXISTS idx_attendance_corrections_updated
+ON attendance_corrections (company_id, updated_at);
+
+CREATE INDEX IF NOT EXISTS idx_attendance_audit_attendance
+ON attendance_audit_logs (company_id, attendance_id, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_attendance_audit_correction
+ON attendance_audit_logs (company_id, correction_id, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_payroll_cutoff_statuses_cutoff
+ON payroll_cutoff_statuses (cutoff_start_date, cutoff_end_date, user_id);
+
+CREATE INDEX IF NOT EXISTS idx_task_definitions_active_name
+ON task_definitions (is_active, task_name);
+
+CREATE INDEX IF NOT EXISTS idx_kpi_records_period_evaluator
+ON kpi_evaluation_records (evaluation_type, evaluation_period_start, evaluation_period_end, evaluator_employee_id);
+
+CREATE INDEX IF NOT EXISTS idx_kpi_submissions_period_evaluator
+ON kpi_evaluation_submissions (evaluation_type, evaluation_period_start, evaluation_period_end, evaluator_employee_id);
+
+CREATE INDEX IF NOT EXISTS idx_kpi_records_rated_submitted
+ON kpi_evaluation_records (rated_employee_id, submitted_at);
+
+CREATE INDEX IF NOT EXISTS idx_kpi_records_status_rating
+ON kpi_evaluation_records (status, rating);
+
+CREATE INDEX IF NOT EXISTS idx_kpi_audit_record_created
+ON kpi_evaluation_audit_logs (record_id, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_incident_reports_assignment_status
+ON incident_reports (assigned_employee_id, resolved, incident_date);
+
+CREATE INDEX IF NOT EXISTS idx_incident_reports_date
+ON incident_reports (incident_date, updated_at);

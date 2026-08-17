@@ -8,9 +8,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="../shared/theme-preload.js"></script>
-<link rel="stylesheet" href="./portal.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="../shared/theme-preload.js"></script>
+  <link rel="stylesheet" href="../shared/incident-report.css?v=20260728-dashboard-modal-v1">
+  <link rel="stylesheet" href="./portal.css?v=20260728-dashboard-modal-v2">
 </head>
 <body class="employee-page">
   <main class="employee-shell">
@@ -24,6 +25,10 @@
             <span class="pill" id="companyBadge">Tenant Ready</span>
             <span class="pill pill-soft" id="userBadge">Signed in</span>
             <span class="pill pill-soft" id="roleBadge">Employee</span>
+            <span class="pill pill-assigned" id="assignedBadge" hidden>0 assigned</span>
+            <span class="pill pill-lbc-confirmation" id="lbcConfirmationBadge" hidden>
+              <i class="fa-solid fa-clipboard-check"></i> LBC Collection Confirmation
+            </span>
           </div>
         </div>
 
@@ -33,7 +38,7 @@
           <div class="stats-grid">
             <div class="stat-card">
               <span class="stat-label">Core Tools</span>
-              <strong class="stat-value" id="coreToolCount">3</strong>
+              <strong class="stat-value" id="coreToolCount">5</strong>
             </div>
             <div class="stat-card">
               <span class="stat-label">Extra Access</span>
@@ -180,6 +185,16 @@
           </div>
         </button>
 
+        <button type="button" class="action-card" id="incidentReportBtn">
+          <span class="action-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+          <h3 class="action-title">Incident Report</h3>
+          <p class="action-copy">Submit a workplace incident directly for Admin review.</p>
+          <div class="action-footer">
+            <span>Create incident report</span>
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          </div>
+        </button>
+
         <button type="button" class="action-card" id="settingsBtn">
           <span class="action-icon"><i class="fa-solid fa-sliders"></i></span>
           <h3 class="action-title">Settings</h3>
@@ -205,6 +220,52 @@
     </section>
   </main>
 
+  <div class="incident-modal" id="incidentSubmissionModal" hidden>
+    <div class="incident-modal-card" role="dialog" aria-modal="true" aria-labelledby="incidentSubmissionTitle">
+      <div class="incident-modal-header">
+        <div>
+          <h2 id="incidentSubmissionTitle">Add Incident Report</h2>
+          <p>Required fields are marked with an asterisk.</p>
+        </div>
+        <button class="incident-icon-button" id="incidentSubmissionCloseBtn" type="button" title="Close" aria-label="Close">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+      <form class="incident-form" id="incidentSubmissionForm">
+        <div class="incident-form-grid">
+          <label class="incident-field">
+            <span>Date *</span>
+            <input id="incidentSubmissionDate" type="date" required>
+          </label>
+          <label class="incident-field">
+            <span>Department *</span>
+            <input id="incidentSubmissionDepartment" type="text" maxlength="160" required>
+          </label>
+          <label class="incident-field incident-field--wide">
+            <span>Reason / Incident *</span>
+            <textarea id="incidentSubmissionReason" maxlength="5000" required></textarea>
+          </label>
+          <label class="incident-field incident-field--wide">
+            <span>How to Solve / Action Taken</span>
+            <textarea id="incidentSubmissionAction" maxlength="8000"></textarea>
+          </label>
+          <label class="incident-field incident-field--wide">
+            <span>Prepared By *</span>
+            <input id="incidentSubmissionPreparedBy" type="text" maxlength="160" required>
+          </label>
+        </div>
+        <div class="incident-form-status" id="incidentSubmissionStatus" role="status"></div>
+        <div class="incident-modal-footer">
+          <button class="incident-button" id="incidentSubmissionCancelBtn" type="button">Cancel</button>
+          <button class="incident-button incident-button--primary" id="incidentSubmissionSaveBtn" type="submit">
+            <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+            <span>Submit Incident</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div id="updatesModal" class="updates-modal" hidden>
     <button type="button" class="updates-modal-backdrop" data-modal-close="true" aria-label="Close details"></button>
     <div class="updates-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="updatesModalTitle">
@@ -223,7 +284,92 @@
     </div>
   </div>
 
-  <script src="../shared/app-client.js"></script>
-  <script src="employee_dashboard.js"></script>
+  <div id="lbcCollectionModal" class="lbc-collection-modal" hidden>
+    <button type="button" class="lbc-collection-modal-backdrop" data-lbc-modal-close="true" aria-label="Close"></button>
+    <div class="lbc-collection-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="lbcCollectionModalTitle">
+      <div class="lbc-collection-modal-head">
+        <div>
+          <div class="lbc-collection-modal-eyebrow">LBC Tracking</div>
+          <h3 id="lbcCollectionModalTitle" class="lbc-collection-modal-title">LBC Collection Confirmation</h3>
+        </div>
+        <button id="lbcCollectionModalCloseBtn" type="button" class="lbc-collection-modal-close" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      
+      <!-- Shared Toolbar -->
+      <div id="lbcCollectionToolbar" class="lbc-collection-toolbar">
+        <div class="toolbar-head">
+          <span class="toolbar-kicker">Shared Filters</span>
+          <p class="toolbar-note">Branch, date scope, and search filters apply to the collection confirmation list.</p>
+        </div>
+
+        <div id="lbcBranchButtons" class="chip-row">
+          <button class="chip active" data-branch="">All Branches</button>
+          <button class="chip" data-branch="Pampanga">Pampanga</button>
+          <button class="chip" data-branch="Cubao">Cubao</button>
+        </div>
+
+        <div id="lbcDateScopeButtons" class="chip-row">
+          <button class="chip" data-date-scope="this_month">This Month</button>
+          <button class="chip active" data-date-scope="all_dates">Mar 2026 Onward</button>
+        </div>
+
+        <div class="search-row">
+          <input id="lbcSearchInput" class="field" type="text" placeholder="Search order, client, tracking, assignee, branch">
+          <button id="lbcSearchBtn" class="btn secondary" type="button">Apply</button>
+          <button id="lbcReloadBtn" class="btn secondary" type="button">Reload Table</button>
+          <button id="lbcRefreshTrackingBtn" class="btn warning" type="button">Reload Tracking</button>
+        </div>
+
+        <article class="lbc-collection-scan-card">
+          <div class="lbc-collection-scan-head">
+            <span class="lbc-collection-scan-title">Confirm by Tracking</span>
+            <p class="lbc-collection-scan-note">Scan or paste one delivered tracking number to open a detail popup, then confirm collection.</p>
+          </div>
+          <div class="lbc-collection-scan-row">
+            <input id="lbcCollectionScanInput" class="field" type="text" inputmode="text" autocomplete="off" placeholder="Scan Tracking Number to Confirm">
+            <button id="lbcCollectionScanConfirmBtn" class="btn primary" type="button">Confirm by Tracking</button>
+          </div>
+          <p id="lbcCollectionScanStatus" class="lbc-collection-scan-status" hidden></p>
+        </article>
+
+        <div id="lbcCollectionFilterButtons" class="chip-row lbc-collection-filter-row">
+          <button class="chip quick active" data-collection-filter="all">All Delivered</button>
+          <button class="chip quick" data-collection-filter="pending">Pending Confirmation</button>
+          <button class="chip quick" data-collection-filter="confirmed">Confirmed</button>
+        </div>
+      </div>
+      
+      <div id="lbcCollectionSummaryContainer" class="lbc-collection-summary-container"></div>
+      <div id="lbcCollectionModalBody" class="lbc-collection-modal-body">
+        <div class="lbc-collection-loading">
+          <i class="fa-solid fa-spinner fa-spin"></i> Loading assigned records...
+        </div>
+      </div>
+      <div class="lbc-collection-modal-actions">
+        <button id="lbcCollectionModalCancelBtn" type="button" class="secondary-button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="lbcCollectionScanConfirmModal" class="lbc-scan-confirm-modal" hidden aria-hidden="true">
+    <button type="button" class="lbc-scan-confirm-modal-backdrop" data-lbc-scan-confirm-close="true" aria-label="Close"></button>
+    <div class="lbc-scan-confirm-modal-card" role="dialog" aria-modal="true" aria-labelledby="lbcScanConfirmModalTitle">
+      <div class="lbc-scan-confirm-modal-head">
+        <span class="lbc-scan-confirm-modal-kicker">Scanned Tracking</span>
+        <h3 id="lbcScanConfirmModalTitle" class="lbc-scan-confirm-modal-title">Review collection details</h3>
+        <p id="lbcScanConfirmModalSubtitle" class="lbc-scan-confirm-modal-subtitle">Press Enter to confirm this collected payment.</p>
+      </div>
+      <div id="lbcScanConfirmModalDetails" class="lbc-scan-confirm-modal-details"></div>
+      <div class="lbc-scan-confirm-modal-actions">
+        <button id="lbcScanConfirmModalCancelBtn" class="btn secondary" type="button">Cancel</button>
+        <button id="lbcScanConfirmModalConfirmBtn" class="btn primary" type="button">Confirm Collection</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/app-client.js?v=20260728-dashboard-modal-v1"></script>
+  <script src="employee_dashboard.js?v=20260728-dashboard-modal-v1"></script>
 </body>
 </html>

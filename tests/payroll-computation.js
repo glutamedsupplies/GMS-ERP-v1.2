@@ -64,7 +64,7 @@ function assertPayrollCase({
 
 function run() {
     assertPayrollCase({
-        label: '9:08 AM to 6:08 PM',
+        label: '9:08 AM to 6:08 PM without grace period',
         timeIn: '09:08',
         timeOut: '18:08',
         dailyRate: 625,
@@ -73,19 +73,19 @@ function run() {
             lunchBreakMinutes: 60,
             workedMinutes: 480,
             shortMinutes: 0,
-            lateMinutes: 0,
-            lateDeductionMinutes: 0,
+            lateMinutes: 8,
+            lateDeductionMinutes: 8,
             earlyOutDeductionMinutes: 0,
-            totalDeductionMinutes: 0,
+            totalDeductionMinutes: 8,
             hourlyRate: 78.13,
-            deductionAmount: 0,
-            finalPay: 625,
+            deductionAmount: 10.42,
+            finalPay: 614.58,
             workedHours: '8.00'
         }
     });
 
     assertPayrollCase({
-        label: '9:08 AM to 6:08 PM before grace start',
+        label: '9:08 AM to 6:08 PM on earlier date without grace period',
         timeIn: '09:08',
         timeOut: '18:08',
         dailyRate: 625,
@@ -107,7 +107,7 @@ function run() {
     });
 
     assertPayrollCase({
-        label: '9:08 AM to 6:00 PM',
+        label: '9:08 AM to 6:00 PM without grace period',
         timeIn: '09:08',
         timeOut: '18:00',
         dailyRate: 625,
@@ -116,13 +116,13 @@ function run() {
             lunchBreakMinutes: 60,
             workedMinutes: 472,
             shortMinutes: 8,
-            lateMinutes: 0,
-            lateDeductionMinutes: 0,
+            lateMinutes: 8,
+            lateDeductionMinutes: 8,
             earlyOutDeductionMinutes: 0,
-            totalDeductionMinutes: 0,
+            totalDeductionMinutes: 8,
             hourlyRate: 78.13,
-            deductionAmount: 0,
-            finalPay: 625,
+            deductionAmount: 10.42,
+            finalPay: 614.58,
             workedHours: '7.87'
         }
     });
@@ -149,7 +149,7 @@ function run() {
     });
 
     assertPayrollCase({
-        label: '9:08 AM to 5:52 PM',
+        label: '9:08 AM to 5:52 PM without grace period',
         timeIn: '09:08',
         timeOut: '17:52',
         dailyRate: 625,
@@ -158,13 +158,13 @@ function run() {
             lunchBreakMinutes: 60,
             workedMinutes: 464,
             shortMinutes: 16,
-            lateMinutes: 0,
-            lateDeductionMinutes: 0,
+            lateMinutes: 8,
+            lateDeductionMinutes: 8,
             earlyOutDeductionMinutes: 8,
-            totalDeductionMinutes: 8,
+            totalDeductionMinutes: 16,
             hourlyRate: 78.13,
-            deductionAmount: 10.42,
-            finalPay: 614.58,
+            deductionAmount: 20.83,
+            finalPay: 604.17,
             workedHours: '7.73'
         }
     });
@@ -179,13 +179,13 @@ function run() {
             lunchBreakMinutes: 60,
             workedMinutes: 469,
             shortMinutes: 11,
-            lateMinutes: 60,
-            lateDeductionMinutes: 60,
+            lateMinutes: 75,
+            lateDeductionMinutes: 75,
             earlyOutDeductionMinutes: 0,
-            totalDeductionMinutes: 60,
+            totalDeductionMinutes: 75,
             hourlyRate: 78.13,
-            deductionAmount: 78.12,
-            finalPay: 546.88,
+            deductionAmount: 97.66,
+            finalPay: 527.34,
             workedHours: '7.82'
         }
     });
@@ -200,13 +200,13 @@ function run() {
             lunchBreakMinutes: 0,
             workedMinutes: 285,
             shortMinutes: 195,
-            lateMinutes: 240,
-            lateDeductionMinutes: 180,
+            lateMinutes: 255,
+            lateDeductionMinutes: 195,
             earlyOutDeductionMinutes: 0,
-            totalDeductionMinutes: 180,
+            totalDeductionMinutes: 195,
             hourlyRate: 78.13,
-            deductionAmount: 234.37,
-            finalPay: 390.63,
+            deductionAmount: 253.91,
+            finalPay: 371.09,
             workedHours: '4.75'
         }
     });

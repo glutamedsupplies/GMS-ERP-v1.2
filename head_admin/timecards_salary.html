@@ -674,6 +674,108 @@
       text-overflow: ellipsis;
     }
 
+    .payslip-upload-panel {
+      grid-column: 1 / -1;
+      min-width: 0;
+      display: grid;
+      gap: 6px;
+      padding: 10px 12px;
+      border: 1px solid var(--surface-line);
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04)),
+        rgba(255, 255, 255, 0.03);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .payslip-upload-card {
+      display: grid;
+      grid-template-columns: 74px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .payslip-preview {
+      width: 74px;
+      aspect-ratio: 3 / 4;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(15, 23, 42, 0.28);
+      color: var(--surface-muted);
+      font-size: 10px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .payslip-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .payslip-preview img[hidden],
+    .payslip-preview span[hidden] {
+      display: none;
+    }
+
+    .payslip-copy {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+    }
+
+    .payslip-label {
+      color: var(--surface-muted);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .payslip-name {
+      color: var(--surface-text-strong);
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.15;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .payslip-meta {
+      color: var(--surface-muted);
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
+
+    .payslip-actions {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    .payslip-actions input[type="file"] {
+      display: none;
+    }
+
+    .payslip-actions .payroll-secondary-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+    }
+
     .salary-panel[hidden] {
       display: none !important;
     }
@@ -1264,6 +1366,27 @@
       font-size: 10px;
     }
 
+    body.layout-fit-tight .payslip-upload-panel {
+      padding: 8px 10px;
+    }
+
+    body.layout-fit-tight .payslip-upload-card {
+      grid-template-columns: 58px minmax(0, 1fr) auto;
+      gap: 9px;
+    }
+
+    body.layout-fit-tight .payslip-preview {
+      width: 58px;
+    }
+
+    body.layout-fit-tight .payslip-name {
+      font-size: 12px;
+    }
+
+    body.layout-fit-tight .payslip-meta {
+      font-size: 10px;
+    }
+
     body.layout-fit-tight .table-shell {
       border-radius: 20px;
     }
@@ -1573,6 +1696,15 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
+      .payslip-upload-card {
+        grid-template-columns: 64px minmax(0, 1fr);
+      }
+
+      .payslip-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+      }
+
       .hours-cell {
         min-width: 150px;
       }
@@ -1619,7 +1751,7 @@
 <div class="side-panel" id="employeePanel">
   <div class="panel-kicker">Attendance Accounts</div>
   <h3><i class="fa-solid fa-users"></i> Accounts</h3>
-  <p class="side-copy">Select an account to review the semi-monthly time card, daily salary, and cutoff pay summary. Inactive and suspended attendance accounts stay visible here for audit and review.</p>
+  <p class="side-copy">Select an account to review the semi-monthly time card, daily salary, and cutoff pay summary. Suspended attendance accounts stay visible here for audit and review.</p>
   <div id="employeeList"></div>
 </div>
 
@@ -1678,6 +1810,31 @@
           </span>
           <span class="payroll-payment-meta" id="cutoffPaymentMeta">Not yet marked as paid.</span>
         </div>
+      </div>
+      <div class="payslip-upload-panel" id="payslipUploadPanel">
+        <div class="payslip-upload-card">
+          <div class="payslip-preview" id="payslipPhotoPreview">
+            <img id="payslipPhotoImage" alt="Uploaded payslip photo" hidden>
+            <span id="payslipPhotoEmpty">No photo</span>
+          </div>
+          <div class="payslip-copy">
+            <span class="payslip-label">Payslip Photo</span>
+            <strong class="payslip-name" id="payslipPhotoName">No photo uploaded</strong>
+            <span class="payslip-meta" id="payslipPhotoMeta">Select an account and cutoff.</span>
+          </div>
+          <div class="payslip-actions">
+            <input type="file" id="payslipPhotoInput" accept="image/*">
+            <button type="button" class="payroll-secondary-button" id="uploadPayslipButton">
+              <i class="fa-solid fa-image" aria-hidden="true"></i>
+              <span>Upload Photo</span>
+            </button>
+            <button type="button" class="payroll-secondary-button" id="removePayslipButton" hidden>
+              <i class="fa-solid fa-trash" aria-hidden="true"></i>
+              <span>Remove</span>
+            </button>
+          </div>
+        </div>
+        <span class="payroll-status" id="payslipPhotoStatus" aria-live="polite"></span>
       </div>
     </div>
   </div>

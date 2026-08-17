@@ -426,7 +426,7 @@
       <div class="hero-copy">
         <span class="hero-kicker"><i class="fa-regular fa-rectangle-list"></i> Attendance Analytics</span>
         <h1>Attendance Reports</h1>
-        <p>Filter daily, weekly, or monthly attendance data in a cleaner tenant-aware report view with balanced colors, clearer summaries, and visible inactive and suspended accounts.</p>
+        <p>Filter daily, weekly, or monthly attendance data in a cleaner tenant-aware report view with balanced colors, clearer summaries, and visible suspended accounts.</p>
       </div>
       <div class="filter-card">
         <div class="filter-grid">
@@ -524,11 +524,12 @@
             <th>Time Out</th>
             <th>Minutes Late</th>
             <th>Status</th>
+            <th>Task</th>
           </tr>
         </thead>
         <tbody id="reportBody">
           <tr>
-            <td colspan="6" class="empty-row">Loading attendance records...</td>
+            <td colspan="7" class="empty-row">Loading attendance records...</td>
           </tr>
         </tbody>
       </table>
@@ -536,6 +537,6 @@
   </section>
 </div>
 <script src="../shared/app-client.js"></script>
-<script src="reports.js"></script>
+<script src="reports.js?v=20260703-task-types"></script>
 </body>
 </html>

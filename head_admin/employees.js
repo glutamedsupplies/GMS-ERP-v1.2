@@ -262,7 +262,7 @@ async function loadEmployees(filter = '') {
         renderEmployees(rows);
     } catch (error) {
         console.error('Failed to load employees:', error);
-        tableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:red;">${appClient.escapeHtml(error.message)}</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:red;">${appClient.escapeHtml(error.message)}</td></tr>`;
     }
 }
 
@@ -287,7 +287,7 @@ function renderEmployees(rows) {
     tableBody.innerHTML = '';
 
     if (!rows.length) {
-        tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#999;">No accounts found</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:#999;">No accounts found</td></tr>';
         return;
     }
 
@@ -308,18 +308,19 @@ function renderEmployees(rows) {
             <td><span class="id-label">${safeId}</span></td>
             <td><strong>${safeName}</strong></td>
             <td>${safeRole}</td>
-            <td><span class="status-pill ${accountStatus}">${statusLabel}</span></td>
+            <td><span class="status-pill ${accountStatus}"></span></td>
             <td><span class="time-field">${safeTimeIn}</span></td>
             <td><span class="time-field">${safeTimeOut}</span></td>
             <td style="text-align:center">
                 <button class="state-btn ${isActive ? 'suspend' : 'reactivate'}" type="button" onclick="toggleEmployeeStatus('${safeId}')"${isCurrentUser ? ' disabled' : ''}>${toggleLabel}</button>
             </td>
-            <td style="text-align:center">
-                <button class="action-btn" onclick="deleteEmployee('${safeId}')"><i class="fas fa-trash-alt"></i></button>
+             <td style="text-align:center">
+                <button class="action-btn-edit" onclick="editEmployee('${safeId}')"><i class="fas fa-edit"></i></button>
             </td>
             <td style="text-align:center">
-                <button class="action-btn" onclick="editEmployee('${safeId}')"><i class="fas fa-edit"></i></button>
+                <button class="action-btn-delete" onclick="deleteEmployee('${safeId}')"><i class="fas fa-trash-alt"></i></button>
             </td>
+
         `;
         tableBody.appendChild(tr);
     });

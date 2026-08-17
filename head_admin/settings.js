@@ -1,4 +1,4 @@
-const appClient = window.appClient;
+﻿const appClient = window.appClient;
 const profilePic = document.getElementById('profilePic');
 const fileInput = document.getElementById('fileInput');
 const fileName = document.getElementById('fileName');
@@ -22,6 +22,16 @@ const googleModalStatus = document.getElementById('googleModalStatus');
 const connectGoogleBtn = document.getElementById('connectGoogleBtn');
 const unlinkEmailBtn = document.getElementById('unlinkEmailBtn');
 const unlinkGoogleBtn = document.getElementById('unlinkGoogleBtn');
+const kpiFrequency = document.getElementById('kpiFrequency');
+const kpiMode = document.getElementById('kpiMode');
+const kpiCustomType = document.getElementById('kpiCustomType');
+const kpiIntervalDays = document.getElementById('kpiIntervalDays');
+const kpiStartDate = document.getElementById('kpiStartDate');
+const kpiEndDate = document.getElementById('kpiEndDate');
+const kpiIssueCommentAll = document.getElementById('kpiIssueCommentAll');
+const kpiPolicyActive = document.getElementById('kpiPolicyActive');
+const kpiSettingsStatus = document.getElementById('kpiSettingsStatus');
+const saveKpiSettingsBtn = document.getElementById('saveKpiSettingsBtn');
 
 let session = null;
 let connectionState = {
@@ -34,7 +44,6 @@ let unlinkFlowState = {
     emailAwaitingCode: false,
     googleAwaitingCode: false
 };
-
 setupPasswordToggle('togglePass1', 'newPass');
 setupPasswordToggle('togglePass2', 'confirmPass');
 syncUnlinkButtonLabels();
@@ -68,7 +77,82 @@ async function initialize() {
     connectGoogleBtn?.addEventListener('click', confirmGoogleConnect);
     unlinkEmailBtn?.addEventListener('click', unlinkEmailConnection);
     unlinkGoogleBtn?.addEventListener('click', unlinkGoogleConnection);
-    await loadProfile();
+    kpiFrequency?.addEventListener('change', syncKpiCustomFields);
+    kpiCustomType?.addEventListener('change', syncKpiCustomFields);
+    saveKpiSettingsBtn?.addEventListener('click', saveKpiEvaluationSettings);
+    await Promise.all([loadProfile(), loadKpiEvaluationSettings()]);
+}
+
+async function loadKpiEvaluationSettings() {
+    if (!kpiFrequency) {
+        return;
+    }
+    setKpiSettingsStatus('Loading KPI policy...');
+    try {
+        const settings = await appClient.getKpiEvaluationSettings();
+        kpiFrequency.value = settings.frequency || 'monthly';
+        kpiMode.value = settings.mode || 'optional_issue_only';
+        kpiCustomType.value = settings.customScheduleType || 'interval';
+        kpiIntervalDays.value = String(settings.customIntervalDays || 15);
+        kpiStartDate.value = settings.customStartDate || '';
+        kpiEndDate.value = settings.customEndDate || '';
+        kpiIssueCommentAll.checked = Boolean(settings.commentRequiredForAllIssueEncounters);
+        kpiPolicyActive.checked = settings.active !== false;
+        syncKpiCustomFields();
+        setKpiSettingsStatus('KPI policy ready.');
+    } catch (error) {
+        console.error('Failed to load KPI evaluation policy:', error);
+        setKpiSettingsStatus(error.message || 'Failed to load KPI policy.', true);
+    }
+}
+
+function syncKpiCustomFields() {
+    const isCustom = kpiFrequency?.value === 'custom';
+    const isDateRange = isCustom && kpiCustomType?.value === 'date_range';
+    document.querySelectorAll('[data-kpi-custom]').forEach((field) => {
+        field.hidden = !isCustom;
+    });
+    document.querySelectorAll('[data-kpi-interval]').forEach((field) => {
+        field.hidden = !isCustom || isDateRange;
+    });
+    document.querySelectorAll('[data-kpi-range]').forEach((field) => {
+        field.hidden = !isDateRange;
+    });
+}
+
+async function saveKpiEvaluationSettings() {
+    if (!saveKpiSettingsBtn) {
+        return;
+    }
+    saveKpiSettingsBtn.disabled = true;
+    setKpiSettingsStatus('Saving KPI policy...');
+    try {
+        await appClient.updateKpiEvaluationSettings({
+            frequency: kpiFrequency.value,
+            mode: kpiMode.value,
+            customScheduleType: kpiCustomType.value,
+            customIntervalDays: Number(kpiIntervalDays.value || 15),
+            customStartDate: kpiStartDate.value,
+            customEndDate: kpiEndDate.value,
+            commentRequiredForAllIssueEncounters: kpiIssueCommentAll.checked,
+            active: kpiPolicyActive.checked
+        });
+        setKpiSettingsStatus('KPI evaluation policy saved.', false, true);
+    } catch (error) {
+        console.error('Failed to save KPI evaluation policy:', error);
+        setKpiSettingsStatus(error.message || 'Failed to save KPI policy.', true);
+    } finally {
+        saveKpiSettingsBtn.disabled = false;
+    }
+}
+
+function setKpiSettingsStatus(message, isError = false, isSuccess = false) {
+    if (!kpiSettingsStatus) {
+        return;
+    }
+    kpiSettingsStatus.textContent = message || '';
+    kpiSettingsStatus.classList.toggle('is-error', Boolean(isError));
+    kpiSettingsStatus.classList.toggle('is-success', Boolean(isSuccess));
 }
 
 async function loadProfile() {
