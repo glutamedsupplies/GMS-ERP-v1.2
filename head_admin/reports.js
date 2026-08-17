@@ -70,7 +70,7 @@ async function populateEmployees() {
         });
     } catch (error) {
         console.error('Failed to populate employees for reports:', error);
-        reportBody.innerHTML = `<tr><td colspan="7" class="empty-row is-error">${appClient.escapeHtml(error.message)}</td></tr>`;
+        reportBody.innerHTML = `<tr><td colspan="6" class="empty-row is-error">${appClient.escapeHtml(error.message)}</td></tr>`;
         setReportStatus(error.message, true);
     }
 }
@@ -114,7 +114,7 @@ async function renderReport() {
         setReportStatus('', false);
 
         if (!normalizedRecords.length) {
-            reportBody.innerHTML = '<tr><td colspan="7" class="empty-row">No attendance records found for the selected filter.</td></tr>';
+            reportBody.innerHTML = '<tr><td colspan="6" class="empty-row">No attendance records found for the selected filter.</td></tr>';
             recordCount.innerText = '0';
             totalLate.innerText = '0';
             totalAbsent.innerText = '0';
@@ -145,7 +145,6 @@ async function renderReport() {
                 <td data-label="Time Out">${appClient.escapeHtml(appClient.formatDisplayTime(record.timeOut, '-'))}</td>
                 <td data-label="Minutes Late">${appClient.escapeHtml(String(record.lateMinutes || 0))}</td>
                 <td data-label="Status" class="${statusClass(record.status)}">${appClient.escapeHtml(record.status)}</td>
-                <td data-label="Task">${appClient.escapeHtml(formatTaskResult(record))}</td>
             `;
             reportBody.appendChild(row);
         });
@@ -155,39 +154,13 @@ async function renderReport() {
         totalSuspended.innerText = String(suspendedTotal);
     } catch (error) {
         console.error('Failed to render attendance report:', error);
-        reportBody.innerHTML = `<tr><td colspan="7" class="empty-row is-error">${appClient.escapeHtml(error.message)}</td></tr>`;
+        reportBody.innerHTML = `<tr><td colspan="6" class="empty-row is-error">${appClient.escapeHtml(error.message)}</td></tr>`;
         recordCount.innerText = '0';
         totalLate.innerText = '0';
         totalAbsent.innerText = '0';
         totalSuspended.innerText = '0';
         setReportStatus(error.message, true);
     }
-}
-
-function formatTaskResult(record) {
-    const taskResults = Array.isArray(record?.taskResults) ? record.taskResults : [];
-    const summary = taskResults
-        .map((task) => {
-            const taskName = String(task?.name || task?.taskName || '').trim();
-            if (!taskName) {
-                return '';
-            }
-            const inputType = String(task?.inputType || task?.input_type || 'numeric').trim().toLowerCase();
-            if (inputType === 'checklist') return `${taskName}: Completed`;
-            if (inputType === 'text') return `${taskName}: ${String(task?.value ?? task?.text ?? '').trim()}`;
-            return `${taskName}: ${Number(task?.value ?? task?.count ?? task?.taskCount ?? 0)}`;
-        })
-        .filter(Boolean)
-        .join(', ');
-    if (summary) {
-        return summary;
-    }
-
-    const taskName = String(record?.taskName || '').trim();
-    if (!taskName) {
-        return '-';
-    }
-    return `${taskName}: ${Number(record?.taskCount || 0)}`;
 }
 
 function statusClass(status) {

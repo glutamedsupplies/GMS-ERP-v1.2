@@ -6,9 +6,7 @@
         order_form: true,
         inventory: true,
         composite: true,
-        lbc_tracking: false,
-        lbc_collection_confirmation: false,
-        sales_report: false
+        lbc_tracking: false
     });
     const mobileTableObservers = new WeakMap();
     const mobileTableRefreshFrames = new WeakMap();
@@ -24,12 +22,8 @@
     const CURRENT_SESSION_CACHE_KEY = 'current-session';
     const SESSION_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
     const MANUAL_REFRESH_WINDOW_MS = 2500;
-    const AUTOMATIC_GET_CACHE_PREFIX = 'http-get';
-    const KPI_REQUEST_CACHE_MAX_AGE_MS = 60 * 1000;
-    const KPI_REQUEST_TIMEOUT_MS = 15000;
     const inFlightRequestCache = new Map();
     let manualRefreshRequestedAt = 0;
-    let requestCacheGeneration = 0;
 
     ensureResponsiveDocumentSetup();
     installManualRefreshDetector();
@@ -849,42 +843,11 @@
     }
 
     async function request(path, options = {}) {
-        const method = String(options.method || 'GET').trim().toUpperCase() || 'GET';
-        const isCacheableApiRead = method === 'GET' && String(path || '').startsWith('/api/');
-
-        if (isCacheableApiRead) {
-            const cacheMaxAgeMs = Math.max(0, Number(options.cacheMaxAgeMs ?? SESSION_CACHE_MAX_AGE_MS));
-            return requestWithSessionCache(
-                `${AUTOMATIC_GET_CACHE_PREFIX}:${path}`,
-                cacheMaxAgeMs,
-                () => requestFromNetwork(path, { ...options, method }),
-                { bypassCache: Boolean(options.bypassCache) }
-            );
-        }
-
-        const result = await requestFromNetwork(path, { ...options, method });
-        if (method !== 'GET' && method !== 'HEAD') {
-            invalidateRequestCacheByPrefix(AUTOMATIC_GET_CACHE_PREFIX);
-        }
-        return result;
-    }
-
-    async function requestFromNetwork(path, options = {}) {
         const requestOptions = {
             method: options.method || 'GET',
             headers: { ...(options.headers || {}) },
             credentials: 'same-origin'
         };
-        const timeoutMs = Math.max(0, Number(options.timeoutMs || 0));
-        const controller = timeoutMs > 0 ? new AbortController() : null;
-        const timeoutId = controller
-            ? window.setTimeout(() => controller.abort(), timeoutMs)
-            : null;
-        if (controller) {
-            requestOptions.signal = controller.signal;
-        } else if (options.signal) {
-            requestOptions.signal = options.signal;
-        }
 
         if (options.body !== undefined) {
             requestOptions.headers['Content-Type'] = 'application/json';
@@ -893,26 +856,11 @@
                 : JSON.stringify(options.body);
         }
 
-        let response;
-        let payload;
-        try {
-            response = await fetch(path, requestOptions);
-            const contentType = response.headers.get('content-type') || '';
-            payload = contentType.includes('application/json')
-                ? await response.json()
-                : { success: response.ok, data: await response.text() };
-        } catch (error) {
-            if (controller?.signal.aborted) {
-                const timeoutError = new Error('KPI records took too long to load. Check that the server is running, then refresh.');
-                timeoutError.code = 'REQUEST_TIMEOUT';
-                throw timeoutError;
-            }
-            throw error;
-        } finally {
-            if (timeoutId !== null) {
-                window.clearTimeout(timeoutId);
-            }
-        }
+        const response = await fetch(path, requestOptions);
+        const contentType = response.headers.get('content-type') || '';
+        const payload = contentType.includes('application/json')
+            ? await response.json()
+            : { success: response.ok, data: await response.text() };
 
         if (!response.ok || payload.success === false) {
             const errorMessage = payload.error || `Request failed (${response.status})`;
@@ -967,7 +915,6 @@
             REQUEST_CACHE_STORAGE_PREFIX,
             session.companyId || 'anon',
             session.role || 'anon',
-            session.userId || 'anon',
             String(cacheKey || '').trim()
         ].join(':');
     }
@@ -1020,19 +967,14 @@
             return inFlightRequestCache.get(scopedKey);
         }
 
-        const cacheGeneration = requestCacheGeneration;
         const pendingRequest = Promise.resolve()
             .then(() => factory())
             .then((result) => {
-                if (maxAgeMs > 0 && cacheGeneration === requestCacheGeneration) {
-                    writeRequestCache(cacheKey, result);
-                }
+                writeRequestCache(cacheKey, result);
                 return result;
             })
             .finally(() => {
-                if (inFlightRequestCache.get(scopedKey) === pendingRequest) {
-                    inFlightRequestCache.delete(scopedKey);
-                }
+                inFlightRequestCache.delete(scopedKey);
             });
 
         inFlightRequestCache.set(scopedKey, pendingRequest);
@@ -1040,7 +982,6 @@
     }
 
     function invalidateRequestCacheByPrefix(cacheKeyPrefix = '') {
-        requestCacheGeneration += 1;
         const scopedPrefix = buildScopedRequestCacheKey(cacheKeyPrefix);
         const exactOrNestedMatch = (key = '') => key === scopedPrefix || key.startsWith(`${scopedPrefix}:`);
 
@@ -1078,7 +1019,6 @@
     }
 
     function invalidateAllRequestCaches() {
-        requestCacheGeneration += 1;
         try {
             const keysToRemove = [];
             for (let index = 0; index < sessionStorage.length; index += 1) {
@@ -1781,42 +1721,18 @@
                 '/head_admin/today_present.html',
                 '/head_admin/time_in_time_out.html',
                 '/head_admin/reports.html',
-                '/head_admin/kpi_evaluation.html',
-                '/head_admin/incident_report.html',
                 '/head_admin/daily_compiled_report.html',
                 '/head_admin/settings.html'
             ];
         }
 
         if (isEmployeeLikeRole(normalizedRole)) {
-            const access = normalizeUserFeatureAccess(bootstrap?.user?.feature_access || {});
-            const allowedPaths = [
+            return [
                 '/employee/employee.html',
                 '/employee/time_card.html',
                 '/employee/time_in_time_out.html',
                 '/employee/settings.html'
             ];
-
-            if (access.order_form) {
-                allowedPaths.push('/head_admin/order_form.html', '/head_admin/communication_panel.html');
-            }
-            if (access.expenses) {
-                allowedPaths.push('/head_admin/expenses.html');
-            }
-            if (access.inventory) {
-                allowedPaths.push('/employee/inventory_stock.html', '/head_admin/inventory_levels.html');
-            }
-            if (access.composite) {
-                allowedPaths.push('/head_admin/composite_items.html');
-            }
-            if (access.lbc_tracking) {
-                allowedPaths.push('/head_admin/lbc_tracking.html');
-            }
-            if (access.sales_report) {
-                allowedPaths.push('/head_admin/sales_report.html');
-            }
-
-            return allowedPaths;
         }
 
         return [];
@@ -2391,9 +2307,7 @@
             () => window.electronAPI?.inventoryVariants?.resolve({ productName, setName }),
             () => request(`/api/inventory-variants/resolve?productName=${encodeURIComponent(productName)}&setName=${encodeURIComponent(setName)}`)
         ),
-        listInventoryOutTracking: ({ dateFrom = '', dateTo = '', branch = '', search = '', limit = 500, offset = 0 } = {}) => request(
-            `/api/inventory/out-tracking?dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}&branch=${encodeURIComponent(branch)}&search=${encodeURIComponent(search)}&limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`
-        ),        listInventory: ({ branch = '', filter = '', limit = 500, offset = 0 } = {}) => {
+        listInventory: ({ branch = '', filter = '', limit = 500, offset = 0 } = {}) => {
             const normalizedBranch = String(branch || '').trim();
             const normalizedFilter = String(filter || '').trim();
             const normalizedLimit = Math.max(1, Number(limit) || 500);
@@ -2545,11 +2459,6 @@
         }).then((result) => {
             invalidateReferenceCaches(['lbc-tracking']);
             return result;
-        }),
-        listLbcCollectionAssignees: () => request('/api/lbc-tracking/collection-assignees'),
-        setLbcCollectionAssignees: (payload = {}) => request('/api/lbc-tracking/collection-assignees', {
-            method: 'PUT',
-            body: payload
         }),
         bulkAssignLbcTracking: (payload = {}) => request('/api/lbc-tracking/bulk-assign', {
             method: 'POST',
@@ -2813,71 +2722,6 @@
             invalidateReferenceCaches(['bootstrap']);
             return result;
         }),
-        getKpiEvaluationContext: (userId = '') => request(`/api/kpi/context?userId=${encodeURIComponent(userId)}`),
-        getKpiEvaluationSettings: () => request('/api/kpi/settings'),
-        updateKpiEvaluationSettings: (payload) => request('/api/kpi/settings', {
-            method: 'PUT',
-            body: payload
-        }),
-        listKpiEvaluations: (filters = {}, requestOptions = {}) => {
-            const params = new URLSearchParams();
-            Object.entries(filters || {}).forEach(([key, value]) => {
-                if (value !== undefined && value !== null && String(value).trim() !== '') {
-                    params.set(key, String(value));
-                }
-            });
-            return request(`/api/kpi/evaluations${params.toString() ? `?${params.toString()}` : ''}`, {
-                cacheMaxAgeMs: KPI_REQUEST_CACHE_MAX_AGE_MS,
-                timeoutMs: KPI_REQUEST_TIMEOUT_MS,
-                ...requestOptions
-            });
-        },
-        getKpiDailyScoreHistory: (employeeId, { days = 90 } = {}) => request(
-            `/api/kpi/scores/history?employeeId=${encodeURIComponent(employeeId)}&days=${encodeURIComponent(days)}`,
-            {
-                cacheMaxAgeMs: KPI_REQUEST_CACHE_MAX_AGE_MS,
-                timeoutMs: KPI_REQUEST_TIMEOUT_MS
-            }
-        ),
-        getKpiEvaluation: (recordId) => request(`/api/kpi/evaluations/${encodeURIComponent(recordId)}`),
-        reviewKpiEvaluation: (recordId, payload = {}) => request(`/api/kpi/evaluations/${encodeURIComponent(recordId)}`, {
-            method: 'PATCH',
-            body: payload
-        }),
-        submitKpiAdminEvaluation: (payload = {}) => request('/api/kpi/evaluations/admin', {
-            method: 'POST',
-            body: payload
-        }),
-        submitKpiIssueEncounter: (payload = {}) => request('/api/kpi/evaluations/issue', {
-            method: 'POST',
-            body: payload
-        }),
-        listIncidentReports: (filters = {}, requestOptions = {}) => {
-            const params = new URLSearchParams();
-            Object.entries(filters || {}).forEach(([key, value]) => {
-                if (value !== undefined && value !== null && String(value).trim() !== '') {
-                    params.set(key, String(value));
-                }
-            });
-            return request(`/api/incident-reports${params.toString() ? `?${params.toString()}` : ''}`, {
-                bypassCache: true,
-                ...requestOptions
-            });
-        },
-        getIncidentReport: (reportId) => request(
-            `/api/incident-reports/${encodeURIComponent(reportId)}`
-        ),
-        createIncidentReport: (payload = {}) => request('/api/incident-reports', {
-            method: 'POST',
-            body: payload
-        }),
-        updateIncidentReport: (reportId, payload = {}) => request(
-            `/api/incident-reports/${encodeURIComponent(reportId)}`,
-            {
-                method: 'PATCH',
-                body: payload
-            }
-        ),
         getCompanyBulletin: () => requestWithSessionCache('company-bulletin', 30000, () => request('/api/company/bulletin')).then((result) => {
             syncEmployeeAnnouncementBanner(result);
             return result;
@@ -2975,16 +2819,15 @@
             invalidateReferenceCaches(['branches', 'bootstrap', 'sales-references']);
             return result;
         }),
-        listUsers: ({ role = '', filter = '', limit = 500, offset = 0, includeInactive = false } = {}) => {
+        listUsers: ({ role = '', filter = '', limit = 500, offset = 0 } = {}) => {
             const normalizedRole = String(role || '').trim();
             const normalizedFilter = String(filter || '').trim();
             const normalizedLimit = Math.max(1, Number(limit) || 500);
             const normalizedOffset = Math.max(0, Number(offset) || 0);
-            const normalizedIncludeInactive = Boolean(includeInactive);
-            const requestFactory = () => request(`/api/users?role=${encodeURIComponent(normalizedRole)}&filter=${encodeURIComponent(normalizedFilter)}&limit=${encodeURIComponent(normalizedLimit)}&offset=${encodeURIComponent(normalizedOffset)}&includeInactive=${normalizedIncludeInactive ? '1' : '0'}`);
+            const requestFactory = () => request(`/api/users?role=${encodeURIComponent(normalizedRole)}&filter=${encodeURIComponent(normalizedFilter)}&limit=${encodeURIComponent(normalizedLimit)}&offset=${encodeURIComponent(normalizedOffset)}`);
             if (shouldUseDefaultQueryCache({ filter: normalizedFilter, offset: normalizedOffset })) {
                 return requestWithSessionCache(
-                    `users:role=${normalizedRole}:filter=${normalizedFilter}:limit=${normalizedLimit}:offset=${normalizedOffset}:includeInactive=${normalizedIncludeInactive ? 1 : 0}`,
+                    `users:role=${normalizedRole}:filter=${normalizedFilter}:limit=${normalizedLimit}:offset=${normalizedOffset}`,
                     SESSION_CACHE_MAX_AGE_MS,
                     requestFactory
                 );
@@ -3011,42 +2854,6 @@
             invalidateReferenceCaches(['users', 'employees']);
             return result;
         }),
-        listTasks: () => request('/api/tasks'),
-        createTask: (payload) => request('/api/tasks', {
-            method: 'POST',
-            body: payload
-        }).then((result) => {
-            invalidateReferenceCaches(['tasks', 'users', 'employees']);
-            return result;
-        }),
-        deleteTask: (taskId) => request(`/api/tasks/${encodeURIComponent(taskId)}`, {
-            method: 'DELETE'
-        }).then((result) => {
-            invalidateReferenceCaches(['tasks', 'users', 'employees']);
-            return result;
-        }),
-        assignUserTask: (userId, payload = {}) => request(`/api/users/${encodeURIComponent(userId)}/task`, {
-            method: 'PATCH',
-            body: payload
-        }).then((result) => {
-            invalidateReferenceCaches(['tasks', 'users', 'employees']);
-            return result;
-        }),
-        listAttendanceCorrections: ({ status = '', limit, offset = 0 } = {}) => {
-            const params = new URLSearchParams({
-                status: String(status || '').trim(),
-                limit: String(Math.max(1, Number(limit) || 100)),
-                offset: String(Math.max(0, Number(offset) || 0))
-            });
-            return request(`/api/attendance/corrections?${params.toString()}`, { bypassCache: true });
-        },
-        approveAttendanceCorrection: (correctionId) => request(`/api/attendance/corrections/${encodeURIComponent(correctionId)}/approve`, {
-            method: 'POST'
-        }),
-        rejectAttendanceCorrection: (correctionId, payload = {}) => request(`/api/attendance/corrections/${encodeURIComponent(correctionId)}/reject`, {
-            method: 'POST',
-            body: payload
-        }),
         getSuperBootstrap: () => request('/api/super/bootstrap'),
         getSuperCustomerServiceConfig: () => request('/api/super/customer-service-config'),
         updateSuperCustomerServiceConfig: (payload) => request('/api/super/customer-service-config', {
@@ -3068,39 +2875,6 @@
             method: 'DELETE'
         }),
         listSuperCompanies: () => request('/api/super/companies'),
-        getSuperKpiEvaluationSettings: (companyId) => request(`/api/super/kpi/settings?companyId=${encodeURIComponent(companyId)}`),
-        listSuperKpiEvaluations: (companyId, filters = {}, requestOptions = {}) => {
-            const params = new URLSearchParams({ companyId: String(companyId || '') });
-            Object.entries(filters || {}).forEach(([key, value]) => {
-                if (value !== undefined && value !== null && String(value).trim() !== '') {
-                    params.set(key, String(value));
-                }
-            });
-            return request(`/api/super/kpi/evaluations?${params.toString()}`, {
-                cacheMaxAgeMs: KPI_REQUEST_CACHE_MAX_AGE_MS,
-                timeoutMs: KPI_REQUEST_TIMEOUT_MS,
-                ...requestOptions
-            });
-        },
-        submitSuperKpiAdminEvaluation: (companyId, payload = {}) => request(
-            `/api/super/kpi/evaluations/admin?companyId=${encodeURIComponent(companyId)}`,
-            {
-                method: 'POST',
-                body: payload
-            }
-        ),
-        getSuperKpiDailyScoreHistory: (companyId, employeeId, { days = 90 } = {}) => request(
-            `/api/super/kpi/scores/history?companyId=${encodeURIComponent(companyId)}&employeeId=${encodeURIComponent(employeeId)}&days=${encodeURIComponent(days)}`,
-            {
-                cacheMaxAgeMs: KPI_REQUEST_CACHE_MAX_AGE_MS,
-                timeoutMs: KPI_REQUEST_TIMEOUT_MS
-            }
-        ),
-        getSuperKpiEvaluation: (companyId, recordId) => request(`/api/super/kpi/evaluations/${encodeURIComponent(recordId)}?companyId=${encodeURIComponent(companyId)}`),
-        reviewSuperKpiEvaluation: (companyId, recordId, payload = {}) => request(`/api/super/kpi/evaluations/${encodeURIComponent(recordId)}?companyId=${encodeURIComponent(companyId)}`, {
-            method: 'PATCH',
-            body: payload
-        }),
         listSuperAttendanceEmployees: ({ companyId = '', filter = '' } = {}) => request(
             `/api/super/attendance/employees?companyId=${encodeURIComponent(companyId)}&filter=${encodeURIComponent(filter)}`
         ),
@@ -3265,32 +3039,12 @@
         getUserTimeCard: (userId, { year, month }) => request(`/api/attendance/user/${encodeURIComponent(userId)}/time-card?year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}`),
         getUserWeeklyTimeCard: (userId, { dateKey = '' } = {}) => request(`/api/attendance/user/${encodeURIComponent(userId)}/weekly-card?dateKey=${encodeURIComponent(dateKey)}`),
         getUserCutoffTimeCard: (userId, { dateKey = '' } = {}) => request(`/api/attendance/user/${encodeURIComponent(userId)}/cutoff-card?dateKey=${encodeURIComponent(dateKey)}`),
-        getUserCutoffPayrollStatus: (userId, { dateKey = '' } = {}) => request(`/api/attendance/user/${encodeURIComponent(userId)}/cutoff-payroll?dateKey=${encodeURIComponent(dateKey)}`, {
-            cacheMaxAgeMs: 0,
-            bypassCache: true
-        }),
+        getUserCutoffPayrollStatus: (userId, { dateKey = '' } = {}) => request(`/api/attendance/user/${encodeURIComponent(userId)}/cutoff-payroll?dateKey=${encodeURIComponent(dateKey)}`),
         setUserCutoffPayrollStatus: (userId, { dateKey = '', status = '' } = {}) => request(`/api/attendance/user/${encodeURIComponent(userId)}/cutoff-payroll`, {
             method: 'PATCH',
             body: { dateKey, status }
         }),
-        setUserCutoffPayslipPhoto: (userId, {
-            dateKey = '',
-            payslipPhotoDataUrl = '',
-            payslipPhotoName = '',
-            removePayslipPhoto = false
-        } = {}) => request(`/api/attendance/user/${encodeURIComponent(userId)}/cutoff-payroll`, {
-            method: 'PATCH',
-            body: {
-                dateKey,
-                payslipPhotoDataUrl,
-                payslipPhotoName,
-                removePayslipPhoto
-            }
-        }).then((result) => {
-            invalidateReferenceCaches(['attendance']);
-            return result;
-        }),
-        getTodayAttendanceRecord: (userId, { dateKey = '' } = {}) => request(`/api/attendance/user/${encodeURIComponent(userId)}/today${dateKey ? `?dateKey=${encodeURIComponent(dateKey)}` : ''}`),
+        getTodayAttendanceRecord: (userId) => request(`/api/attendance/user/${encodeURIComponent(userId)}/today`),
         getAttendanceForMonth: ({ userId, year, month }) => request(`/api/attendance/month?userId=${encodeURIComponent(userId)}&year=${encodeURIComponent(year)}&month=${encodeURIComponent(month)}`),
         getAttendanceReport: ({ employeeId = 'all', range = 'daily', dateKey = '' }) => request(`/api/attendance/report?employeeId=${encodeURIComponent(employeeId)}&range=${encodeURIComponent(range)}&dateKey=${encodeURIComponent(dateKey)}`),
         getDailyAttendanceSnapshot: (dateKey = '') => request(`/api/attendance/snapshot?dateKey=${encodeURIComponent(dateKey)}`),
@@ -3308,12 +3062,9 @@
             invalidateReferenceCaches(['attendance']);
             return result;
         }),
-        recordTimeOut: (userId, payload = {}) => request('/api/attendance/time-out', {
+        recordTimeOut: (userId) => request('/api/attendance/time-out', {
             method: 'POST',
-            body: {
-                userId,
-                ...payload
-            }
+            body: { userId }
         }).then((result) => {
             invalidateReferenceCaches(['attendance']);
             return result;

@@ -53,7 +53,7 @@ async function initialize() {
             updateSummary(rows);
 
             if (!rows.length) {
-                tbody.innerHTML = '<tr><td colspan="12" class="no-data">No employee accounts found. Add employees first so today\'s list can show Inactive, Suspended, Absent, Late, On Time, or Excuse status for the current date.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" class="no-data">No employee accounts found. Add employees first so today\'s list can show Inactive, Suspended, Absent, Late, On Time, or Excuse status for the current date.</td></tr>';
                 return;
             }
 
@@ -70,7 +70,6 @@ async function initialize() {
                     <td data-label="Late Minutes">${row.statusGroup === 'late' ? row.lateMinutes : 0}</td>
                     <td data-label="Status"><span class="status-pill ${statusClass(row.statusGroup)}">${appClient.escapeHtml(row.status)}</span></td>
                     <td data-label="Remarks">${appClient.escapeHtml(row.displayRemarks || '-')}</td>
-                    <td data-label="Task">${appClient.escapeHtml(formatTaskResult(row))}</td>
                     <td data-label="Action">${buildActionCell(row)}</td>
                 `;
 
@@ -100,7 +99,7 @@ async function initialize() {
             });
         } catch (error) {
             console.error('Failed to load today attendance snapshot:', error);
-            tbody.innerHTML = `<tr><td colspan="12" class="no-data">${appClient.escapeHtml(error.message)}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="11" class="no-data">${appClient.escapeHtml(error.message)}</td></tr>`;
             updateSummary([]);
             showStatus(error.message, true, true);
         }
@@ -195,32 +194,6 @@ async function initialize() {
 
 function formatTime(value) {
     return appClient.formatDisplayTime(value);
-}
-
-function formatTaskResult(row) {
-    const taskResults = Array.isArray(row?.taskResults) ? row.taskResults : [];
-    const summary = taskResults
-        .map((task) => {
-            const taskName = String(task?.name || task?.taskName || '').trim();
-            if (!taskName) {
-                return '';
-            }
-            const inputType = String(task?.inputType || task?.input_type || 'numeric').trim().toLowerCase();
-            if (inputType === 'checklist') return `${taskName}: Completed`;
-            if (inputType === 'text') return `${taskName}: ${String(task?.value ?? task?.text ?? '').trim()}`;
-            return `${taskName}: ${Number(task?.value ?? task?.count ?? task?.taskCount ?? 0)}`;
-        })
-        .filter(Boolean)
-        .join(', ');
-    if (summary) {
-        return summary;
-    }
-
-    const taskName = String(row?.taskName || '').trim();
-    if (!taskName) {
-        return '-';
-    }
-    return `${taskName}: ${Number(row?.taskCount || 0)}`;
 }
 
 async function listAttendanceUsers() {

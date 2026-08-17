@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="gms-disable-cached-brand-theme" content="true">
   <title>User Management</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="../shared/theme-preload.js"></script>
   <style>
     :root {
@@ -114,7 +113,7 @@
 
     .form {
       display: grid;
-      grid-template-columns: minmax(150px, 1.15fr) minmax(170px, 1.25fr) minmax(120px, .9fr) minmax(130px, 1fr) minmax(150px, 1fr) minmax(170px, 1.15fr);
+      grid-template-columns: minmax(170px, 1.25fr) minmax(180px, 1.4fr) minmax(140px, 1fr) minmax(140px, 1fr) minmax(180px, 1.25fr);
       gap: 10px;
       margin: 12px 0;
       align-items: center;
@@ -158,272 +157,19 @@
       font-weight: 600;
     }
 
-    .task-panel {
-      margin: 14px 0 12px;
-      border: 1px solid #d8e4f3;
-      border-radius: 14px;
-      padding: 14px;
-      background: linear-gradient(180deg, #ffffff, #f6f9fe);
-    }
-    .task-panel-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
-    }
-    .task-panel-head h2 {
-      font-size: 16px;
-      margin: 0;
-    }
-    .task-form {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      align-items: center;
-    }
-    .task-list {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 10px;
-    }
-    .task-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      min-height: 32px;
-      padding: 4px 8px 4px 10px;
-      border-radius: 999px;
-      border: 1px solid #cfdcf0;
-      background: #fff;
-      color: #25405f;
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .task-chip button {
-      width: 24px;
-      height: 24px;
-      min-width: 24px;
-      padding: 0;
-      border-radius: 999px;
-      background: #fee2e2;
-      color: #991b1b;
-      box-shadow: none;
-      justify-content: center;
-      align-items: center;
-      display: inline-flex;
-      line-height: 1;
-    }
-    .task-empty {
-      color: #64748b;
-      font-size: 12px;
-      font-weight: 600;
-      padding: 2px 0;
-    }
-    .task-cell {
-      position: relative;
-      width: auto;
-      min-width: 0;
-      overflow: visible;
-    }
-    .task-dropdown {
-      position: relative;
-      display: inline-block;
-      width: auto;
-      max-width: 100%;
-    }
-    .task-dropdown-btn {
-      width: auto;
-      min-width: 128px;
-      max-width: 100%;
-      height: 32px;
-      padding: 0 9px;
-      border: 1px solid #cbd8ea;
-      border-radius: 10px;
-      background: #fff;
-      color: #17345c;
-      box-shadow: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .task-dropdown-btn i {
-      flex: 0 0 auto;
-      color: #5c7192;
-      font-size: 11px;
-      transition: transform .16s ease;
-    }
-    .task-dropdown.open .task-dropdown-btn {
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
-    }
-    .task-dropdown.open .task-dropdown-btn i { transform: rotate(180deg); }
-    .task-dropdown-btn:disabled {
-      background: #f6f8fb;
-      color: #7b8ca5;
-    }
-    .task-summary {
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .task-dropdown-menu {
-      display: none;
-      position: absolute;
-      top: calc(100% + 6px);
-      left: 0;
-      width: max-content;
-      min-width: 190px;
-      max-width: min(320px, calc(100vw - 32px));
-      max-height: 280px;
-      border: 1px solid #d6e0ee;
-      border-radius: 12px;
-      background: #fff;
-      box-shadow: 0 16px 32px rgba(15, 35, 70, 0.18);
-      z-index: 15;
-    }
-    .task-dropdown-content {
-      overflow-y: auto;
-      max-height: 200px;
-      padding: 8px;
-    }
-    .task-dropdown.open .task-dropdown-menu {
-      display: flex;
-      flex-direction: column;
-    }
-    .task-option {
-      min-height: 34px;
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      padding: 7px 8px;
-      border-radius: 9px;
-      color: #203854;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    .task-option:hover { background: #f1f6ff; }
-    .task-option input {
-      width: 16px;
-      height: 16px;
-      margin: 0;
-      padding: 0;
-      flex: 0 0 auto;
-      accent-color: var(--primary);
-      box-shadow: none;
-    }
-    .task-option-name {
-      min-width: 0;
-      flex: 1 1 auto;
-      overflow-wrap: anywhere;
-    }
-    .task-option-type {
-      flex: 0 0 auto;
-      color: #64748b;
-      font-size: 12px;
-    }
-    .task-option-type i {
-      display: inline-flex;
-    }
-    .task-dropdown-empty {
-      padding: 8px;
-      color: #64748b;
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .task-dropdown-header {
-      padding: 6px 8px 4px;
-      color: #64748b;
-      font-size: 10px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .task-dropdown-footer {
-      flex: 0 0 auto;
-      padding: 12px;
-    }
-    .task-dropdown-add {
-      display: grid;
-      margin-bottom: 6px;
-    }
-    .task-dropdown-add-toggle {
-      width: 100%;
-      height: 32px;
-      padding: 0 9px;
-      border: none;
-      border-radius: 8px;
-      background: #f8fbff;
-      color: #245ea8;
-      box-shadow: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .task-dropdown-add-toggle:hover {
-      border-color: var(--primary);
-      background: #eef5ff;
-    }
-    .task-dropdown-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 6px;
-      margin-top: 0;
-      padding-top: 8px;
-      border-top: 1px solid #e7edf7;
-    }
-    .task-dropdown-actions button {
-      height: 30px;
-      min-width: auto;
-      padding: 0 10px;
-      border-radius: 8px;
-      font-size: 12px;
-      box-shadow: none;
-    }
-    .task-dropdown-clear {
-      background: #eef2f7;
-      color: #334155;
-    }
-    .task-dropdown-apply {
-      background: linear-gradient(140deg, var(--primary), var(--primary-dark));
-      color: #fff;
-    }
-    .task-dropdown.is-saving .task-dropdown-btn,
-    .task-dropdown.is-saving .task-dropdown-menu {
-      opacity: .72;
-    }
-    .task-muted {
-      color: #64748b;
-      font-size: 12px;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-
     .form-actions { margin: 12px 0 6px; }
     .primary-btn {
       background: linear-gradient(140deg, var(--primary), var(--primary-dark));
       color: #fff;
-      border-radius: 8px;
+      box-shadow: 0 8px 16px rgba(30, 85, 197, 0.35);
       min-width: 180px;
-      font-weight: 500;
     }
     .secondary-btn {
       border: 1px solid #cdd8e7;
       background: #fff;
       color: #1c2e49;
-      border-radius: 8px;
       box-shadow: none;
-      font-weight: 500;
+      font-weight: 600;
     }
     .secondary-btn:hover { background: #f5f8fd; }
 
@@ -431,109 +177,68 @@
       margin-top: 8px;
       border: 1px solid var(--line);
       border-radius: 14px;
-      overflow-x: hidden;
-      overflow-y: visible;
+      overflow: auto;
       background: #fff;
     }
-    table {
-      width: 100%;
-      min-width: 0;
-      border-collapse: separate;
-      border-spacing: 0;
-      table-layout: fixed;
-    }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1040px; }
     th, td {
       border-bottom: 1px solid #e8eef6;
-      padding: 9px 8px;
+      padding: 12px 14px;
       text-align: left;
-      font-size: 13px;
+      font-size: 14px;
       vertical-align: middle;
-    }
-    td {
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    th:nth-child(1), td:nth-child(1) { width: 12%; }
-    th:nth-child(2), td:nth-child(2) { width: 14%; }
-    th:nth-child(3), td:nth-child(3) { width: 9%; }
-    th:nth-child(4), td:nth-child(4) { width: 11%; }
-    th:nth-child(6), td:nth-child(6) { width: 20%; }
-    th:nth-child(7), td:nth-child(7) { width: 5%; text-align: center; }
-    th:nth-child(8), td:nth-child(8) { width: 11%; }
-    td:nth-child(1),
-    td:nth-child(2),
-    td:nth-child(3),
-    td:nth-child(4) {
-      white-space: nowrap;
-    }
-    td:nth-child(5),
-    td:nth-child(6),
-    td:nth-child(8) {
-      overflow: visible;
     }
     th {
       background: linear-gradient(180deg, #f8fbff, #f1f6fe);
       color: #2b3f62;
-      font-size: 11px;
+      font-size: 12px;
       text-transform: uppercase;
-      letter-spacing: .35px;
+      letter-spacing: .5px;
       font-weight: 700;
     }
     tbody tr:hover { background: #f8fbff; }
     tbody tr:last-child td { border-bottom: none; }
     .empty-row { text-align: center; color: var(--muted); padding: 22px 14px; }
 
-    .user-status-dot {
+    .pill {
       display: inline-block;
-      width: 10px;
-      height: 10px;
+      padding: 4px 10px;
       border-radius: 999px;
-      vertical-align: middle;
-    }
-    .user-status-dot.active {
-      background: #16a34a;
-
-    }
-    .user-status-dot.inactive,
-    .user-status-dot.suspended {
-      background: #94a3b8;
-    }
-
-    .actions { display: flex; gap: 6px; flex-wrap: nowrap; }
-    .actions button {
-      width: 28px;
-      min-width: 28px;
-      height: 28px;
-      border-radius: 9px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
       font-size: 12px;
-      padding: 0;
+      font-weight: 700;
+    }
+    .pill.active { background: var(--success-bg); color: var(--success-text); }
+    .pill.inactive { background: #eef2f7; color: #475569; }
+    .pill.suspended { background: var(--danger-bg); color: var(--danger-text); }
+
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .actions button {
+      height: 30px;
+      border-radius: 9px;
+      font-size: 12px;
+      padding: 0 10px;
       font-weight: 700;
       box-shadow: none;
     }
-    .actions button i { pointer-events: none; }
-    .actions .edit { background: #ffffff; color: #214ea9; font-size: 16px;}
-    .actions .toggle.suspend { background: #ffffff; color: #9a3412; font-size: 16px;}
-    .actions .toggle.reactivate { background: #ffffff; color: #166534; font-size: 16px;}
-    .actions .delete { background: #ffffff; color: #991b1b; font-size: 16px;}
+    .actions .edit { background: #e4edff; color: #214ea9; }
+    .actions .toggle { background: #eef2f7; color: #1f2f46; }
+    .actions .delete { background: #fee2e2; color: #991b1b; }
     .actions .edit:hover { background: #d6e5ff; }
-    .actions .toggle.suspend:hover { background: #ffedd5; }
-    .actions .toggle.reactivate:hover { background: #bbf7d0; }
+    .actions .toggle:hover { background: #dfe7f1; }
     .actions .delete:hover { background: #fccccc; }
 
     .feature-pill {
       display: inline-block;
-      margin: 1px 3px 1px 0;
-      padding: 3px 6px;
+      margin: 2px 5px 2px 0;
+      padding: 4px 8px;
       border-radius: 999px;
       background: #e9f0ff;
       color: #284d97;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
     }
     .feature-pill.off { background: #f1f5f9; color: #64748b; }
+
     .modal {
       position: fixed;
       inset: 0;
@@ -567,10 +272,7 @@
       height: 36px;
       border-radius: 10px;
       border: none;
-      background: #ffffff;
-      justify-content: center;
-      align-items: center;
-      display: inline-flex;
+      background: #eef2f7;
       color: #334155;
       font-size: 22px;
       line-height: 1;
@@ -608,96 +310,6 @@
       flex-wrap: wrap;
     }
     #editStatus { margin-top: 10px; min-height: 18px; }
-    .task-create-card {
-      width: min(520px, 100%);
-    }
-    .task-create-context {
-      min-height: 18px;
-      margin: -2px 0 12px;
-      color: #5a6f8f;
-      font-size: 13px;
-      font-weight: 600;
-    }
-    .task-create-field {
-      display: grid;
-      gap: 7px;
-      color: #3e5579;
-      font-size: 11px;
-      font-weight: 800;
-      text-transform: uppercase;
-    }
-    .task-create-field input[type="text"] {
-      height: 42px;
-      font-size: 14px;
-      font-weight: 600;
-      text-transform: none;
-    }
-    .task-type-fieldset {
-      min-width: 0;
-      margin: 14px 0 0;
-      padding: 0;
-      border: 0;
-    }
-    .task-type-fieldset legend {
-      margin-bottom: 7px;
-      color: #3e5579;
-      font-size: 11px;
-      font-weight: 800;
-      text-transform: uppercase;
-    }
-    .task-type-segmented {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      border: 1px solid #cbd8ea;
-      border-radius: 8px;
-      overflow: hidden;
-      background: #f8fafc;
-    }
-    .task-type-option {
-      position: relative;
-      min-width: 0;
-      min-height: 46px;
-      border-right: 1px solid #cbd8ea;
-    }
-    .task-type-option:last-child { border-right: 0; }
-    .task-type-option input {
-      position: absolute;
-      opacity: 0;
-      pointer-events: none;
-    }
-    .task-type-option span {
-      min-height: 46px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-      padding: 0 8px;
-      color: #526987;
-      font-size: 12px;
-      font-weight: 800;
-      cursor: pointer;
-    }
-    .task-type-option input:checked + span {
-      color: #fff;
-      background: var(--primary);
-    }
-    .task-type-option input:focus-visible + span {
-      outline: 3px solid rgba(59, 130, 246, .24);
-      outline-offset: -3px;
-    }
-    #taskCreateStatus { min-height: 18px; margin-top: 10px; }
-    .task-type-badge {
-      display: inline-flex;
-      align-items: center;
-      margin-left: 5px;
-      padding: 2px 6px;
-      border-radius: 999px;
-      color: #526987;
-      background: #eef3f9;
-      font-size: 9px;
-      font-weight: 800;
-      text-transform: uppercase;
-    }
 
     .pending-panel {
       margin-top: 18px;
@@ -799,14 +411,6 @@
       border: 1px dashed #cbd5e1;
       background: #f8fafc;
     }
-    .task-dropdown-label {
-      padding: 10px 12px 4px;
-      color: var(--muted);
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-    }
 
     @media (max-width: 980px) {
       .wrap { padding: 20px 12px 26px; }
@@ -817,12 +421,9 @@
     }
     @media (max-width: 620px) {
       .form { grid-template-columns: 1fr; }
-      .task-form { display: grid; grid-template-columns: 1fr; }
-      .task-form .primary-btn { width: 100%; }
       .primary-btn { width: 100%; }
       .modal-actions .primary-btn, .modal-actions .secondary-btn { width: 100%; }
     }
-
   </style>
 </head>
 <body>
@@ -863,24 +464,11 @@
           <label><input type="checkbox" data-feature-scope="create" data-feature-key="inventory" checked> Inventory</label>
           <label><input type="checkbox" data-feature-scope="create" data-feature-key="composite" checked> Composite</label>
           <label><input type="checkbox" data-feature-scope="create" data-feature-key="lbc_tracking"> LBC Tracking</label>
-          <label><input type="checkbox" data-feature-scope="create" data-feature-key="lbc_collection_confirmation"> LBC Collection Confirmation <span class="muted">(assign via LBC Tracking)</span></label>
-          <label><input type="checkbox" data-feature-scope="create" data-feature-key="sales_report"> Sales Report</label>
         </div>
       </div>
 
       <div class="form-actions">
         <button id="createUserBtn" type="button" class="primary-btn">Create User</button>
-      </div>
-
-      <div class="task-panel">
-        <div class="task-panel-head">
-          <h2>Task Management</h2>
-          <span class="muted">Create tasks, then assign them to active users in the table.</span>
-        </div>
-        <div class="task-form">
-          <button id="createTaskBtn" type="button" class="primary-btn"><i class="fa-solid fa-plus"></i> Add Task</button>
-        </div>
-        <div id="taskList" class="task-list"></div>
       </div>
 
       <div id="status" class="status"></div>
@@ -893,7 +481,6 @@
               <th>Role</th>
               <th>Branch</th>
               <th>Features</th>
-              <th>Task</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -914,42 +501,6 @@
       <div class="pending-meta">Pending count: <span class="pending-count" id="pendingSignupCount">0</span></div>
       <div class="pending-list" id="pendingSignupList"></div>
       <div class="pending-empty" id="pendingSignupEmpty">No pending signup requests.</div>
-    </div>
-  </div>
-
-  <div id="taskCreateModal" class="modal" aria-hidden="true">
-    <div class="modal-card task-create-card" role="dialog" aria-modal="true" aria-labelledby="taskCreateTitle">
-      <div class="modal-header">
-        <h2 id="taskCreateTitle">Add Task</h2>
-        <button id="closeTaskCreateModalBtn" type="button" class="icon-btn" aria-label="Close add task dialog">&times;</button>
-      </div>
-      <p class="task-create-context" id="taskCreateContext"></p>
-      <label class="task-create-field" for="taskNameInput">
-        Task Name
-        <input id="taskNameInput" type="text" placeholder="e.g. Invoice" maxlength="80" autocomplete="off">
-      </label>
-      <fieldset class="task-type-fieldset">
-        <legend>Input Type</legend>
-        <div class="task-type-segmented">
-          <label class="task-type-option">
-            <input type="radio" name="taskInputType" value="checklist">
-            <span><i class="fa-solid fa-square-check"></i> Checklist</span>
-          </label>
-          <label class="task-type-option">
-            <input type="radio" name="taskInputType" value="numeric" checked>
-            <span><i class="fa-solid fa-arrow-up-9-1"></i> Numeric</span>
-          </label>
-          <label class="task-type-option">
-            <input type="radio" name="taskInputType" value="text">
-            <span><i class="fa-solid fa-font"></i> Text</span>
-          </label>
-        </div>
-      </fieldset>
-      <div id="taskCreateStatus" class="status"></div>
-      <div class="modal-actions">
-        <button id="cancelTaskCreateBtn" type="button" class="secondary-btn">Cancel</button>
-        <button id="saveTaskCreateBtn" type="button" class="primary-btn">Add Task</button>
-      </div>
     </div>
   </div>
 
@@ -1003,8 +554,6 @@
           <label><input type="checkbox" data-feature-scope="edit" data-feature-key="inventory"> Inventory</label>
           <label><input type="checkbox" data-feature-scope="edit" data-feature-key="composite"> Composite</label>
           <label><input type="checkbox" data-feature-scope="edit" data-feature-key="lbc_tracking"> LBC Tracking</label>
-          <label><input type="checkbox" data-feature-scope="edit" data-feature-key="lbc_collection_confirmation"> LBC Collection Confirmation <span class="muted">(assign via LBC Tracking)</span></label>
-          <label><input type="checkbox" data-feature-scope="edit" data-feature-key="sales_report"> Sales Report</label>
         </div>
       </div>
 
@@ -1016,7 +565,7 @@
     </div>
   </div>
 
-  <script src="../shared/app-client.js?v=20260707-feature-tools"></script>
-  <script src="./users.js?v=20260714-user-tasks"></script>
+  <script src="../shared/app-client.js"></script>
+  <script src="./users.js"></script>
 </body>
 </html>

@@ -478,15 +478,8 @@ async function initialize() {
     state.companyCode = normalizeCompanyCode(session.companyCode || '');
     state.quickPos.manualEditorExpanded = !isChowQuickPosWorkspace();
     appClient.attachEmployeeBackButton(session);
-    
-    // Employee customize order form access
-    // Keep the Customize Form button available for admin roles and employees
-    // that were explicitly granted order-form/customize permissions.
-    const canAccessOrderFormSetup = canCustomizeOrderForm(session);
     if (openOrderFormSetupBtn) {
-        openOrderFormSetupBtn.hidden = !canAccessOrderFormSetup;
-        openOrderFormSetupBtn.disabled = false;
-        openOrderFormSetupBtn.setAttribute('aria-hidden', canAccessOrderFormSetup ? 'false' : 'true');
+        openOrderFormSetupBtn.hidden = !canCustomizeOrderForm(session.role);
     }
 
     await loadReceiptConfig();
@@ -565,99 +558,11 @@ function getPreferredMedicalSupplySet(quantity = 1, quantityUnit = '') {
     return '';
 }
 
-function normalizeAccessKey(value = '') {
-    return String(value || '')
-        .trim()
-        .toLowerCase()
-        .replace(/[\s-]+/g, '_');
-}
-
-function collectAccessValues(value, bucket = new Set()) {
-    if (value == null) {
-        return bucket;
-    }
-
-    if (Array.isArray(value)) {
-        value.forEach((entry) => collectAccessValues(entry, bucket));
-        return bucket;
-    }
-
-    if (typeof value === 'object') {
-        Object.entries(value).forEach(([key, entryValue]) => {
-            const normalizedKey = normalizeAccessKey(key);
-            if (entryValue === true || entryValue === 'true' || entryValue === 1 || entryValue === '1' || entryValue === 'allowed' || entryValue === 'enabled') {
-                bucket.add(normalizedKey);
-            }
-
-            if (['feature', 'featureName', 'permission', 'permissionName', 'name', 'key', 'code', 'module'].includes(key)) {
-                bucket.add(normalizeAccessKey(entryValue));
-            }
-
-            if (Array.isArray(entryValue) || (entryValue && typeof entryValue === 'object')) {
-                collectAccessValues(entryValue, bucket);
-            }
-        });
-        return bucket;
-    }
-
-    String(value)
-        .split(/[\n,|]+/)
-        .map((entry) => normalizeAccessKey(entry))
-        .filter(Boolean)
-        .forEach((entry) => bucket.add(entry));
-
-    return bucket;
-}
-
-function sessionHasOrderFormSetupAccess(session = {}) {
-    const accessValues = new Set();
-    [
-        session.allowEmployeeFeature,
-        session.employeeFeature,
-        session.employeeFeatures,
-        session.allowedEmployeeFeatures,
-        session.allowedFeatures,
-        session.featureAccess,
-        session.features,
-        session.permissions,
-        session.employeeAccess,
-        session.modules,
-        session.roleFeatures,
-        session.access
-    ].forEach((value) => collectAccessValues(value, accessValues));
-
-    return [
-        'order_form',
-        'customize_order_form',
-        'order_form_customize',
-        'order_form_setup',
-        'workspace_setup',
-        'company_workspace_config'
-    ].some((permission) => accessValues.has(permission));
-}
-
-function canCustomizeOrderForm(sessionOrRole = {}) {
-    const session = sessionOrRole && typeof sessionOrRole === 'object'
-        ? sessionOrRole
-        : { role: sessionOrRole };
-    const normalizedRole = normalizeAccessKey(session.role);
-
-    if ([
-        'head_admin',
-        'company_admin',
-        'super_admin'
-    ].includes(normalizedRole)) {
-        return true;
-    }
-
-    // This page already passed ensureSession({ allowEmployeeFeature: 'order_form' }).
-    // Therefore an employee who reaches this page is treated as an employee
-    // with granted Order Form access, not a blocked/disabled user.
-    if (['employee', 'staff', 'sales_rep', 'sales_representative'].includes(normalizedRole)) {
-        return true;
-    }
-
-    return sessionHasOrderFormSetupAccess(session);
+function canCustomizeOrderForm(role) {
+    const normalizedRole = String(role || '').trim().toLowerCase().replace(/\s+/g, '_');
+    return normalizedRole === 'head_admin'
+        || normalizedRole === 'company_admin'
+        || normalizedRole === 'super_admin';
 }
 
 function getOrderFormWorkspaceConfig() {
@@ -1405,7 +1310,7 @@ function applyWorkspaceConfigToView() {
     state.controls.salesRep?.setDisabled?.(!showSalesRepresentative);
 
     if (!showDeliveryFee) {
-        deliveryFeeInput.value = '';
+        deliveryFeeInput.value = '0';
         deliveryFeeToggle.checked = false;
     }
     syncFormMode();
@@ -1627,7 +1532,7 @@ async function resetOrderForm(statusMessage = '') {
     paymentTypeInput.value = '';
     amountPaidInput.value = '';
     deliveryFeeInput.value = '';
-    deliveryFeeToggle.checked = false;
+    deliveryFeeToggle.checked = true;
     if (inventoryDeductToggle) {
         inventoryDeductToggle.checked = true;
     }
@@ -4172,11 +4077,7 @@ async function applyParsedOrder(parsed) {
             isManual: true
         };
     } else {
-        deliveryFeeInput.value = '';
-        state.autoDeliveryFee = {
-            suggested: getSuggestedDeliveryFee(),
-            isManual: false
-        };
+        syncAutoDeliveryFee({ force: true });
     }
 
     if (parsed.deliveryFeeToCollect !== null) {
@@ -5990,6 +5891,21 @@ function commitRowSelectionInputs() {
 }
 
 function getSuggestedDeliveryFee() {
+    const courier = state.controls.courier?.getValue() || '';
+    const branch = state.controls.branch?.getValue() || '';
+
+    if (courier !== 'Meet-Up') {
+        return 0;
+    }
+
+    if (branch === 'Cubao') {
+        return 50;
+    }
+
+    if (branch === 'Pampanga') {
+        return 100;
+    }
+
     return 0;
 }
 
@@ -6003,7 +5919,7 @@ function syncAutoDeliveryFee({ force = false } = {}) {
         : Number.isFinite(currentValue) && currentValue === previousSuggested;
 
     if (force || !state.autoDeliveryFee.isManual || matchesPreviousSuggestion) {
-        deliveryFeeInput.value = '';
+        deliveryFeeInput.value = suggested > 0 ? String(suggested) : '';
         state.autoDeliveryFee.isManual = false;
     }
 

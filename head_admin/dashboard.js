@@ -77,7 +77,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         client_database: 'client_database.html',
         inventory_manager: 'inventory.html',
         inventory_levels: 'inventory_levels.html',
-        inventory_tracking: 'inventory_tracking.html',
         sales_inventory_insight: 'sales_inventory_insight.html',
         composite_items: 'composite_items.html',
         order_form: 'order_form.html',
@@ -92,8 +91,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         today: 'today_present.html',
         time_in_out: 'time_in_time_out.html',
         reports: 'reports.html',
-        kpi_evaluation: 'kpi_evaluation.html',
-        incident_report: 'incident_report.html',
         daily_compiled_report: 'daily_compiled_report.html',
         settings: 'settings.html',
         users: 'users.html',
@@ -107,7 +104,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         client_database: ['sales'],
         inventory_manager: ['inventory'],
         inventory_levels: ['inventory'],
-        inventory_tracking: ['sales', 'inventory'],
         sales_inventory_insight: ['sales', 'inventory'],
         composite_items: ['inventory'],
         order_form: ['invoicing'],
@@ -122,8 +118,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         today: ['attendance'],
         time_in_out: ['attendance'],
         reports: ['reports'],
-        kpi_evaluation: ['attendance'],
-        incident_report: ['attendance'],
         daily_compiled_report: [],
         settings: [],
         users: [],
@@ -135,7 +129,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     const panelFeatureRequirements = {
         inventory_manager: ['inventory'],
         inventory_levels: ['inventory'],
-        inventory_tracking: ['inventory'],
         composite_items: ['composite'],
         order_form: ['order_form'],
         customer_credits: ['order_form'],
@@ -151,7 +144,6 @@ window.addEventListener('DOMContentLoaded', async () => {
                 'inventory_manager',
                 'composite_items',
                 'inventory_levels',
-                'inventory_tracking',
                 'sales_inventory_insight',
                 'order_form',
                 'sales_report',
@@ -171,9 +163,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 'timecards_salary',
                 'today',
                 'time_in_out',
-                'reports',
-                'kpi_evaluation',
-                'incident_report'
+                'reports'
             ]
         },
         {
@@ -211,8 +201,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         today: 'Check who is present today with fewer clicks and a more readable layout.',
         time_in_out: 'Manage attendance station actions and live time controls.',
         reports: 'Generate attendance reports with better access to filters and output panels.',
-        kpi_evaluation: 'Review private peer evaluations, issue encounters, rating trends, and required evaluation completion.',
-        incident_report: 'Review employee incident submissions and update their resolution status.',
         daily_compiled_report: 'Build a polished manual daily report and copy it as a ready-to-share image.',
         settings: 'Adjust workspace settings and account preferences.',
         users: 'Control user access, feature permissions, and account setup.',
@@ -289,7 +277,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     function loadPanel(panel, options = {}) {
         const fileName = panelMap[panel];
-        if (!fileName || !frameShell || !isPanelEnabled(panel)) {
+        if (!fileName || !frameShell) {
             return;
         }
 
@@ -589,8 +577,6 @@ window.addEventListener('DOMContentLoaded', async () => {
             'today',
             'time_in_out',
             'reports',
-            'kpi_evaluation',
-            'incident_report',
             'daily_compiled_report',
             'settings'
         ];
@@ -830,11 +816,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             || ''
         ).trim();
         const normalizedRole = String(session?.role || 'head_admin').trim().toLowerCase();
-        const roleLabel = normalizedRole === 'company_admin'
-            ? 'Company Admin'
-            : (normalizedRole === 'staff'
-                ? 'Staff'
-                : (normalizedRole === 'employee' ? 'Employee' : 'Head Admin'));
+        const roleLabel = normalizedRole === 'company_admin' ? 'Company Admin' : 'Head Admin';
         const enabledModules = Object.entries(bootstrap?.modules || {}).filter(([, isEnabled]) => Boolean(isEnabled));
         const readyPanels = navItems.filter((item) => item.dataset.hidden !== 'true' && item.dataset.disabled !== 'true').length;
 

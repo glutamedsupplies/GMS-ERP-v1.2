@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const store = require('../lib/sqlite');
 
-const SCHEMA_VERSION = '2026.07.28.01';
+const SCHEMA_VERSION = '2026.03.04.01';
 const ROOT_DIR = path.resolve(__dirname, '..');
 const DATA_ROOT = process.env.ATTENDANCE_DATA_DIR
     ? path.resolve(process.env.ATTENDANCE_DATA_DIR)

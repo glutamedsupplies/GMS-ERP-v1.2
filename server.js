@@ -35,57 +35,6 @@ function loadEnvFile() {
 
 loadEnvFile();
 
-function isTruthyFlag(value) {
-    return ['1', 'true', 'yes', 'on'].includes(String(value ?? '').trim().toLowerCase());
-}
-
-function setEnvIfEmpty(key, value) {
-    const normalizedValue = String(value ?? '').trim();
-    if (!normalizedValue || (process.env[key] !== undefined && process.env[key] !== '')) {
-        return;
-    }
-    process.env[key] = normalizedValue;
-}
-
-function loadLocalRuntimeConfig() {
-    const isCloudRuntime = isTruthyFlag(process.env.VERCEL)
-        || isTruthyFlag(process.env.RENDER)
-        || Boolean(String(process.env.VERCEL_URL || '').trim())
-        || Boolean(String(process.env.RENDER_EXTERNAL_HOSTNAME || '').trim());
-    if (isCloudRuntime) {
-        return;
-    }
-
-    const configPath = path.join(__dirname, 'local-runtime.config.json');
-    if (!fs.existsSync(configPath)) {
-        return;
-    }
-
-    let config;
-    try {
-        config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    } catch (error) {
-        console.warn(`Unable to read local runtime config: ${error.message}`);
-        return;
-    }
-
-    setEnvIfEmpty('ATTENDANCE_DB_BACKEND', config.dbBackend || 'sqlite');
-    if (config.dataDir) {
-        setEnvIfEmpty('ATTENDANCE_DATA_DIR', path.resolve(__dirname, config.dataDir));
-    }
-    setEnvIfEmpty('ATTENDANCE_BIND_HOST', config.bindHost);
-    setEnvIfEmpty('ATTENDANCE_PORT', config.port);
-    setEnvIfEmpty('ATTENDANCE_TIME_ZONE', config.timeZone);
-    setEnvIfEmpty('ATTENDANCE_TRUST_PROXY', config.trustProxy);
-    setEnvIfEmpty('ATTENDANCE_SECURE_COOKIES', config.secureCookies);
-    setEnvIfEmpty('ATTENDANCE_AUTO_SEED', '0');
-    setEnvIfEmpty('DATABASE_URL', config.databaseUrl);
-    setEnvIfEmpty('DATABASE_SSL_MODE', config.databaseSslMode);
-    setEnvIfEmpty('ATTENDANCE_PUBLIC_URL', config.publicUrl);
-}
-
-loadLocalRuntimeConfig();
-
 function reportStartupError(error) {
     const message = error?.message || String(error);
     console.error('Failed to start Attendance server:', error);

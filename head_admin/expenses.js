@@ -123,7 +123,6 @@ function getModuleRefs(prefix) {
         branchInput: document.getElementById(`${prefix}BranchInput`),
         aboutInput: document.getElementById(`${prefix}AboutInput`),
         amountInput: document.getElementById(`${prefix}AmountInput`),
-        paymentMethodInput: document.getElementById(`${prefix}PaymentMethodInput`),
         noteInput: document.getElementById(`${prefix}NoteInput`),
         statusInput: document.getElementById(`${prefix}StatusInput`),
         saveBtn: document.getElementById(`save${capitalize(prefix)}Btn`),
@@ -206,7 +205,6 @@ async function loadReferences() {
             const refs = state.modules[module.key].refs;
             populateSelect(refs.branchInput, state.references.branches || []);
             populateSelect(refs.branchFilter, state.references.branches || [], true, 'All Branches');
-            populateSelect(refs.paymentMethodInput, getPaymentMethodOptions(), true, 'Select payment mode');
             setFormStatus(module.key, `${module.label} form ready.`, false);
             setReportStatus(module.key, `${module.label} filters ready.`, false);
         });
@@ -220,10 +218,6 @@ async function loadReferences() {
 }
 
 function populateSelect(select, values, includeBlank = false, blankLabel = 'Select option') {
-    if (!select) {
-        return;
-    }
-
     select.innerHTML = '';
 
     if (includeBlank) {
@@ -239,29 +233,6 @@ function populateSelect(select, values, includeBlank = false, blankLabel = 'Sele
         option.textContent = value;
         select.appendChild(option);
     });
-}
-
-function getPaymentMethodOptions() {
-    const references = state.references || {};
-    const candidates = [
-        ...(Array.isArray(references.inputPaymentMethods) ? references.inputPaymentMethods : []),
-        ...(Array.isArray(references.paymentMethods) ? references.paymentMethods : []),
-        ...(Array.isArray(references.paymentOptions) ? references.paymentOptions : [])
-    ];
-    const values = [];
-
-    candidates.forEach((value) => {
-        const normalized = String(value || '').trim();
-        if (!normalized) {
-            return;
-        }
-
-        if (!values.some((entry) => entry.toLowerCase() === normalized.toLowerCase())) {
-            values.push(normalized);
-        }
-    });
-
-    return values.length ? values : ['CASH', 'GCash', 'Maya'];
 }
 
 function getPreferredBranch(moduleKey) {
@@ -345,9 +316,6 @@ function resetForm(moduleKey) {
     refs.branchInput.value = getPreferredBranch(moduleKey);
     refs.aboutInput.value = '';
     refs.amountInput.value = '';
-    if (refs.paymentMethodInput) {
-        refs.paymentMethodInput.value = '';
-    }
     refs.noteInput.value = '';
     if (refs.statusInput) {
         refs.statusInput.value = 'Confirmed';
@@ -368,7 +336,6 @@ async function saveEntry(moduleKey) {
         branch: refs.branchInput.value,
         about: refs.aboutInput.value.trim(),
         amount: refs.amountInput.value,
-        paymentMethod: refs.paymentMethodInput?.value || '',
         note: refs.noteInput.value.trim()
     };
     if (refs.statusInput) {
@@ -393,11 +360,6 @@ async function saveEntry(moduleKey) {
 
     if (Number(payload.amount || 0) <= 0) {
         setFormStatus(moduleKey, `${module.label} amount must be greater than zero.`, true);
-        return;
-    }
-
-    if (!payload.paymentMethod) {
-        setFormStatus(moduleKey, 'Mode of payment is required.', true);
         return;
     }
 
@@ -1120,7 +1082,6 @@ function renderTable(moduleKey, rows) {
             const linkedLabel = isAuto
                 ? `Linked ${row.linked_order_number || row.linked_receipt_number || 'sales entry'}`
                 : (row.note || 'Manual cash income entry');
-            const paymentMethod = formatPaymentMethod(row.payment_method || row.paymentMethod);
             return `
                 <tr>
                     <td>${appClient.escapeHtml(formatDate(row[module.dateColumn]))}</td>
@@ -1132,7 +1093,6 @@ function renderTable(moduleKey, rows) {
                             <div class="meta-row">
                                 <span class="status-pill ${status.toLowerCase()}">${appClient.escapeHtml(status)}</span>
                                 <span class="source-pill">${appClient.escapeHtml(sourceLabel)}</span>
-                                <span class="source-pill">${appClient.escapeHtml(paymentMethod)}</span>
                             </div>
                         </div>
                     </td>
@@ -1148,7 +1108,6 @@ function renderTable(moduleKey, rows) {
             `;
         }
 
-        const paymentMethod = formatPaymentMethod(row.payment_method || row.paymentMethod);
         return `
             <tr>
                 <td>${appClient.escapeHtml(formatDate(row[module.dateColumn]))}</td>
@@ -1157,9 +1116,6 @@ function renderTable(moduleKey, rows) {
                     <div class="cell-copy">
                         <strong>${appClient.escapeHtml(row.about || '-')}</strong>
                         <small>${appClient.escapeHtml(row.note || 'No note')}</small>
-                        <div class="meta-row">
-                            <span class="source-pill">${appClient.escapeHtml(paymentMethod)}</span>
-                        </div>
                     </div>
                 </td>
                 <td class="amount-cell">${appClient.escapeHtml(formatMoney(row.amount || 0))}</td>
@@ -1218,9 +1174,6 @@ function beginEdit(moduleKey, entryId) {
     refs.branchInput.value = row.branch || '';
     refs.aboutInput.value = row.about || '';
     refs.amountInput.value = String(Number(row.amount || 0));
-    if (refs.paymentMethodInput) {
-        setSelectValue(refs.paymentMethodInput, row.payment_method || row.paymentMethod || '');
-    }
     refs.noteInput.value = row.note || '';
     if (refs.statusInput) {
         refs.statusInput.value = normalizeCashIncomeStatus(row.confirmation_status || row.confirmationStatus || 'Confirmed');
@@ -1234,21 +1187,6 @@ function beginEdit(moduleKey, entryId) {
     setActiveModule(moduleKey);
     scrollModulePanelIntoView(moduleKey, 'form');
     refs.aboutInput.focus();
-}
-
-function formatPaymentMethod(value) {
-    return String(value || '').trim() || 'No payment mode';
-}
-
-function setSelectValue(select, value) {
-    if (!select) {
-        return;
-    }
-
-    const normalized = String(value || '').trim();
-    const match = Array.from(select.options || [])
-        .find((option) => option.value.toLowerCase() === normalized.toLowerCase());
-    select.value = match ? match.value : '';
 }
 
 function syncSelectedDeleteButton(moduleKey) {

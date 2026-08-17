@@ -171,7 +171,6 @@ const state = {
     savingTrackingKey: '',
     collectionScanPreview: null,
     collectionScanModalOpen: false,
-    isCollectionAssignee: false,
     loading: false,
     locked: false
 };
@@ -214,262 +213,11 @@ async function initialize() {
     bindEvents();
     focusActiveWorkspaceInput({ select: true });
     await loadRows();
-    await loadAssignedEmployeesFromServer();
-    bindAssignEmployeeModalEvents();
-}
-
-async function loadAssignedEmployeesFromServer() {
-    try {
-        const payload = await appClient.listLbcCollectionAssignees();
-        const employees = Array.isArray(payload?.employees) ? payload.employees : [];
-        collectionSelectedEmployees = employees.map((emp) => ({
-            id: emp.id || '',
-            name: emp.name || emp.id || ''
-        }));
-        state.isCollectionAssignee = Boolean(payload?.isAssigned);
-        renderCollectionAssignEmployeeLabel();
-        applyCollectionAssignVisibility();
-        if (typeof renderCollectionRows === 'function') {
-            renderCollectionRows();
-        }
-        setActionLoading(Boolean(state.loading || state.locked));
-    } catch (error) {
-        console.error('Failed to load assigned employees:', error);
-        collectionSelectedEmployees = [];
-        state.isCollectionAssignee = false;
-        renderCollectionAssignEmployeeLabel();
-        applyCollectionAssignVisibility();
-    }
-}
-
-let collectionSelectedEmployees = [];
-
-function getCollectionSelectedEmployeeIds() {
-    return [...collectionSelectedEmployees];
-}
-
-function renderCollectionAssignEmployeeLabel() {
-    const label = document.getElementById('collectionAssignEmployeeLabel');
-    const countBadge = document.getElementById('collectionAssignEmployeeCount');
-    if (!label) {
-        return;
-    }
-    const selectedCount = collectionSelectedEmployees.length;
-    if (selectedCount === 0) {
-        label.textContent = 'Assign Employee';
-        if (countBadge) {
-            countBadge.hidden = true;
-            countBadge.textContent = '0';
-        }
-        return;
-    }
-    const firstEmployee = collectionSelectedEmployees[0];
-    const displayName = String(firstEmployee.name || firstEmployee.id || '');
-    if (selectedCount === 1) {
-        label.textContent = displayName;
-    } else {
-        label.textContent = `${displayName} +${selectedCount - 1}`;
-    }
-    if (countBadge) {
-        countBadge.hidden = false;
-        countBadge.textContent = String(selectedCount);
-    }
-}
-
-function bindAssignEmployeeModalEvents() {
-    const toggle = document.getElementById('collectionAssignEmployeeToggle');
-    const modal = document.getElementById('assignEmployeeModal');
-    const backdrop = document.getElementById('assignEmployeeModalBackdrop');
-    const closeBtn = document.getElementById('assignEmployeeModalCloseBtn');
-    const cancelBtn = document.getElementById('assignEmployeeModalCancelBtn');
-    const confirmBtn = document.getElementById('assignEmployeeModalConfirmBtn');
-    const selectAllBtn = document.getElementById('assignEmployeeSelectAllBtn');
-    const deselectAllBtn = document.getElementById('assignEmployeeDeselectAllBtn');
-    const list = document.getElementById('assignEmployeeList');
-
-    if (!toggle || !modal) {
-        return;
-    }
-
-    applyCollectionAssignVisibility();
-
-    function openModal() {
-        if (!canManageCollectionAssignees()) {
-            setStatus('Only head admins can assign collection confirmation employees.', true);
-            return;
-        }
-        modal.hidden = false;
-        modal.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
-        loadAssignEmployeeList();
-    }
-
-    function closeModal() {
-        modal.hidden = true;
-        modal.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
-    }
-
-    toggle.addEventListener('click', (event) => {
-        event.stopPropagation();
-        openModal();
-    });
-
-    if (backdrop) {
-        backdrop.addEventListener('click', closeModal);
-    }
-
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closeModal);
-    }
-
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', closeModal);
-    }
-
-    if (confirmBtn) {
-        confirmBtn.addEventListener('click', () => {
-            updateCollectionSelectedState().finally(() => {
-                closeModal();
-            });
-        });
-    }
-
-    if (selectAllBtn) {
-        selectAllBtn.addEventListener('click', () => {
-            const checkboxes = list ? list.querySelectorAll('input[type="checkbox"]') : [];
-            checkboxes.forEach((cb) => {
-                cb.checked = true;
-            });
-        });
-    }
-
-    if (deselectAllBtn) {
-        deselectAllBtn.addEventListener('click', () => {
-            const checkboxes = list ? list.querySelectorAll('input[type="checkbox"]') : [];
-            checkboxes.forEach((cb) => {
-                cb.checked = false;
-            });
-        });
-    }
-
-    if (list) {
-        list.addEventListener('click', (event) => {
-            const item = event.target.closest('.assign-employee-item');
-            if (item) {
-                const cb = item.querySelector('input[type="checkbox"]');
-                if (cb) {
-                    cb.checked = !cb.checked;
-                }
-            }
-        });
-    }
-}
-
-async function updateCollectionSelectedState() {
-    const list = document.getElementById('assignEmployeeList');
-    if (!list || !state._collectionAssignEmployeeList) {
-        return;
-    }
-    const checkedIds = new Set();
-    const checkboxes = list.querySelectorAll('input[type="checkbox"]');
-    checkboxes.forEach((cb) => {
-        if (cb.checked) {
-            checkedIds.add(cb.value);
-        }
-    });
-    collectionSelectedEmployees = state._collectionAssignEmployeeList.filter(
-        (emp) => checkedIds.has(String(emp.id || ''))
-    );
-    renderCollectionAssignEmployeeLabel();
-    await saveAssignedEmployeesToServer();
-}
-
-async function saveAssignedEmployeesToServer() {
-    try {
-        const data = collectionSelectedEmployees.map((emp) => ({
-            id: emp.id || emp.userId || '',
-            name: emp.name || emp.userId || emp.id || ''
-        }));
-        const payload = await appClient.setLbcCollectionAssignees({ employees: data });
-        const saved = Array.isArray(payload?.employees) ? payload.employees : data;
-        collectionSelectedEmployees = saved.map((emp) => ({
-            id: emp.id || '',
-            name: emp.name || emp.id || ''
-        }));
-        renderCollectionAssignEmployeeLabel();
-    } catch (error) {
-        console.error('Failed to save assigned employees:', error);
-        window.alert(error?.message || 'Failed to save assigned employees.');
-    }
-}
-
-async function loadAssignEmployeeList() {
-    const list = document.getElementById('assignEmployeeList');
-    if (!list) {
-        return;
-    }
-    try {
-        const rows = await appClient.listUsers({ role: '', filter: '' });
-        const activeEmployees = rows.filter((user) => {
-            const status = getEmployeeAccountStatus(user);
-            const role = String(user.role || '').trim().toLowerCase();
-            const name = String(user.name || user.userId || user.id || '').toLowerCase();
-            if (role === 'head_admin' || name.includes('head admin')) {
-                return false;
-            }
-            return status === 'active';
-        });
-        activeEmployees.sort((left, right) => {
-            return String(left.name || '').localeCompare(String(right.name || ''));
-        });
-        state._collectionAssignEmployeeList = activeEmployees;
-        if (activeEmployees.length === 0) {
-            list.innerHTML = '<div class="assign-employee-empty">No active employees found</div>';
-            return;
-        }
-        list.innerHTML = activeEmployees.map((employee) => {
-            const empId = String(employee.id || employee.userId || '');
-            const empName = String(employee.name || employee.userId || employee.id || '');
-            const isChecked = collectionSelectedEmployees.some(
-                (selected) => String(selected.id || '') === empId
-            );
-            const safeId = empId.replace(/["<>]/g, '');
-            const safeName = empName.replace(/["<>]/g, '');
-            return `
-                <label class="assign-employee-item">
-                    <input type="checkbox" value="${safeId}" ${isChecked ? 'checked' : ''}>
-                    <span class="assign-employee-item-label">${safeName}</span>
-                </label>
-            `;
-        }).join('');
-        renderCollectionAssignEmployeeLabel();
-    } catch (error) {
-        console.error('Failed to load employees for assign modal:', error);
-        list.innerHTML = '<div class="assign-employee-empty">Failed to load employees</div>';
-    }
-}
-
-function getEmployeeAccountStatus(user) {
-    const status = String(user.account_status || user.status || '').trim().toLowerCase();
-    if (status === 'active' || status === 'activated') {
-        return 'active';
-    }
-    if (status === 'inactive' || status === 'deactivated' || status === 'disabled') {
-        return 'inactive';
-    }
-    if (status === 'pending') {
-        return 'pending';
-    }
-    return 'active';
 }
 
 function bindEvents() {
     workspaceViewButtons.forEach((button) => {
-        button.addEventListener('click', (event) => {
-            if (event.target.closest('#collectionAssignEmployeeContainer, #assignEmployeeModal')) {
-                return;
-            }
+        button.addEventListener('click', () => {
             const nextView = normalizeWorkspaceView(button.dataset.workspaceView);
             if (nextView === state.workspaceView) {
                 return;
@@ -551,7 +299,6 @@ function bindEvents() {
         }
         await loadRows();
     });
-
 
     refreshTrackingBtn?.addEventListener('click', async () => {
         await handleRefreshTracking();
@@ -1737,7 +1484,7 @@ function renderCollectionRows() {
                           </div>
                         </div>
                       `
-                    : '<span class="collection-note">Confirmation requires head admin or assigned employee</span>'
+                    : '<span class="collection-note">Owner confirmation required</span>'
             );
 
         return `
@@ -1870,30 +1617,9 @@ function formatAmount(value) {
     });
 }
 
-function isHeadAdminLikeRole(role = '') {
-    const normalized = normalizeText(role).toLowerCase();
-    return normalized === 'head_admin'
-        || normalized === 'company_admin'
-        || normalized === 'super_admin';
-}
-
-function canManageCollectionAssignees() {
-    return isHeadAdminLikeRole(state.session?.role);
-}
-
-function applyCollectionAssignVisibility() {
-    const container = document.getElementById('collectionAssignEmployeeContainer');
-    if (!container) {
-        return;
-    }
-    container.hidden = !canManageCollectionAssignees();
-}
-
 function canOwnerConfirmCollection() {
-    if (isHeadAdminLikeRole(state.session?.role)) {
-        return true;
-    }
-    return Boolean(state.isCollectionAssignee);
+    const role = normalizeText(state.session?.role).toLowerCase();
+    return role === 'head_admin' || role === 'company_admin' || role === 'super_admin';
 }
 
 function buildCollectionScanPreviewDetailItems(row = {}) {
@@ -1990,7 +1716,7 @@ async function handleCollectionScanConfirm() {
     }
 
     if (!canOwnerConfirmCollection()) {
-        setStatus('Only head admins and assigned employees can confirm collections.', true);
+        setStatus('Owner confirmation is required for this action.', true);
         focusCollectionConfirmInput({ select: true });
         return;
     }
@@ -2352,7 +2078,7 @@ async function handleConfirmCollection(orderKey = '', trackingEntryId = '', trac
     }
 
     if (!canOwnerConfirmCollection()) {
-        setStatus('Only head admins and assigned employees can confirm collections.', true);
+        setStatus('Owner confirmation is required for this action.', true);
         return false;
     }
 
@@ -2390,7 +2116,7 @@ async function handleUndoCollectionConfirmation(orderKey = '', trackingEntryId =
     }
 
     if (!canOwnerConfirmCollection()) {
-        setStatus('Only head admins and assigned employees can confirm collections.', true);
+        setStatus('Owner confirmation is required for this action.', true);
         return;
     }
 
@@ -2426,7 +2152,7 @@ async function handleCollectionReturnToTransit(orderKey = '', trackingEntryId = 
     }
 
     if (!canOwnerConfirmCollection()) {
-        setStatus('Only head admins and assigned employees can confirm collections.', true);
+        setStatus('Owner confirmation is required for this action.', true);
         return;
     }
 
