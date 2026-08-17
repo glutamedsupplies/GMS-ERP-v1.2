@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>KPI Context Menu Fixture</title>
+</head>
+<body data-kpi-scope="tenant">
+  <input id="filterRecordDate" type="date">
+  <table><tbody id="recordsBody"></tbody></table>
+  <div id="adminEvaluationContextMenu" role="menu" hidden>
+    <button id="adminEvaluationContextAction" type="button" role="menuitem">Evaluation</button>
+  </div>
+  <div id="adminEvaluationModal" aria-hidden="true">
+    <h2 id="adminEvaluationModalTitle"></h2>
+    <p id="adminEvaluationModalSubtitle"></p>
+    <form id="adminEvaluationForm">
+      <div id="adminEvaluationModalBody"></div>
+      <button id="adminEvaluationSubmitBtn" type="submit">Submit evaluation</button>
+    </form>
+    <button id="closeAdminEvaluationModalBtn" type="button">Close</button>
+  </div>
+  <script>
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    window.appClient = {
+      ensureSession: async () => ({ userId: 'fixture-admin', role: 'head_admin' }),
+      getBootstrap: async () => ({}),
+      applyBootstrapBrandTheme: () => {},
+      escapeHtml: (value) => String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;'),
+      listKpiEvaluations: async () => ({
+        items: [],
+        employees: [{ id: 'fixture-employee', name: 'Fixture Employee', role: 'employee', assigned_tasks: [] }],
+        settings: {},
+        summary: {
+          currentPeriod: { start: today },
+          dailyEmployeeScores: [{
+            employeeId: 'fixture-employee',
+            employeeName: 'Fixture Employee',
+            attendance: { dateKey: today, timeIn: '09:00', timeOut: '17:00' },
+            hasTimeIn: true,
+            hasTimeOut: true,
+            isPresent: true,
+            isKpiWorkingDay: true,
+            kpiScorePercent: 80,
+            dailyKpiScores: [{ dateKey: today, kpiScorePercent: 80 }]
+          }]
+        }
+      })
+    };
+  </script>
+  <script src="../shared/kpi-evaluation-admin.js"></script>
+</body>
+</html>

@@ -33,7 +33,10 @@ CREATE TABLE IF NOT EXISTS users (
   display_name TEXT NOT NULL DEFAULT '',
   profile_picture TEXT NOT NULL DEFAULT '',
   time_in TEXT NOT NULL DEFAULT '08:00',
-  time_out TEXT NOT NULL DEFAULT '17:00'
+  time_out TEXT NOT NULL DEFAULT '17:00',
+  assigned_task_id TEXT NOT NULL DEFAULT '',
+  assigned_task_ids_json TEXT NOT NULL DEFAULT '[]',
+  custom_assigned_tasks_json TEXT NOT NULL DEFAULT '[]'
 );
 
 CREATE TABLE IF NOT EXISTS plans (

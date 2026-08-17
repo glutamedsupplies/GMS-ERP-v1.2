@@ -220,7 +220,67 @@
             grid-template-columns: minmax(0, 1.12fr) minmax(240px, 0.88fr);
             gap: 10px;
             align-items: start;
+            overflow-y: auto;
+            padding-right: 4px;
         }
+
+        .kpi-policy-settings {
+            grid-column: 1 / -1;
+            display: grid;
+            gap: 10px;
+            padding: 13px;
+            border-radius: 20px;
+            border: 1px solid rgba(var(--primary-rgb), 0.18);
+            background: var(--surface-bg-elevated);
+            box-shadow: var(--surface-shadow);
+        }
+
+        .kpi-policy-settings h3,
+        .kpi-policy-settings p { margin: 0; }
+
+        .kpi-policy-settings h3 { color: var(--text); font-size: 15px; }
+        .kpi-policy-settings p { color: var(--text-soft); font-size: 10px; line-height: 1.5; }
+
+        .kpi-policy-settings-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .kpi-policy-settings-field { min-width: 0; }
+        .kpi-policy-settings-field[hidden] { display: none; }
+        .kpi-policy-settings-field select,
+        .kpi-policy-settings-field input[type="date"],
+        .kpi-policy-settings-field input[type="number"] { height: 40px; padding: 0 11px; }
+
+        .kpi-settings-toggle {
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border: 1px solid rgba(var(--primary-rgb), 0.14);
+            border-radius: 14px;
+            color: var(--text-soft);
+            background: var(--input-bg);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0;
+            text-transform: none;
+        }
+
+        .kpi-settings-toggle input { width: 16px; height: 16px; accent-color: var(--primary); }
+
+        .kpi-policy-settings-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 9px;
+        }
+
+        .kpi-policy-settings-status { min-height: 16px; color: var(--text-soft); font-size: 10px; font-weight: 700; }
+        .kpi-policy-settings-status.is-error { color: var(--danger); }
+        .kpi-policy-settings-status.is-success { color: var(--success); }
 
         .settings-main,
         .settings-side {
@@ -892,6 +952,10 @@
             .modal-secondary-actions {
                 grid-template-columns: 1fr;
             }
+
+            .kpi-policy-settings-grid { grid-template-columns: 1fr; }
+            .kpi-policy-settings-actions { align-items: stretch; flex-direction: column; }
+            .kpi-policy-settings-actions button { width: 100%; }
         }
     </style>
 </head>
@@ -930,6 +994,27 @@
                         <i class="fa-solid fa-eye toggle-password" id="togglePass2"></i>
                     </div>
                 </div>
+
+                <section class="kpi-policy-settings" aria-labelledby="kpiPolicySettingsTitle">
+                    <div>
+                        <h3 id="kpiPolicySettingsTitle">Daily KPI Policy</h3>
+                        <p>Every active employee must rate all active coworkers during daily time out. Comments are optional.</p>
+                    </div>
+                    <div class="kpi-policy-settings-grid">
+                        <div class="kpi-policy-settings-field">
+                            <label>Evaluation frequency</label>
+                            <div class="kpi-settings-toggle">Daily</div>
+                        </div>
+                        <div class="kpi-policy-settings-field">
+                            <label>Participants</label>
+                            <div class="kpi-settings-toggle">All active employees</div>
+                        </div>
+                        <div class="kpi-policy-settings-field">
+                            <label>Comments</label>
+                            <div class="kpi-settings-toggle">Optional for ratings 1 to 5</div>
+                        </div>
+                    </div>
+                </section>
 
                 <div class="settings-actions">
                     <div class="settings-action-row">
@@ -976,6 +1061,7 @@
                     </div>
                     <p class="connect-footnote">You can still log in using your Admin ID and password.</p>
                 </div>
+
             </div>
         </div>
     </div>
@@ -1016,8 +1102,8 @@
         </div>
     </div>
 
-    <script src="../shared/app-client.js?v=20260318-unlink-verify"></script>
-    <script src="./settings.js?v=20260318-unlink-verify"></script>
+    <script src="../shared/app-client.js?v=20260702-kpi-evaluation"></script>
+    <script src="./settings.js?v=20260702-kpi-evaluation"></script>
 </body>
 </html>
 

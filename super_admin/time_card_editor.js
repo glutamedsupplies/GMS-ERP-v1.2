@@ -20,7 +20,6 @@ const LAST_COMPANY_KEY = 'superTimeCardEditorCompanyId';
 const LAST_EMPLOYEE_KEY = 'superTimeCardEditorEmployeeId';
 const ZERO_HOUR_STATUSES = new Set(['absent', 'day off', 'inactive', 'suspended']);
 const SCHEDULED_TIME_IN = '09:00';
-const LATE_GRACE_MINUTES = 15;
 
 const state = {
     session: null,
@@ -561,7 +560,7 @@ function isLateTimeIn(timeValue, scheduledTimeIn = '') {
         return false;
     }
 
-    return timeInMinutes > scheduledMinutes + LATE_GRACE_MINUTES;
+    return timeInMinutes > scheduledMinutes;
 }
 
 function parseTimeToMinutes(value) {

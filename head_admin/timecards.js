@@ -18,6 +18,14 @@ const cutoffPaymentStatusValue = document.getElementById('cutoffPaymentStatusVal
 const cutoffPaymentMeta = document.getElementById('cutoffPaymentMeta');
 const toggleCutoffPaymentButton = document.getElementById('toggleCutoffPaymentButton');
 const cutoffPaymentStatus = document.getElementById('cutoffPaymentStatus');
+const payslipPhotoInput = document.getElementById('payslipPhotoInput');
+const uploadPayslipButton = document.getElementById('uploadPayslipButton');
+const removePayslipButton = document.getElementById('removePayslipButton');
+const payslipPhotoStatus = document.getElementById('payslipPhotoStatus');
+const payslipPhotoImage = document.getElementById('payslipPhotoImage');
+const payslipPhotoEmpty = document.getElementById('payslipPhotoEmpty');
+const payslipPhotoName = document.getElementById('payslipPhotoName');
+const payslipPhotoMeta = document.getElementById('payslipPhotoMeta');
 const normalTimeCardButton = document.getElementById('normalTimeCardButton');
 const salaryTimeCardButton = document.getElementById('salaryTimeCardButton');
 const salaryPanel = document.getElementById('salaryPanel');
@@ -39,6 +47,8 @@ const ACCOUNT_STATUS_LABELS = Object.freeze({
 const ZERO_PAY_STATUSES = new Set(['absent', 'day off', 'inactive', 'suspended']);
 const PAYROLL_REQUIRED_HOURS = 8;
 const PAYROLL_REQUIRED_MINUTES = PAYROLL_REQUIRED_HOURS * 60;
+const PAYSLIP_PHOTO_MAX_BYTES = 900 * 1024;
+const PAYSLIP_PHOTO_MAX_DIMENSION = 1600;
 const PHP_CURRENCY_FORMATTER = new Intl.NumberFormat('en-PH', {
     style: 'currency',
     currency: 'PHP',
@@ -48,6 +58,13 @@ const PHP_CURRENCY_FORMATTER = new Intl.NumberFormat('en-PH', {
 const PDF_LIB_URLS = Object.freeze({
     html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
     jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+});
+// Approved one-cutoff payroll correction. Normal deduction math remains the default path.
+const ZERO_DEDUCTION_OVERRIDE = Object.freeze({
+    companyId: 'company_27e2b5d69251',
+    employeeTokens: Object.freeze(['airine', 'airine robledo sosa']),
+    startDateKey: '2026-07-01',
+    endDateKey: '2026-07-15'
 });
 const EXPORT_STYLE_ELEMENT_ID = 'timecardExportStyles';
 const EXPORT_SANDBOX_ID = 'timecardExportSandbox';
@@ -64,6 +81,7 @@ let currentTimecardRows = [];
 let currentPayrollEmployeeId = '';
 let payrollSaveInFlight = false;
 let cutoffPaymentSaveInFlight = false;
+let payslipPhotoSaveInFlight = false;
 let currentCutoffPaymentState = null;
 let timecardViewMode = initialTimecardMode === 'salary' ? 'salary' : 'normal';
 let currentBootstrap = null;
@@ -181,6 +199,7 @@ async function loadEmployees(preferredEmployeeId = '', { preserveTable = false }
             syncPayrollControlsForEmployee(null, { force: true });
             renderPayrollSummary(null, []);
             renderCutoffPaymentState(null);
+            renderPayslipPhotoState(null);
             setExportStatus('', '');
             syncExportControls();
             employeeListDiv.innerHTML = '<div class="empty-row" style="padding:12px;">No attendance accounts found.</div>';
@@ -328,6 +347,7 @@ async function renderTimecard(employee, { preserveTable = false } = {}) {
         currentCutoffPaymentState = null;
         renderPayrollSummary(resolvedEmployee, []);
         renderCutoffPaymentState(null);
+        renderPayslipPhotoState(null);
     }
     employeeNameTitle.innerText = `${resolvedEmployee.name}'s Semi-Monthly Time Card`;
 
@@ -339,7 +359,9 @@ async function renderTimecard(employee, { preserveTable = false } = {}) {
         updateCutoffRangeLabel(selectedDate);
 
         const selectedDateKey = formatDateKey(selectedDate);
-        const cachedTimecard = readTimecardCache(resolvedEmployee.id, selectedDateKey);
+        const selectedCutoffKey = getCutoffRangeKey(selectedDate);
+        const selectedCutoffAnchorDateKey = getCutoffAnchorDateKey(selectedDate);
+        const cachedTimecard = readTimecardCache(resolvedEmployee.id, selectedCutoffKey);
         if (cachedTimecard && (!isSalaryTimecardView() || cachedTimecard.hasCutoffPaymentState)) {
             if (requestToken !== timecardRequestToken) {
                 return;
@@ -349,6 +371,7 @@ async function renderTimecard(employee, { preserveTable = false } = {}) {
             currentCutoffPaymentState = cachedTimecard.cutoffPaymentState;
             renderPayrollSummary(resolvedEmployee, normalizedRows);
             renderCutoffPaymentState(cachedTimecard.cutoffPaymentState);
+            renderPayslipPhotoState(cachedTimecard.cutoffPaymentState);
             renderTimecardRows(resolvedEmployee, normalizedRows);
             syncExportControls();
             return;
@@ -360,11 +383,11 @@ async function renderTimecard(employee, { preserveTable = false } = {}) {
 
         const [rows, cutoffPaymentState] = await Promise.all([
             appClient.getUserCutoffTimeCard(resolvedEmployee.id, {
-                dateKey: selectedDateKey
+                dateKey: selectedCutoffAnchorDateKey || selectedDateKey
             }),
             isSalaryTimecardView()
                 ? appClient.getUserCutoffPayrollStatus(resolvedEmployee.id, {
-                    dateKey: selectedDateKey
+                    dateKey: selectedCutoffAnchorDateKey || selectedDateKey
                 }).catch((error) => {
                     console.error('Failed to load cutoff payout status:', error);
                     return null;
@@ -374,7 +397,7 @@ async function renderTimecard(employee, { preserveTable = false } = {}) {
         if (requestToken !== timecardRequestToken) {
             return;
         }
-        writeTimecardCache(resolvedEmployee.id, selectedDateKey, {
+        writeTimecardCache(resolvedEmployee.id, selectedCutoffKey, {
             rows,
             cutoffPaymentState,
             hasCutoffPaymentState: isSalaryTimecardView()
@@ -384,6 +407,7 @@ async function renderTimecard(employee, { preserveTable = false } = {}) {
         currentCutoffPaymentState = cutoffPaymentState;
         renderPayrollSummary(resolvedEmployee, normalizedRows);
         renderCutoffPaymentState(cutoffPaymentState);
+        renderPayslipPhotoState(cutoffPaymentState);
         renderTimecardRows(resolvedEmployee, normalizedRows);
         syncExportControls();
     } catch (error) {
@@ -395,6 +419,7 @@ async function renderTimecard(employee, { preserveTable = false } = {}) {
         currentCutoffPaymentState = null;
         renderPayrollSummary(resolvedEmployee, []);
         renderCutoffPaymentState(null);
+        renderPayslipPhotoState(null);
         timecardTableBody.innerHTML = `<tr><td colspan="${getTimecardColumnCount()}" class="empty-row is-error">${appClient.escapeHtml(error.message)}</td></tr>`;
         syncExportControls();
         queueCompactLayoutCheck();
@@ -453,7 +478,7 @@ function renderTimecardRows(employee, rows = []) {
     const fragment = document.createDocumentFragment();
     safeRows.forEach((row) => {
         const workHoursState = getWorkHoursState(row);
-        const payrollState = getRowPayrollState(row, employee?.daily_salary);
+        const payrollState = getRowPayrollState(row, employee?.daily_salary, employee);
         const payrollDetailKey = getPayrollDetailKey(employee, row);
         const statusLabel = getVisibleAttendanceStatusLabel(row?.status, row);
         const tr = document.createElement('tr');
@@ -572,6 +597,21 @@ function getCutoffBounds(value) {
 function buildCutoffRangeLabel(value) {
     const { rangeStart, rangeEnd } = getCutoffBounds(value);
     return `Cutoff range: ${formatShortDate(rangeStart)} - ${formatShortDate(rangeEnd)}`;
+}
+
+function getCutoffRangeKey(value = getSelectedDate()) {
+    const { rangeStart, rangeEnd } = getCutoffBounds(value);
+    return `${formatDateKey(rangeStart)}:${formatDateKey(rangeEnd)}`;
+}
+
+function getCutoffAnchorDateKey(value = getSelectedDate()) {
+    const { rangeEnd } = getCutoffBounds(value);
+    return formatDateKey(rangeEnd);
+}
+
+function isSameActiveCutoff(employeeId = '', cutoffRangeKey = '') {
+    return String(selectedEmployee?.id || '').trim() === String(employeeId || '').trim()
+        && getCutoffRangeKey(getSelectedDate()) === String(cutoffRangeKey || '').trim();
 }
 
 function updateCutoffRangeLabel(value) {
@@ -809,9 +849,28 @@ function initializePayrollControls() {
         });
     }
 
+    if (uploadPayslipButton && payslipPhotoInput) {
+        uploadPayslipButton.addEventListener('click', () => {
+            if (uploadPayslipButton.disabled) {
+                return;
+            }
+            payslipPhotoInput.click();
+        });
+        payslipPhotoInput.addEventListener('change', () => {
+            void uploadSelectedPayslipPhoto();
+        });
+    }
+
+    if (removePayslipButton) {
+        removePayslipButton.addEventListener('click', () => {
+            void removePayslipPhoto();
+        });
+    }
+
     syncPayrollControlsForEmployee(null, { force: true });
     renderPayrollSummary(null, []);
     renderCutoffPaymentState(null);
+    renderPayslipPhotoState(null);
 }
 
 function initializeTimecardViewMode() {
@@ -913,7 +972,7 @@ function getLoadedEmployeeById(employeeId = '') {
 function syncPayrollControlsForEmployee(employee, { force = false } = {}) {
     const employeeId = String(employee?.id || '').trim();
     const employeeChanged = employeeId !== currentPayrollEmployeeId;
-    const controlsLocked = payrollSaveInFlight || cutoffPaymentSaveInFlight;
+    const controlsLocked = payrollSaveInFlight || cutoffPaymentSaveInFlight || payslipPhotoSaveInFlight;
     currentPayrollEmployeeId = employeeId;
 
     if (dailySalaryInput) {
@@ -932,9 +991,23 @@ function syncPayrollControlsForEmployee(employee, { force = false } = {}) {
         toggleCutoffPaymentButton.disabled = !employeeId || controlsLocked;
     }
 
+    if (uploadPayslipButton) {
+        uploadPayslipButton.disabled = !employeeId || controlsLocked;
+    }
+
+    if (payslipPhotoInput) {
+        payslipPhotoInput.disabled = !employeeId || controlsLocked;
+    }
+
+    if (removePayslipButton) {
+        const hasPayslipPhoto = Boolean(currentCutoffPaymentState?.payslipPhotoDataUrl);
+        removePayslipButton.disabled = !employeeId || controlsLocked || !hasPayslipPhoto;
+    }
+
     if (employeeChanged) {
         setDailySalaryStatus('', '');
         setCutoffPaymentFeedback('', '');
+        setPayslipPhotoFeedback('', '');
     }
 
     syncExportControls();
@@ -970,7 +1043,11 @@ function buildDefaultCutoffPaymentState(employee = selectedEmployee, dateValue =
         payoutStatus: 'pending',
         paidAt: '',
         updatedAt: '',
-        updatedBy: ''
+        updatedBy: '',
+        payslipPhotoDataUrl: '',
+        payslipPhotoName: '',
+        payslipPhotoUploadedAt: '',
+        payslipPhotoUploadedBy: ''
     };
 }
 
@@ -1001,6 +1078,88 @@ function setCutoffPaymentFeedback(message = '', tone = '') {
     } else if (tone === 'error') {
         cutoffPaymentStatus.classList.add('is-error');
     }
+}
+
+function setPayslipPhotoFeedback(message = '', tone = '') {
+    if (!payslipPhotoStatus) {
+        return;
+    }
+
+    payslipPhotoStatus.textContent = String(message || '');
+    payslipPhotoStatus.classList.remove('is-success', 'is-error');
+    if (tone === 'success') {
+        payslipPhotoStatus.classList.add('is-success');
+    } else if (tone === 'error') {
+        payslipPhotoStatus.classList.add('is-error');
+    }
+}
+
+function isImageDataUrl(value = '') {
+    return /^data:image\/[a-z0-9.+-]+;base64,/i.test(String(value || '').trim());
+}
+
+function formatPayslipCutoffRangeLabel(paymentState = currentCutoffPaymentState) {
+    const cutoffStartDateKey = String(paymentState?.cutoffStartDateKey || '').trim();
+    const cutoffEndDateKey = String(paymentState?.cutoffEndDateKey || '').trim();
+    if (cutoffStartDateKey && cutoffEndDateKey) {
+        return `${formatShortDate(parseInputDate(cutoffStartDateKey))} - ${formatShortDate(parseInputDate(cutoffEndDateKey))}`;
+    }
+
+    const { rangeStart, rangeEnd } = getCutoffBounds(getSelectedDate());
+    return `${formatShortDate(rangeStart)} - ${formatShortDate(rangeEnd)}`;
+}
+
+function renderPayslipPhotoState(paymentState = currentCutoffPaymentState) {
+    const hasPayslipUi = payslipPhotoImage || payslipPhotoEmpty || payslipPhotoName || payslipPhotoMeta || removePayslipButton;
+    if (!hasPayslipUi) {
+        return;
+    }
+
+    const resolvedState = paymentState || null;
+    const photoDataUrl = String(resolvedState?.payslipPhotoDataUrl || '').trim();
+    const photoName = String(resolvedState?.payslipPhotoName || '').trim();
+    const uploadedAtLabel = formatCutoffPaymentDateTime(resolvedState?.payslipPhotoUploadedAt);
+    const uploadedByLabel = String(resolvedState?.payslipPhotoUploadedBy || '').trim();
+    const hasPhoto = isImageDataUrl(photoDataUrl);
+    const cutoffRangeLabel = formatPayslipCutoffRangeLabel(resolvedState);
+
+    if (payslipPhotoImage) {
+        if (hasPhoto) {
+            payslipPhotoImage.src = photoDataUrl;
+            payslipPhotoImage.hidden = false;
+        } else {
+            payslipPhotoImage.hidden = true;
+            payslipPhotoImage.removeAttribute('src');
+        }
+    }
+
+    if (payslipPhotoEmpty) {
+        payslipPhotoEmpty.hidden = hasPhoto;
+    }
+
+    if (payslipPhotoName) {
+        payslipPhotoName.textContent = hasPhoto ? (photoName || 'Payslip photo') : 'No photo uploaded';
+    }
+
+    if (payslipPhotoMeta) {
+        if (!selectedEmployee) {
+            payslipPhotoMeta.textContent = 'Select an account and cutoff.';
+        } else if (hasPhoto) {
+            const uploadNote = uploadedAtLabel && uploadedByLabel
+                ? `Uploaded ${uploadedAtLabel} by ${uploadedByLabel}`
+                : (uploadedAtLabel ? `Uploaded ${uploadedAtLabel}` : 'Payslip photo attached.');
+            payslipPhotoMeta.textContent = `Cutoff ${cutoffRangeLabel}. ${uploadNote}`;
+        } else {
+            payslipPhotoMeta.textContent = `No payslip photo attached for cutoff ${cutoffRangeLabel}.`;
+        }
+    }
+
+    if (removePayslipButton) {
+        removePayslipButton.hidden = !hasPhoto;
+    }
+
+    syncPayrollControlsForEmployee(selectedEmployee, { force: false });
+    queueCompactLayoutCheck();
 }
 
 function renderCutoffPaymentState(paymentState = currentCutoffPaymentState) {
@@ -1050,6 +1209,34 @@ function normalizePayrollStatus(status = '') {
     return String(status || '').trim().toLowerCase();
 }
 
+function normalizePayrollOverrideToken(value = '') {
+    return String(value || '').trim().toLowerCase();
+}
+
+function isZeroDeductionOverrideRow(row, employee = selectedEmployee) {
+    const dateKey = normalizeDateKey(row?.dateKey || row?.date, '');
+    if (!dateKey
+        || dateKey < ZERO_DEDUCTION_OVERRIDE.startDateKey
+        || dateKey > ZERO_DEDUCTION_OVERRIDE.endDateKey) {
+        return false;
+    }
+
+    const companyId = String(employee?.company_id || currentBootstrap?.company?.id || '').trim();
+    if (companyId !== ZERO_DEDUCTION_OVERRIDE.companyId) {
+        return false;
+    }
+
+    const lookupTokens = [
+        employee?.id,
+        employee?.username,
+        employee?.name,
+        row?.id,
+        row?.name
+    ].map(normalizePayrollOverrideToken).filter(Boolean);
+
+    return lookupTokens.some((token) => ZERO_DEDUCTION_OVERRIDE.employeeTokens.includes(token));
+}
+
 function formatPayrollMoney(value = 0) {
     return PHP_CURRENCY_FORMATTER.format(roundCurrencyValue(value));
 }
@@ -1087,7 +1274,7 @@ function getVisibleAttendanceStatusLabel(status = '', row = null) {
     const hasTimeIn = Boolean(String(row?.timeIn || '').trim());
     const hasTimeOut = Boolean(String(row?.timeOut || '').trim());
     const isPending = Boolean(row?.isPendingTimeout) || (hasTimeIn && !hasTimeOut);
-    const lateMinutes = row
+    const lateMinutes = row && !isZeroDeductionOverrideRow(row)
         ? Math.max(getLateDeductionMinutesForRow(row), parseMinutesValue(row?.lateMinutes))
         : 0;
     if (lateMinutes > 0) {
@@ -1267,20 +1454,24 @@ function bindRenderedPayrollDetails() {
     });
 }
 
-function getRowPayrollState(row, dailySalaryValue = 0) {
+function getRowPayrollState(row, dailySalaryValue = 0, employee = selectedEmployee) {
     const dailySalary = roundCurrencyValue(dailySalaryValue);
     const totalSpanMinutes = getTotalSpanMinutesForRow(row);
     const lunchBreakMinutes = getLunchBreakMinutesForRow(row);
     const workedMinutes = getWorkedMinutesForRow(row);
     const requiredMinutes = getRequiredMinutesForRow(row);
     const shortMinutes = getShortMinutesForRow(row, workedMinutes, requiredMinutes);
-    const lateDeductionMinutes = getLateDeductionMinutesForRow(row);
-    const earlyOutDeductionMinutes = getEarlyOutDeductionMinutesForRow(row);
-    const totalDeductionMinutes = getTotalDeductionMinutesForRow(
+    const rawLateDeductionMinutes = getLateDeductionMinutesForRow(row);
+    const rawEarlyOutDeductionMinutes = getEarlyOutDeductionMinutesForRow(row);
+    const rawTotalDeductionMinutes = getTotalDeductionMinutesForRow(
         row,
-        lateDeductionMinutes,
-        earlyOutDeductionMinutes
+        rawLateDeductionMinutes,
+        rawEarlyOutDeductionMinutes
     );
+    const forceZeroDeduction = isZeroDeductionOverrideRow(row, employee);
+    const lateDeductionMinutes = forceZeroDeduction ? 0 : rawLateDeductionMinutes;
+    const earlyOutDeductionMinutes = forceZeroDeduction ? 0 : rawEarlyOutDeductionMinutes;
+    const totalDeductionMinutes = forceZeroDeduction ? 0 : rawTotalDeductionMinutes;
     const hasTimeIn = Boolean(String(row?.timeIn || '').trim());
     const hasTimeOut = Boolean(String(row?.timeOut || '').trim());
     const isPending = Boolean(row?.isPendingTimeout) || (hasTimeIn && !hasTimeOut);
@@ -1386,7 +1577,7 @@ function buildPayrollSummaryState(employee, rows = []) {
     const safeRows = Array.isArray(rows) ? rows : [];
     const dailySalary = roundCurrencyValue(employee?.daily_salary);
     return safeRows.reduce((totals, row) => {
-        const payrollState = getRowPayrollState(row, dailySalary);
+        const payrollState = getRowPayrollState(row, dailySalary, employee);
         if (isPresentAttendanceDay(row)) {
             totals.presentDays += 1;
         }
@@ -1519,7 +1710,7 @@ async function toggleCutoffPaymentState() {
         return;
     }
 
-    const selectedDateKey = formatDateKey(getSelectedDate());
+    const selectedDateKey = getCutoffAnchorDateKey(getSelectedDate());
     const baseState = currentCutoffPaymentState || buildDefaultCutoffPaymentState(selectedEmployee, getSelectedDate());
     const currentStatus = normalizeCutoffPaymentStatusValue(baseState?.payoutStatus);
     const nextStatus = currentStatus === 'paid' ? 'pending' : 'paid';
@@ -1539,17 +1730,193 @@ async function toggleCutoffPaymentState() {
         invalidateTimecardCacheForEmployee(selectedEmployee.id);
         currentCutoffPaymentState = updatedState;
         renderCutoffPaymentState(updatedState);
+        renderPayslipPhotoState(updatedState);
         setCutoffPaymentFeedback(
             nextStatus === 'paid' ? 'Cutoff marked as paid.' : 'Cutoff set to pending.',
             'success'
         );
     } catch (error) {
         renderCutoffPaymentState(currentCutoffPaymentState);
+        renderPayslipPhotoState(currentCutoffPaymentState);
         setCutoffPaymentFeedback(error.message || 'Failed to update cutoff payout status.', 'error');
     } finally {
         cutoffPaymentSaveInFlight = false;
         syncPayrollControlsForEmployee(selectedEmployee, { force: true });
         renderCutoffPaymentState(currentCutoffPaymentState);
+        renderPayslipPhotoState(currentCutoffPaymentState);
+    }
+}
+
+function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(reader.error || new Error('Unable to read selected image.'));
+        reader.readAsDataURL(file);
+    });
+}
+
+function loadImageDataUrl(dataUrl) {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error('Invalid payslip image.'));
+        image.src = dataUrl;
+    });
+}
+
+function dataUrlByteLength(dataUrl = '') {
+    const text = String(dataUrl || '');
+    const commaIndex = text.indexOf(',');
+    if (commaIndex < 0) {
+        return text.length;
+    }
+
+    const base64 = text.slice(commaIndex + 1);
+    const padding = base64.endsWith('==') ? 2 : (base64.endsWith('=') ? 1 : 0);
+    return Math.max(0, Math.floor((base64.length * 3) / 4) - padding);
+}
+
+function formatBytes(value = 0) {
+    const bytes = Math.max(0, Number(value || 0));
+    if (bytes < 1024) {
+        return `${bytes} B`;
+    }
+    if (bytes < 1024 * 1024) {
+        return `${(bytes / 1024).toFixed(1)} KB`;
+    }
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+async function optimizePayslipPhotoDataUrl(dataUrl) {
+    const image = await loadImageDataUrl(dataUrl);
+    const originalBytes = dataUrlByteLength(dataUrl);
+    let width = image.naturalWidth || image.width || 0;
+    let height = image.naturalHeight || image.height || 0;
+    if (!width || !height) {
+        throw new Error('Invalid payslip image size.');
+    }
+
+    if (originalBytes <= PAYSLIP_PHOTO_MAX_BYTES && Math.max(width, height) <= PAYSLIP_PHOTO_MAX_DIMENSION) {
+        return dataUrl;
+    }
+
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) {
+        throw new Error('Your browser does not support image processing.');
+    }
+
+    const scale = Math.min(1, PAYSLIP_PHOTO_MAX_DIMENSION / Math.max(width, height));
+    width = Math.max(1, Math.round(width * scale));
+    height = Math.max(1, Math.round(height * scale));
+
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+        canvas.width = width;
+        canvas.height = height;
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, width, height);
+        context.drawImage(image, 0, 0, width, height);
+
+        for (let quality = 0.9; quality >= 0.55; quality -= 0.07) {
+            const candidate = canvas.toDataURL('image/jpeg', quality);
+            if (dataUrlByteLength(candidate) <= PAYSLIP_PHOTO_MAX_BYTES) {
+                return candidate;
+            }
+        }
+
+        width = Math.max(1, Math.round(width * 0.85));
+        height = Math.max(1, Math.round(height * 0.85));
+    }
+
+    throw new Error(`Payslip photo must be under ${formatBytes(PAYSLIP_PHOTO_MAX_BYTES)}.`);
+}
+
+async function uploadSelectedPayslipPhoto() {
+    const file = payslipPhotoInput?.files?.[0] || null;
+    if (!file) {
+        return;
+    }
+
+    if (!selectedEmployee?.id) {
+        setPayslipPhotoFeedback('Select an account first.', 'error');
+        payslipPhotoInput.value = '';
+        return;
+    }
+
+    if (!String(file.type || '').startsWith('image/')) {
+        setPayslipPhotoFeedback('Please choose an image file.', 'error');
+        payslipPhotoInput.value = '';
+        return;
+    }
+
+    const targetEmployeeId = String(selectedEmployee.id || '').trim();
+    const targetCutoffKey = getCutoffRangeKey(getSelectedDate());
+    const targetDateKey = getCutoffAnchorDateKey(getSelectedDate());
+    payslipPhotoSaveInFlight = true;
+    syncPayrollControlsForEmployee(selectedEmployee, { force: true });
+    setPayslipPhotoFeedback('Preparing payslip photo...', '');
+
+    try {
+        const rawDataUrl = await readFileAsDataUrl(file);
+        const optimizedDataUrl = await optimizePayslipPhotoDataUrl(rawDataUrl);
+        setPayslipPhotoFeedback('Saving payslip photo...', '');
+        const updatedState = await appClient.setUserCutoffPayslipPhoto(targetEmployeeId, {
+            dateKey: targetDateKey,
+            payslipPhotoDataUrl: optimizedDataUrl,
+            payslipPhotoName: file.name || 'Payslip photo'
+        });
+        invalidateTimecardCacheForEmployee(targetEmployeeId);
+        if (isSameActiveCutoff(targetEmployeeId, targetCutoffKey)) {
+            currentCutoffPaymentState = updatedState;
+            renderCutoffPaymentState(updatedState);
+            renderPayslipPhotoState(updatedState);
+            setPayslipPhotoFeedback('Payslip photo uploaded for this cutoff.', 'success');
+        }
+    } catch (error) {
+        console.error('Failed to upload payslip photo:', error);
+        setPayslipPhotoFeedback(error.message || 'Failed to upload payslip photo.', 'error');
+        renderPayslipPhotoState(currentCutoffPaymentState);
+    } finally {
+        payslipPhotoSaveInFlight = false;
+        if (payslipPhotoInput) {
+            payslipPhotoInput.value = '';
+        }
+        syncPayrollControlsForEmployee(selectedEmployee, { force: true });
+    }
+}
+
+async function removePayslipPhoto() {
+    if (!selectedEmployee?.id || payslipPhotoSaveInFlight || !currentCutoffPaymentState?.payslipPhotoDataUrl) {
+        return;
+    }
+
+    const targetEmployeeId = String(selectedEmployee.id || '').trim();
+    const targetCutoffKey = getCutoffRangeKey(getSelectedDate());
+    const targetDateKey = getCutoffAnchorDateKey(getSelectedDate());
+    payslipPhotoSaveInFlight = true;
+    syncPayrollControlsForEmployee(selectedEmployee, { force: true });
+    setPayslipPhotoFeedback('Removing payslip photo...', '');
+
+    try {
+        const updatedState = await appClient.setUserCutoffPayslipPhoto(targetEmployeeId, {
+            dateKey: targetDateKey,
+            removePayslipPhoto: true
+        });
+        invalidateTimecardCacheForEmployee(targetEmployeeId);
+        if (isSameActiveCutoff(targetEmployeeId, targetCutoffKey)) {
+            currentCutoffPaymentState = updatedState;
+            renderCutoffPaymentState(updatedState);
+            renderPayslipPhotoState(updatedState);
+            setPayslipPhotoFeedback('Payslip photo removed from this cutoff.', 'success');
+        }
+    } catch (error) {
+        console.error('Failed to remove payslip photo:', error);
+        setPayslipPhotoFeedback(error.message || 'Failed to remove payslip photo.', 'error');
+        renderPayslipPhotoState(currentCutoffPaymentState);
+    } finally {
+        payslipPhotoSaveInFlight = false;
+        syncPayrollControlsForEmployee(selectedEmployee, { force: true });
     }
 }
 
@@ -1796,6 +2163,23 @@ function getTimecardExportStylesheet() {
             border-radius: 18px;
             border: 1px solid #dbe5f1;
             background: rgba(248, 250, 252, 0.92);
+        }
+
+        .timecard-export-payslip {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 168px minmax(0, 1fr);
+            gap: 14px;
+            align-items: center;
+        }
+
+        .timecard-export-payslip img {
+            width: 168px;
+            max-height: 220px;
+            object-fit: contain;
+            border-radius: 14px;
+            border: 1px solid #dbe5f1;
+            background: #ffffff;
         }
 
         .timecard-export-label {
@@ -2187,6 +2571,13 @@ function buildTimecardExportSummaryMarkup(payload) {
     const normalizedPayoutStatus = normalizeCutoffPaymentStatusValue(paymentState?.payoutStatus);
     const paidAtLabel = formatCutoffPaymentDateTime(paymentState?.paidAt);
     const updatedByLabel = String(paymentState?.updatedBy || '').trim();
+    const payslipPhotoDataUrl = String(paymentState?.payslipPhotoDataUrl || '').trim();
+    const hasPayslipPhoto = isImageDataUrl(payslipPhotoDataUrl);
+    const payslipUploadedAtLabel = formatCutoffPaymentDateTime(paymentState?.payslipPhotoUploadedAt);
+    const payslipUploadedByLabel = String(paymentState?.payslipPhotoUploadedBy || '').trim();
+    const payslipNote = payslipUploadedAtLabel && payslipUploadedByLabel
+        ? `Uploaded ${payslipUploadedAtLabel} by ${payslipUploadedByLabel}`
+        : (payslipUploadedAtLabel ? `Uploaded ${payslipUploadedAtLabel}` : 'Payslip photo attached.');
     const payoutNote = normalizedPayoutStatus === 'paid'
         ? (
             updatedByLabel && paidAtLabel
@@ -2222,6 +2613,16 @@ function buildTimecardExportSummaryMarkup(payload) {
                 <strong class="timecard-export-value">${escapeExportHtml(normalizedPayoutStatus === 'paid' ? 'Paid' : 'Pending')}</strong>
                 <span class="timecard-export-note">${escapeExportHtml(payoutNote)}</span>
             </article>
+            ${hasPayslipPhoto ? `
+                <article class="timecard-export-card timecard-export-payslip">
+                    <img src="${escapeExportHtml(payslipPhotoDataUrl)}" alt="Payslip photo">
+                    <div>
+                        <span class="timecard-export-label">Payslip Photo</span>
+                        <strong class="timecard-export-value">${escapeExportHtml(paymentState?.payslipPhotoName || 'Payslip photo')}</strong>
+                        <span class="timecard-export-note">${escapeExportHtml(payslipNote)}</span>
+                    </div>
+                </article>
+            ` : ''}
         </section>
     `;
 }
@@ -2235,7 +2636,7 @@ function buildTimecardExportRowsMarkup(payload) {
     return rows.map((row) => {
         const statusLabel = getVisibleAttendanceStatusLabel(row?.status, row);
         if (payload.salaryView) {
-            const payrollState = getRowPayrollState(row, payload.dailySalary);
+            const payrollState = getRowPayrollState(row, payload.dailySalary, payload.employee);
             const payNote = payrollState.isPending
                 ? 'Pending timeout'
                 : (payrollState.isPayableDay

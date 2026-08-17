@@ -358,7 +358,7 @@
       <div class="hero-copy">
         <span class="hero-kicker"><i class="fa-regular fa-calendar-check"></i> Attendance Overview</span>
         <h1>Today Attendance Snapshot</h1>
-        <p>Current-date view of all employees with On Time, Late, Absent, Excuse, Inactive, and Suspended status in a tenant-aware layout that stays balanced across company colors.</p>
+        <p>Current-date view of all listed employees with On Time, Late, Absent, Excuse, and Suspended status in a tenant-aware layout that stays balanced across company colors.</p>
       </div>
       <div class="hero-meta">
         <div class="meta-card">
@@ -404,7 +404,7 @@
     <div class="table-head">
       <div>
         <h2>Employee Attendance For Today</h2>
-        <p>Absent employees are inferred from the employee list when no current-date record exists in the attendance log, while inactive and suspended accounts stay labeled with their own status.</p>
+        <p>Absent employees are inferred from the employee list when no current-date record exists in the attendance log, while suspended accounts stay labeled with their own status.</p>
       </div>
       <div class="status-note" id="statusNote"></div>
     </div>
@@ -422,12 +422,13 @@
             <th>Late Minutes</th>
             <th>Status</th>
             <th>Remarks</th>
+            <th>Task</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody id="todayTableBody">
           <tr>
-            <td colspan="11" class="no-data">Loading attendance records...</td>
+            <td colspan="12" class="no-data">Loading attendance records...</td>
           </tr>
         </tbody>
       </table>
@@ -436,6 +437,6 @@
 </div>
 
 <script src="../shared/app-client.js"></script>
-<script src="today_present.js"></script>
+<script src="today_present.js?v=20260703-task-types"></script>
 </body>
 </html>
