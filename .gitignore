@@ -26,3 +26,4 @@ mobile/flutter/
 mobile/flutter_windows_sdk.zip
 mobile/.pub-cache/
 mobile/flutter_app_backup_*/
+local-runtime.config.json

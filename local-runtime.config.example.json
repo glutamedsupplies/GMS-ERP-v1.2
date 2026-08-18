@@ -1,5 +1,5 @@
 {
-  "dataDir": "C:\\Users\\pc\\Documents\\GitHub\\GMS\\.runtime-data",
+  "dataDir": "./.runtime-data",
   "bindHost": "127.0.0.1",
   "port": 3001,
   "dbBackend": "sqlite",
